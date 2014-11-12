@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Copyright 2014 Google Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script will build and push the images necessary for the demo.
+FROM dockerfile/nginx
 
-set -o errexit
-set -o nounset
-set -o pipefail
+ADD default /etc/nginx/sites-available/default
 
-if [[ "${DOCKER_HUB_USER+set}" != "set" ]] ; then
-  echo "Please set DOCKER_HUB_USER to your Docker hub account"
-  exit 1
-fi
+ONBUILD ADD html /usr/share/nginx/html
+ONBUILD RUN chmod -R a+r /usr/share/nginx/html
 
-set -x
-
-docker build -t update-demo-base images/base
-docker build -t "${DOCKER_HUB_USER}/update-demo:kitten" images/kitten
-docker build -t "${DOCKER_HUB_USER}/update-demo:nautilus" images/nautilus
-
-docker push "${DOCKER_HUB_USER}/update-demo"
+CMD ["nginx"]
