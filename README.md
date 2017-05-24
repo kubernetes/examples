@@ -15,7 +15,7 @@ and to refresh command syntax, output, changed prerequisites, as needed.
 ------------- | ------------- | ------------ | ------------ | 
 |[Guestbook](guestbook/) | PHP app with Redis | Deployment, Service | Beginner |
 |[WordPress](mysql-wordpress-pd/) | WordPress with MySQL | Deployment, Persistent Volume with Claim | Beginner|
-|[Cassandra](storage/cassandra/) | Cloud Native Cassandra | Daemon Set, Stateful Set, Replication Controller | Intermediate 
+|[Cassandra](cassandra/) | Cloud Native Cassandra | Daemon Set, Stateful Set, Replication Controller | Intermediate
 
 > Note: Please add examples that are maintained to the list above.
 
