@@ -18,6 +18,7 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG CASSANDRA_VERSION
 ARG DEV_CONTAINER
+RUN apt-get update && apt-get install wget -y
 
 LABEL \
     org.label-schema.build-date=$BUILD_DATE \
@@ -39,19 +40,13 @@ ENV CASSANDRA_HOME=/usr/local/apache-cassandra-${CASSANDRA_VERSION} \
     DI_SHA=81231da1cd074fdc81af62789fead8641ef3f24b6b07366a1c34e5b059faf363
 
 ADD files /
+RUN wget -q -O - http://www-us.apache.org/dist/cassandra/${CASSANDRA_VERSION}/apache-cassandra-${CASSANDRA_VERSION}-bin.tar.gz | tar -xzf - -C /usr/local
 
 RUN set -e && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
-  && apt-get update && apt-get -qq -y --force-yes install --no-install-recommends \
+   && apt-get update && apt-get -qq -y --force-yes install --no-install-recommends \
     openjdk-8-jre-headless \
     libjemalloc1 \
-    localepurge \
-    wget && \
-  mirror_url=$( wget -q -O - http://www.apache.org/dyn/closer.cgi/cassandra/ \
-        | sed -n 's#.*href="\(http://.*/cassandra\/[^"]*\)".*#\1#p' \
-        | head -n 1 \
-    ) \
-    && wget -q -O - ${mirror_url}/${CASSANDRA_VERSION}/apache-cassandra-${CASSANDRA_VERSION}-bin.tar.gz \
-        | tar -xzf - -C /usr/local \
+    localepurge \ 
     && wget -q -O - https://github.com/Yelp/dumb-init/releases/download/v${DI_VERSION}/dumb-init_${DI_VERSION}_amd64 > /sbin/dumb-init \
     && echo "$DI_SHA  /sbin/dumb-init" | sha256sum -c - \
     && chmod +x /sbin/dumb-init \

@@ -14,9 +14,8 @@
 
 # build the cassandra image.
 VERSION=v12
-PROJECT_ID?=google_samples
-PROJECT=gcr.io/${PROJECT_ID}
-CASSANDRA_VERSION=3.10
+PROJECT=erikschlegel
+CASSANDRA_VERSION=3.11.0
 
 all: kubernetes-cassandra.jar build
 
@@ -35,7 +34,7 @@ container-dev:
 build: container container-dev
 
 push: build
-	gcloud docker -- push ${PROJECT}/cassandra:${VERSION}
-	gcloud docker -- push ${PROJECT}/cassandra:${VERSION}-dev
+	docker -- push ${PROJECT}/cassandra:${VERSION}
+	docker -- push ${PROJECT}/cassandra:${VERSION}-dev
 
 .PHONY: all build push
