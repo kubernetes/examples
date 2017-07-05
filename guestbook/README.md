@@ -1,5 +1,11 @@
+<!-- EXCLUDE_FROM_DOCS BEGIN -->
+
+> :warning: :warning: Follow this tutorial on the Kubernetes website:
+> https://kubernetes.io/docs/tutorials/stateless-application/guestbook/.
+> Otherwise some of the URLs will not work properly.
 
 ## Guestbook Example
+<!-- EXCLUDE_FROM_DOCS END -->
 
 This example shows how to build a simple, multi-tier web application using Kubernetes and [Docker](https://www.docker.com/).
 
@@ -47,7 +53,7 @@ $ kubectl cluster-info
 
 If you see a url response, you are ready to go. If not, read the [Getting Started guides](http://kubernetes.io/docs/getting-started-guides/) for how to get started, and follow the [prerequisites](http://kubernetes.io/docs/user-guide/prereqs/) to install and configure `kubectl`. As noted above, if you have a Google Container Engine cluster set up, read [this example](https://cloud.google.com/container-engine/docs/tutorials/guestbook) instead.
 
-All the files referenced in this example can be downloaded in [current folder](./).
+All the files referenced in this example can be downloaded [from GitHub](https://git.k8s.io/examples/guestbook).
 
 ### Quick Start
 
@@ -56,7 +62,7 @@ This section shows the simplest way to get the example work. If you want to know
 Start the guestbook with one command:
 
 ```console
-$ kubectl create -f examples/guestbook/all-in-one/guestbook-all-in-one.yaml
+$ kubectl create -f guestbook/all-in-one/guestbook-all-in-one.yaml
 service "redis-master" created
 deployment "redis-master" created
 service "redis-slave" created
@@ -68,7 +74,7 @@ deployment "frontend" created
 Alternatively, you can start the guestbook by running:
 
 ```console
-$ kubectl create -f examples/guestbook/
+$ kubectl create -f guestbook/
 ```
 
 Then, list all your Services:
@@ -86,13 +92,13 @@ Now you can access the guestbook on each node with frontend Service's `<Cluster-
 Clean up the guestbook:
 
 ```console
-$ kubectl delete -f examples/guestbook/all-in-one/guestbook-all-in-one.yaml
+$ kubectl delete -f guestbook/all-in-one/guestbook-all-in-one.yaml
 ```
 
 or
 
 ```console
-$ kubectl delete -f examples/guestbook/
+$ kubectl delete -f guestbook/
 ```
 
 
@@ -103,7 +109,7 @@ Before continuing to the gory details, we also recommend you to read Kubernetes 
 
 #### Define a Deployment
 
-To start the redis master, use the file [redis-master-deployment.yaml](redis-master-deployment.yaml), which describes a single [pod](http://kubernetes.io/docs/user-guide/pods/) running a redis key-value server in a container.
+To start the redis master, use the file [redis-master-deployment.yaml](https://git.k8s.io/examples/guestbook/redis-master-deployment.yaml), which describes a single [pod](http://kubernetes.io/docs/user-guide/pods/) running a redis key-value server in a container.
 
 Although we have a single instance of our redis master, we are using a [Deployment](http://kubernetes.io/docs/user-guide/deployments/) to enforce that exactly one pod keeps running. E.g., if the node were to go down, the Deployment will ensure that the redis master gets restarted on a healthy node. (In our simplified example, this could result in data loss.)
 
@@ -151,7 +157,7 @@ spec:
         - containerPort: 6379
 ```
 
-[Download example](redis-master-deployment.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/redis-master-deployment.yaml)
 <!-- END MUNGE: EXAMPLE redis-master-deployment.yaml -->
 
 #### Define a Service
@@ -161,7 +167,7 @@ A Kubernetes [Service](http://kubernetes.io/docs/user-guide/services/) is a name
 Services find the pods to load balance based on the pods' labels.
 The selector field of the Service description determines which pods will receive the traffic sent to the Service, and the `port` and `targetPort` information defines what port the Service proxy will run at.
 
-The file [redis-master-service.yaml](redis-master-deployment.yaml) defines the redis master Service:
+The file [redis-master-service.yaml](https://git.k8s.io/examples/guestbook/redis-master-deployment.yaml) defines the redis master Service:
 
 <!-- BEGIN MUNGE: EXAMPLE redis-master-service.yaml -->
 
@@ -185,7 +191,7 @@ spec:
     tier: backend
 ```
 
-[Download example](redis-master-service.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/redis-master-service.yaml)
 <!-- END MUNGE: EXAMPLE redis-master-service.yaml -->
 
 #### Create a Service
@@ -193,7 +199,7 @@ spec:
 According to the [config best practices](http://kubernetes.io/docs/user-guide/config-best-practices/), create a Service before corresponding Deployments so that the scheduler can spread the pods comprising the Service. So we first create the Service by running:
 
 ```console
-$ kubectl create -f examples/guestbook/redis-master-service.yaml
+$ kubectl create -f guestbook/redis-master-service.yaml
 service "redis-master" created
 ```
 
@@ -233,7 +239,7 @@ This example has been configured to use the DNS service by default.
 
 If your cluster does not have the DNS service enabled, then you can use environment variables by setting the
 `GET_HOSTS_FROM` env value in both
-[redis-slave-deployment.yaml](redis-slave-deployment.yaml) and [frontend-deployment.yaml](frontend-deployment.yaml)
+[redis-slave-deployment.yaml](https://git.k8s.io/examples/guestbook/redis-slave-deployment.yaml) and [frontend-deployment.yaml](https://git.k8s.io/examples/guestbook/frontend-deployment.yaml)
 from `dns` to `env` before you start up the app.
 (However, this is unlikely to be necessary. You can check for the DNS service in the list of the cluster's services by
 running `kubectl --namespace=kube-system get rc -l k8s-app=kube-dns`.)
@@ -244,7 +250,7 @@ Note that switching to env causes creation-order dependencies, since Services ne
 Second, create the redis master pod in your Kubernetes cluster by running:
 
 ```console
-$ kubectl create -f examples/guestbook/redis-master-deployment.yaml
+$ kubectl create -f guestbook/redis-master-deployment.yaml
 deployment "redis-master" created
 ```
 
@@ -345,7 +351,7 @@ In Kubernetes, a Deployment is responsible for managing multiple instances of a 
 Just like the master, we want to have a Service to proxy connections to the redis slaves. In this case, in addition to discovery, the slave Service will provide transparent load balancing to web app clients.
 
 This time we put the Service and Deployment into one [file](http://kubernetes.io/docs/user-guide/managing-deployments/#organizing-resource-configurations). Grouping related objects together in a single file is often better than having separate files.
-The specification for the slaves is in [all-in-one/redis-slave.yaml](all-in-one/redis-slave.yaml):
+The specification for the slaves is in [all-in-one/redis-slave.yaml](https://git.k8s.io/examples/guestbook/all-in-one/redis-slave.yaml):
 
 <!-- BEGIN MUNGE: EXAMPLE all-in-one/redis-slave.yaml -->
 
@@ -414,7 +420,7 @@ spec:
         - containerPort: 6379
 ```
 
-[Download example](all-in-one/redis-slave.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/redis-slave.yaml)
 <!-- END MUNGE: EXAMPLE all-in-one/redis-slave.yaml -->
 
 This time the selector for the Service is `app=redis,role=slave,tier=backend`, because that identifies the pods running redis slaves. It is generally helpful to set labels on your Service itself as we've done here to make it easy to locate them with the `kubectl get services -l "app=redis,role=slave,tier=backend"` command. For more information on the usage of labels, see [using-labels-effectively](http://kubernetes.io/docs/user-guide/managing-deployments/#using-labels-effectively).
@@ -422,7 +428,7 @@ This time the selector for the Service is `app=redis,role=slave,tier=backend`, b
 Now that you have created the specification, create the Service in your cluster by running:
 
 ```console
-$ kubectl create -f examples/guestbook/all-in-one/redis-slave.yaml
+$ kubectl create -f guestbook/all-in-one/redis-slave.yaml
 service "redis-slave" created
 deployment "redis-slave" created
 
@@ -455,7 +461,7 @@ A frontend pod is a simple PHP server that is configured to talk to either the s
 Again we'll create a set of replicated frontend pods instantiated by a Deployment — this time, with three replicas.
 
 As with the other pods, we now want to create a Service to group the frontend pods.
-The Deployment and Service are described in the file [all-in-one/frontend.yaml](all-in-one/frontend.yaml):
+The Deployment and Service are described in the file [all-in-one/frontend.yaml](https://git.k8s.io/examples/guestbook/all-in-one/frontend.yaml):
 
 <!-- BEGIN MUNGE: EXAMPLE all-in-one/frontend.yaml -->
 
@@ -522,21 +528,21 @@ spec:
         - containerPort: 80
 ```
 
-[Download example](all-in-one/frontend.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/frontend.yaml)
 <!-- END MUNGE: EXAMPLE all-in-one/frontend.yaml -->
 
 #### Using 'type: LoadBalancer' for the frontend service (cloud-provider-specific)
 
 For supported cloud providers, such as Google Compute Engine or Google Container Engine, you can specify to use an external load balancer
 in the service `spec`, to expose the service onto an external load balancer IP.
-To do this, uncomment the `type: LoadBalancer` line in the [all-in-one/frontend.yaml](all-in-one/frontend.yaml) file before you start the service.
+To do this, uncomment the `type: LoadBalancer` line in the [all-in-one/frontend.yaml](https://git.k8s.io/examples/guestbook/all-in-one/frontend.yaml) file before you start the service.
 
 [See the appendix below](#appendix-accessing-the-guestbook-site-externally) on accessing the guestbook site externally for more details.
 
 Create the service and Deployment like this:
 
 ```console
-$ kubectl create -f examples/guestbook/all-in-one/frontend.yaml
+$ kubectl create -f guestbook/all-in-one/frontend.yaml
 service "frontend" created
 deployment "frontend" created
 ```
