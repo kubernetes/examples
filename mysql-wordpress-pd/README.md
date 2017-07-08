@@ -1,4 +1,11 @@
+<!-- EXCLUDE_FROM_DOCS BEGIN -->
+
+> :warning: :warning: Follow this tutorial on the Kubernetes website:
+> https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/.
+> Otherwise some of the URLs will not work properly.
+
 # Persistent Installation of MySQL and WordPress on Kubernetes
+<!-- EXCLUDE_FROM_DOCS END -->
 
 This example describes how to run a persistent installation of
 [WordPress](https://wordpress.org/) and
@@ -31,10 +38,10 @@ your editor added one.
 
 ```shell
 tr --delete '\n' <password.txt >.strippedpassword.txt && mv .strippedpassword.txt password.txt
-kubectl create -f https://raw.githubusercontent.com/kubernetes/kubernetes/master/examples/mysql-wordpress-pd/local-volumes.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/mysql-wordpress-pd/local-volumes.yaml
 kubectl create secret generic mysql-pass --from-file=password.txt
-kubectl create -f https://raw.githubusercontent.com/kubernetes/kubernetes/master/examples/mysql-wordpress-pd/mysql-deployment.yaml
-kubectl create -f https://raw.githubusercontent.com/kubernetes/kubernetes/master/examples/mysql-wordpress-pd/wordpress-deployment.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/mysql-wordpress-pd/mysql-deployment.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/mysql-wordpress-pd/wordpress-deployment.yaml
 ```
 
 ## Table of Contents
@@ -117,11 +124,11 @@ chcon -Rt svirt_sandbox_file_t /tmp/data
 ```
 
 Continuing with host path, create the persistent volume objects in Kubernetes using
-[local-volumes.yaml](local-volumes.yaml):
+[local-volumes.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/local-volumes.yaml):
 
 ```shell
-export KUBE_REPO=https://raw.githubusercontent.com/kubernetes/kubernetes/master
-kubectl create -f $KUBE_REPO/examples/mysql-wordpress-pd/local-volumes.yaml
+export KUBE_REPO=https://raw.githubusercontent.com/kubernetes/examples/master
+kubectl create -f $KUBE_REPO/mysql-wordpress-pd/local-volumes.yaml
 ```
 
 
@@ -134,10 +141,10 @@ Create two persistent disks. You will need to create the disks in the
 same [GCE zone](https://cloud.google.com/compute/docs/zones) as the
 Kubernetes cluster. The default setup script will create the cluster
 in the `us-central1-b` zone, as seen in the
-[config-default.sh](../../cluster/gce/config-default.sh) file. Replace
+[config-default.sh](https://git.k8s.io/kubernetes/cluster/gce/config-default.sh) file. Replace
 `<zone>` below with the appropriate zone. The names `wordpress-1` and
 `wordpress-2` must match the `pdName` fields we have specified in
-[gce-volumes.yaml](gce-volumes.yaml).
+[gce-volumes.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/gce-volumes.yaml).
 
 ```shell
 gcloud compute disks create --size=20GB --zone=<zone> wordpress-1
@@ -147,8 +154,8 @@ gcloud compute disks create --size=20GB --zone=<zone> wordpress-2
 Create the persistent volume objects in Kubernetes for those disks:
 
 ```shell
-export KUBE_REPO=https://raw.githubusercontent.com/kubernetes/kubernetes/master
-kubectl create -f $KUBE_REPO/examples/mysql-wordpress-pd/gce-volumes.yaml
+export KUBE_REPO=https://raw.githubusercontent.com/kubernetes/examples/master
+kubectl create -f $KUBE_REPO/mysql-wordpress-pd/gce-volumes.yaml
 ```
 
 ## Create the MySQL Password Secret
@@ -175,13 +182,13 @@ access the database.
 
 Now that the persistent disks and secrets are defined, the Kubernetes
 pods can be launched. Start MySQL using
-[mysql-deployment.yaml](mysql-deployment.yaml).
+[mysql-deployment.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/mysql-deployment.yaml).
 
 ```shell
-kubectl create -f $KUBE_REPO/examples/mysql-wordpress-pd/mysql-deployment.yaml
+kubectl create -f $KUBE_REPO/mysql-wordpress-pd/mysql-deployment.yaml
 ```
 
-Take a look at [mysql-deployment.yaml](mysql-deployment.yaml), and
+Take a look at [mysql-deployment.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/mysql-deployment.yaml), and
 note that we've defined a volume mount for `/var/lib/mysql`, and then
 created a Persistent Volume Claim that looks for a 20G volume. This
 claim is satisfied by any volume that meets the requirements, in our
@@ -230,7 +237,7 @@ kubectl logs <pod-name>
 Version: '5.6.29'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
 ```
 
-Also in [mysql-deployment.yaml](mysql-deployment.yaml) we created a
+Also in [mysql-deployment.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/mysql-deployment.yaml) we created a
 service to allow other pods to reach this mysql instance. The name is
 `wordpress-mysql` which resolves to the pod IP.
 
@@ -264,10 +271,10 @@ local-pv-2   20Gi       RWO           Bound       default/mysql-pv-claim        
 ## Deploy WordPress
 
 Next deploy WordPress using
-[wordpress-deployment.yaml](wordpress-deployment.yaml):
+[wordpress-deployment.yaml](https://git.k8s.io/examples/mysql-wordpress-pd/wordpress-deployment.yaml):
 
 ```shell
-kubectl create -f $KUBE_REPO/examples/mysql-wordpress-pd/wordpress-deployment.yaml
+kubectl create -f $KUBE_REPO/mysql-wordpress-pd/wordpress-deployment.yaml
 ```
 
 Here we are using many of the same features, such as a volume claim

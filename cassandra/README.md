@@ -1,5 +1,11 @@
+<!-- EXCLUDE_FROM_DOCS BEGIN -->
+
+> :warning: :warning: Follow this tutorial on the Kubernetes website:
+> https://kubernetes.io/docs/tutorials/stateful-application/cassandra/.
+> Otherwise some of the URLs will not work properly.
 
 # Cloud Native Deployments of Cassandra using Kubernetes
+<!-- EXCLUDE_FROM_DOCS END -->
 
 ## Table of Contents
 
@@ -27,18 +33,18 @@ new Cassandra nodes as they join the cluster.
 
 This example also uses some of the core components of Kubernetes:
 
-- [_Pods_](../../../docs/user-guide/pods.md)
-- [ _Services_](../../../docs/user-guide/services.md)
-- [_Replication Controllers_](../../../docs/user-guide/replication-controller.md)
-- [_Stateful Sets_](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
-- [_Daemon Sets_](../../../docs/admin/daemons.md)
+- [_Pods_](/docs/user-guide/pods)
+- [ _Services_](/docs/user-guide/services)
+- [_Replication Controllers_](/docs/user-guide/replication-controller)
+- [_Stateful Sets_](/docs/concepts/workloads/controllers/statefulset/)
+- [_Daemon Sets_](/docs/admin/daemons)
 
 ## Prerequisites
 
 This example assumes that you have a Kubernetes version >=1.2 cluster installed and running,
-and that you have installed the [`kubectl`](../../../docs/user-guide/kubectl/kubectl.md)
+and that you have installed the [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 command line tool somewhere in your path.  Please see the
-[getting started guides](../../../docs/getting-started-guides/)
+[getting started guides](https://kubernetes.io/docs/getting-started-guides/)
 for installation instructions for your platform.
 
 This example also has a few code and configuration files needed.  To avoid
@@ -68,17 +74,21 @@ here are the steps:
 # StatefulSet
 #
 
+# clone the example repository
+git clone https://github.com/kubernetes/examples
+cd examples
+
 # create a service to track all cassandra statefulset nodes
-kubectl create -f examples/storage/cassandra/cassandra-service.yaml
+kubectl create -f cassandra/cassandra-service.yaml
 
 # create a statefulset
-kubectl create -f examples/storage/cassandra/cassandra-statefulset.yaml
+kubectl create -f cassandra/cassandra-statefulset.yaml
 
 # validate the Cassandra cluster. Substitute the name of one of your pods.
 kubectl exec -ti cassandra-0 -- nodetool status
 
 # cleanup
-grace=$(kubectl get po cassandra-0 --template '{{.spec.terminationGracePeriodSeconds}}') \
+grace=$(kubectl get po cassandra-0 -o=jsonpath='{.spec.terminationGracePeriodSeconds}') \
   && kubectl delete statefulset,po -l app=cassandra \
   && echo "Sleeping $grace" \
   && sleep $grace \
@@ -89,7 +99,7 @@ grace=$(kubectl get po cassandra-0 --template '{{.spec.terminationGracePeriodSec
 #
 
 # create a replication controller to replicate cassandra nodes
-kubectl create -f examples/storage/cassandra/cassandra-controller.yaml
+kubectl create -f cassandra/cassandra-controller.yaml
 
 # validate the Cassandra cluster. Substitute the name of one of your pods.
 kubectl exec -ti cassandra-xxxxx -- nodetool status
@@ -104,7 +114,7 @@ kubectl delete rc cassandra
 # Create a DaemonSet to place a cassandra node on each kubernetes node
 #
 
-kubectl create -f examples/storage/cassandra/cassandra-daemonset.yaml --validate=false
+kubectl create -f cassandra/cassandra-daemonset.yaml --validate=false
 
 # resource cleanup
 kubectl delete service -l app=cassandra
@@ -113,8 +123,8 @@ kubectl delete daemonset cassandra
 
 ## Step 1: Create a Cassandra Headless Service
 
-A Kubernetes _[Service](../../../docs/user-guide/services.md)_ describes a set of
-[_Pods_](../../../docs/user-guide/pods.md) that perform the same task. In
+A Kubernetes _[Service](/docs/user-guide/services)_ describes a set of
+[_Pods_](/docs/user-guide/pods) that perform the same task. In
 Kubernetes, the atomic unit of an application is a Pod: one or more containers
 that _must_ be scheduled onto the same host.
 
@@ -140,14 +150,14 @@ spec:
     app: cassandra
 ```
 
-[Download example](cassandra-service.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/cassandra-service.yaml)
 <!-- END MUNGE: EXAMPLE cassandra-service.yaml -->
 
 Create the service for the StatefulSet:
 
 
 ```console
-$ kubectl create -f examples/storage/cassandra/cassandra-service.yaml
+$ kubectl create -f cassandra/cassandra-service.yaml
 ```
 
 The following command shows if the service has been created.
@@ -278,13 +288,13 @@ parameters:
   type: pd-ssd
 ```
 
-[Download example](cassandra-statefulset.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/cassandra-statefulset.yaml)
 <!-- END MUNGE: EXAMPLE cassandra-statefulset.yaml -->
 
 Create the Cassandra StatefulSet as follows:
 
 ```console
-$ kubectl create -f examples/storage/cassandra/cassandra-statefulset.yaml
+$ kubectl create -f cassandra/cassandra-statefulset.yaml
 ```
 
 ## Step 3: Validate and Modify The Cassandra StatefulSet
@@ -353,7 +363,7 @@ system_traces  system_schema  system_auth  system  system_distributed
 ```
 
 In order to increase or decrease the size of the Cassandra StatefulSet, you must use
-`kubectl edit`.  You can find more information about the edit command in the [documentation](../../../docs/user-guide/kubectl/kubectl_edit.md).
+`kubectl edit`.  You can find more information about the edit command in the [documentation](/docs/user-guide/kubectl/kubectl_edit).
 
 Use the following command to edit the StatefulSet.
 
@@ -416,7 +426,7 @@ Deleting and/or scaling a StatefulSet down will not delete the volumes associate
 Use the following commands to delete the StatefulSet.
 
 ```console
-$ grace=$(kubectl get po cassandra-0 --template '{{.spec.terminationGracePeriodSeconds}}') \
+$ grace=$(kubectl get po cassandra-0 -o=jsonpath='{.spec.terminationGracePeriodSeconds}') \
   && kubectl delete statefulset -l app=cassandra \
   && echo "Sleeping $grace" \
   && sleep $grace \
@@ -426,7 +436,7 @@ $ grace=$(kubectl get po cassandra-0 --template '{{.spec.terminationGracePeriodS
 ## Step 5: Use a Replication Controller to create Cassandra node pods
 
 A Kubernetes
-_[Replication Controller](../../../docs/user-guide/replication-controller.md)_
+_[Replication Controller](/docs/user-guide/replication-controller)_
 is responsible for replicating sets of identical pods.  Like a
 Service, it has a selector query which identifies the members of its set.
 Unlike a Service, it also has a desired number of replicas, and it will create
@@ -500,7 +510,7 @@ spec:
           emptyDir: {}
 ```
 
-[Download example](cassandra-controller.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/cassandra-controller.yaml)
 <!-- END MUNGE: EXAMPLE cassandra-controller.yaml -->
 
 There are a few things to note in this description.
@@ -520,7 +530,7 @@ Create the Replication Controller:
 
 ```console
 
-$ kubectl create -f examples/storage/cassandra/cassandra-controller.yaml
+$ kubectl create -f cassandra/cassandra-controller.yaml
 
 ```
 
@@ -654,7 +664,7 @@ $ kubectl delete rc cassandra
 
 ## Step 8: Use a DaemonSet instead of a Replication Controller
 
-In Kubernetes, a [_Daemon Set_](../../../docs/admin/daemons.md) can distribute pods
+In Kubernetes, a [_Daemon Set_](/docs/admin/daemons) can distribute pods
 onto Kubernetes nodes, one-to-one.  Like a _ReplicationController_, it has a
 selector query which identifies the members of its set.  Unlike a
 _ReplicationController_, it has a node selector to limit which nodes are
@@ -732,7 +742,7 @@ spec:
           emptyDir: {}
 ```
 
-[Download example](cassandra-daemonset.yaml?raw=true)
+[Download example](https://raw.githubusercontent.com/kubernetes/examples/master/cassandra-daemonset.yaml)
 <!-- END MUNGE: EXAMPLE cassandra-daemonset.yaml -->
 
 Most of this DaemonSet definition is identical to the ReplicationController
@@ -748,7 +758,7 @@ Create this DaemonSet:
 
 ```console
 
-$ kubectl create -f examples/storage/cassandra/cassandra-daemonset.yaml
+$ kubectl create -f cassandra/cassandra-daemonset.yaml
 
 ```
 
@@ -756,7 +766,7 @@ You may need to disable config file validation, like so:
 
 ```console
 
-$ kubectl create -f examples/storage/cassandra/cassandra-daemonset.yaml --validate=false
+$ kubectl create -f cassandra/cassandra-daemonset.yaml --validate=false
 
 ```
 
@@ -834,7 +844,7 @@ ring. The [`KubernetesSeedProvider`](java/src/main/java/io/k8s/cassandra/Kuberne
 discovers Cassandra seeds IP addresses via the Kubernetes API, those Cassandra
 instances are defined within the Cassandra Service.
 
-Refer to the custom seed provider [README](java/README.md) for further
+Refer to the custom seed provider [README](https://git.k8s.io/examples/cassandra/java/README.md) for further
 `KubernetesSeedProvider` configurations. For this example you should not need
 to customize the Seed Provider configurations.
 
@@ -843,12 +853,12 @@ how the container docker image was built and what it contains.
 
 You may also note that we are setting some Cassandra parameters (`MAX_HEAP_SIZE`
 and `HEAP_NEWSIZE`), and adding information about the
-[namespace](../../../docs/user-guide/namespaces.md).
+[namespace](/docs/user-guide/namespaces).
 We also tell Kubernetes that the container exposes
 both the `CQL` and `Thrift` API ports.  Finally, we tell the cluster
 manager that we need 0.1 cpu (0.1 core).
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storage/cassandra/README.md?pixel)]()
+[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/cassandra/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->
