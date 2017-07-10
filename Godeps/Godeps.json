@@ -1,0 +1,43 @@
+{
+	"ImportPath": "github.com/kubernetes/examples",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Packages": [
+		"./cassandra/test-server/..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/gocql/gocql",
+			"Comment": "pre-node-events-508-g3e8b36f",
+			"Rev": "3e8b36f5e9e52cdeb265f385808c504a53db55fc"
+		},
+		{
+			"ImportPath": "github.com/gocql/gocql/internal/lru",
+			"Comment": "pre-node-events-508-g3e8b36f",
+			"Rev": "3e8b36f5e9e52cdeb265f385808c504a53db55fc"
+		},
+		{
+			"ImportPath": "github.com/gocql/gocql/internal/murmur",
+			"Comment": "pre-node-events-508-g3e8b36f",
+			"Rev": "3e8b36f5e9e52cdeb265f385808c504a53db55fc"
+		},
+		{
+			"ImportPath": "github.com/gocql/gocql/internal/streams",
+			"Comment": "pre-node-events-508-g3e8b36f",
+			"Rev": "3e8b36f5e9e52cdeb265f385808c504a53db55fc"
+		},
+		{
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "553a641470496b2327abcac10b36396bd98e45c9"
+		},
+		{
+			"ImportPath": "github.com/hailocab/go-hostpool",
+			"Rev": "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
+		},
+		{
+			"ImportPath": "gopkg.in/inf.v0",
+			"Comment": "v0.9.0",
+			"Rev": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4"
+		}
+	]
+}
