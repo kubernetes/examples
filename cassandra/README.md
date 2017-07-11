@@ -53,7 +53,7 @@ computer.
 
 ## Cassandra Docker
 
-The pods use the [```gcr.io/google-samples/cassandra:v12```](image/Dockerfile)
+The pods use the [```gcr.io/google-samples/cassandra:v12```](https://github.com/kubernetes/examples/blob/master/cassandra/image/Dockerfile)
 image from Google's [container registry](https://cloud.google.com/container-registry/docs/).
 The docker is based on `debian:jessie` and includes OpenJDK 8. This image
 includes a standard Cassandra installation from the Apache Debian repo.  Through the use of environment variables you are able to change values that are inserted into the `cassandra.yaml`.
@@ -840,7 +840,7 @@ via a replication control or a daemonset, you will need to use the custom seed p
 In Cassandra, a `SeedProvider` bootstraps the gossip protocol that Cassandra uses to find other
 Cassandra nodes. Seed addresses are hosts deemed as contact points. Cassandra
 instances use the seed list to find each other and learn the topology of the
-ring. The [`KubernetesSeedProvider`](java/src/main/java/io/k8s/cassandra/KubernetesSeedProvider.java)
+ring. The [`KubernetesSeedProvider`](https://github.com/kubernetes/examples/blob/master/cassandra/java/src/main/java/io/k8s/cassandra/KubernetesSeedProvider.java)
 discovers Cassandra seeds IP addresses via the Kubernetes API, those Cassandra
 instances are defined within the Cassandra Service.
 
@@ -848,7 +848,7 @@ Refer to the custom seed provider [README](https://git.k8s.io/examples/cassandra
 `KubernetesSeedProvider` configurations. For this example you should not need
 to customize the Seed Provider configurations.
 
-See the [image](image/) directory of this example for specifics on
+See the [image](https://github.com/kubernetes/examples/tree/master/cassandra/image) directory of this example for specifics on
 how the container docker image was built and what it contains.
 
 You may also note that we are setting some Cassandra parameters (`MAX_HEAP_SIZE`
