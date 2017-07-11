@@ -263,7 +263,7 @@ redis-slave
 ```
 
 Tip: To turn down your Kubernetes cluster, follow the corresponding instructions in the version of the
-[Getting Started Guides](../../docs/getting-started-guides/) that you previously used to create your cluster.
+[Getting Started Guides](https://kubernetes.io/docs/getting-started-guides/) that you previously used to create your cluster.
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
