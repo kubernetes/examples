@@ -167,7 +167,7 @@ A Kubernetes [Service](http://kubernetes.io/docs/user-guide/services/) is a name
 Services find the pods to load balance based on the pods' labels.
 The selector field of the Service description determines which pods will receive the traffic sent to the Service, and the `port` and `targetPort` information defines what port the Service proxy will run at.
 
-The file [redis-master-service.yaml](https://git.k8s.io/examples/guestbook/redis-master-deployment.yaml) defines the redis master Service:
+The file [redis-master-service.yaml](https://git.k8s.io/examples/guestbook/redis-master-service.yaml) defines the redis master Service:
 
 <!-- BEGIN MUNGE: EXAMPLE redis-master-service.yaml -->
 
