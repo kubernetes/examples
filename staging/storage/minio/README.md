@@ -247,8 +247,6 @@ spec:
   replicas: 4
   template:
     metadata:
-      annotations:
-        pod.alpha.kubernetes.io/initialized: "true"
       labels:
         app: minio
     spec:
