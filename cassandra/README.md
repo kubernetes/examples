@@ -14,6 +14,8 @@ title: Using StatefulSets with Cassandra
 {% capture overview %}
 This tutorial shows you how to develop a native cloud [Cassandra](http://cassandra.apache.org/) deployment on Kubernetes. In this instance, a custom Cassandra `SeedProvider` enables Cassandra to discover new Cassandra nodes as they join the cluster.
 
+Deploying stateful distributed applications, like Cassandra, within a clustered environment can be challenging. StatefulSets greatly simplify this process. Please read about [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)  for more information about the features used in this tutorial.
+
 **Cassandra Docker**
 The pods use the [```gcr.io/google-samples/cassandra:v12```](https://github.com/kubernetes/examples/blob/master/cassandra/image/Dockerfile)
 image from Google's [container registry](https://cloud.google.com/container-registry/docs/).
@@ -44,7 +46,7 @@ To complete this tutorial, you should already have a basic familiarity with [Pod
 
 * Have a supported Kubernetes Cluster running
 
-Read the [getting started guides](https://kubernetes.io/docs/docs/setup/pick-right-solution/) if you don’t already have a cluster. 
+**Note:** Please read the [getting started guides](https://kubernetes.io/docs/docs/setup/pick-right-solution/) if you do not already have a cluster. 
 
 ### Additional Minikube Setup Instructions
 
@@ -131,7 +133,7 @@ cassandra-0   1/1       Running             0          1m
 cassandra-1   0/1       ContainerCreating   0          8s
 ```
 
-**Note**: It can take up to ten minutes for all three pods to deploy. 
+**Note:** It can take up to ten minutes for all three pods to deploy. 
 
 Once all pods are deployed, the same command returns:
 
