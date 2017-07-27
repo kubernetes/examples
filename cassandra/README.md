@@ -13,6 +13,7 @@ This tutorial shows you how to develop a native cloud [Cassandra](http://cassand
 Deploying stateful distributed applications, like Cassandra, within a clustered environment can be challenging. StatefulSets greatly simplify this process. Please read about [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)  for more information about the features used in this tutorial.
 
 **Cassandra Docker**
+
 The pods use the [```gcr.io/google-samples/cassandra:v12```](https://github.com/kubernetes/examples/blob/master/cassandra/image/Dockerfile)
 image from Google's [container registry](https://cloud.google.com/container-registry/docs/).
 The docker is based on `debian:jessie` and includes OpenJDK 8. This image includes a standard Cassandra installation from the Apache Debian repo.  By using environment variables you can change values that are inserted into `cassandra.yaml`.
@@ -34,19 +35,19 @@ The docker is based on `debian:jessie` and includes OpenJDK 8. This image includ
 {% endcapture %}
 
 {% capture prerequisites %}
-To complete this tutorial, you should already have a basic familiarity with [Pods](https://kubernetes.io/docs/docs/concepts/workloads/pods/pod/), [Services](https://kubernetes.io/docs/docs/concepts/services-networking/service/), and [StatefulSets](https://kubernetes.io/docs/docs/concepts/workloads/controllers/statefulset/). In addition, you should:
+To complete this tutorial, you should already have a basic familiarity with [Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/), [Services](https://kubernetes.io/docs/concepts/services-networking/service/), and [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). In addition, you should:
 
-* [Install and Configure](https://kubernetes.io/docs/docs/tasks/tools/install-kubectl/) the `kubectl` command line
+* [Install and Configure](https://kubernetes.io/docs/tasks/tools/install-kubectl/) the `kubectl` command line
 
-* Download [cassandra-service.yaml](https://kubernetes.io/docs/docs/tutorials/stateful-application/cassandra-service.yaml) and [cassandra-statefulset.yaml](https://kubernetes.io/docs/docs/tutorials/stateful-application/cassandra-statefulset.yaml)
+* Download [cassandra-service.yaml](https://kubernetes.io/docs/tutorials/stateful-application/cassandra-service.yaml) and [cassandra-statefulset.yaml](https://kubernetes.io/docs/tutorials/stateful-application/cassandra-statefulset.yaml)
 
 * Have a supported Kubernetes Cluster running
 
-**Note:** Please read the [getting started guides](https://kubernetes.io/docs/docs/setup/pick-right-solution/) if you do not already have a cluster. 
+**Note:** Please read the [getting started guides](https://kubernetes.io/docs/setup/pick-right-solution/) if you do not already have a cluster. 
 
 ### Additional Minikube Setup Instructions
 
-**Warning:** [Minikube](https://kubernetes.io/docs/docs/getting-started-guides/minikube/) defaults to 1024MB of memory and 1 CPU which results in an insufficient resource errors. 
+**Warning:** [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube/) defaults to 1024MB of memory and 1 CPU which results in an insufficient resource errors. 
 
 To avoid these errors, run minikube with:
 
@@ -57,7 +58,7 @@ minikube start --memory 5120 --cpus=4
 
 {% capture lessoncontent %}
 ## Creating a Cassandra Headless Service
-A Kubernetes [Service](/docs/concepts/services-networking/service/) describes a set of [Pods](https://kubernetes.io/docs/docs/concepts/workloads/pods/pod/) that perform the same task. 
+A Kubernetes [Service](https://kubernetes.io/docs/concepts/services-networking/service/) describes a set of [Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/) that perform the same task. 
 
 The following `Service` is used for DNS lookups between Cassandra pods and clients within the Kubernetes Cluster.
 
@@ -85,7 +86,7 @@ NAME        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
 cassandra   None         <none>        9042/TCP   45s
 ```
 
-If anything else returns, the service was not successfully created. Read [Debug Services](https://kubernetes.io/docs/docs/tasks/debug-application-cluster/debug-service/) for common issues.
+If anything else returns, the service was not successfully created. Read [Debug Services](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/) for common issues.
 
 ## Using a StatefulSet to Create a Cassandra Ring
 
@@ -141,7 +142,8 @@ cassandra-1   1/1       Running   0          9m
 cassandra-2   1/1       Running   0          8m
 ```
 
-Running the Cassandra utility `nodetool` displays the status of the ring.
+{:start="3"}
+3. Run the Cassandra utility nodetool to display the status of the ring.
 
 ```
 kubectl exec cassandra-0 -- nodetool status
@@ -157,6 +159,7 @@ UN  10.4.2.4  65.26 KiB  32           63.7%             a9d27f81-6783-461d-8583-
 UN  10.4.0.4  102.04 KiB  32           66.7%             5559a58c-8b03-47ad-bc32-c621708dc2e4  Rack1-K8Demo
 UN  10.4.1.4  83.06 KiB  32           69.6%             9dce943c-581d-4c0e-9543-f519969cc805  Rack1-K8Demo
 ```
+
 ## Modifying the Cassandra StatefulSet
 Use `kubectl edit` to modify the size of of a Cassandra StatefulSet. 
 
@@ -166,6 +169,7 @@ Use `kubectl edit` to modify the size of of a Cassandra StatefulSet.
 kubectl edit statefulset cassandra
 ```
    This command opens an editor in your terminal. The line you need to change is `Replicas`.
+   
    **Note:** The following sample is an excerpt of the StatefulSet file.
 
 ```console
@@ -222,6 +226,7 @@ grace=$(kubectl get po cassandra-0 -o=jsonpath='{.spec.terminationGracePeriodSec
   && sleep $grace \
   && kubectl delete pvc -l app=cassandra
 ```
+
 2. Run the following command to delete the Cassandra `Service`.
 
 ```shell
@@ -231,7 +236,7 @@ kubectl delete service -l app=cassandra
 {% endcapture %}
 
 {% capture whatsnext %}
-* Learn how to [Scale a StatefullSet](https://kubernetes.io/docs/docs/tasks/run-application/scale-stateful-set/).
+* Learn how to [Scale a StatefulSet](https://kubernetes.io/docs/tasks/run-application/scale-stateful-set/).
 * Learn more about the [KubernetesSeedProvider](https://github.com/kubernetes/examples/blob/master/cassandra/java/src/main/java/io/k8s/cassandra/KubernetesSeedProvider.java)
 * See more custom [Seed Provider Configurations](https://git.k8s.io/examples/cassandra/java/README.md)
 
