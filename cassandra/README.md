@@ -236,7 +236,7 @@ kubectl delete service -l app=cassandra
 {% endcapture %}
 
 {% capture whatsnext %}
-* Learn how to [Scale a StatefullSet](https://kubernetes.io/docs/tasks/run-application/scale-stateful-set/).
+* Learn how to [Scale a StatefulSet](https://kubernetes.io/docs/tasks/run-application/scale-stateful-set/).
 * Learn more about the [KubernetesSeedProvider](https://github.com/kubernetes/examples/blob/master/cassandra/java/src/main/java/io/k8s/cassandra/KubernetesSeedProvider.java)
 * See more custom [Seed Provider Configurations](https://git.k8s.io/examples/cassandra/java/README.md)
 
