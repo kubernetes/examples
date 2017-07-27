@@ -7,10 +7,6 @@
 # Cloud Native Deployments of Cassandra using Kubernetes
 <!-- EXCLUDE_FROM_DOCS END -->
 
----
-title: Using StatefulSets with Cassandra
----
-
 {% capture overview %}
 This tutorial shows you how to develop a native cloud [Cassandra](http://cassandra.apache.org/) deployment on Kubernetes. In this instance, a custom Cassandra `SeedProvider` enables Cassandra to discover new Cassandra nodes as they join the cluster.
 
