@@ -57,10 +57,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
-          - name: POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
         readinessProbe:
           exec:
             command:
@@ -93,6 +89,6 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1beta1
 metadata:
   name: fast
-provisioner: kubernetes.io/gce-pd
+provisioner: k8s.io/minikube-hostpath
 parameters:
   type: pd-ssd
