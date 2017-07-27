@@ -58,7 +58,7 @@ minikube start --memory 5120 --cpus=4
 
 {% capture lessoncontent %}
 ## Creating a Cassandra Headless Service
-A Kubernetes [Service](https://kubernetes.io//docs/concepts/services-networking/service/) describes a set of [Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/) that perform the same task. 
+A Kubernetes [Service](https://kubernetes.io/docs/concepts/services-networking/service/) describes a set of [Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/) that perform the same task. 
 
 The following `Service` is used for DNS lookups between Cassandra pods and clients within the Kubernetes Cluster.
 
