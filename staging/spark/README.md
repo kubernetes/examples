@@ -31,7 +31,7 @@ Optionally, your Kubernetes cluster should be configured with a Loadbalancer int
 ## Step One: Create namespace
 
 ```sh
-$ kubectl create -f examples/spark/namespace-spark-cluster.yaml
+$ kubectl create -f examples/staging/spark/namespace-spark-cluster.yaml
 ```
 
 Now list all namespaces:
@@ -59,23 +59,23 @@ The Master [service](../../docs/user-guide/services.md) is the master service
 for a Spark cluster.
 
 Use the
-[`examples/spark/spark-master-controller.yaml`](spark-master-controller.yaml)
+[`examples/staging/sparkspark/spark-master-controller.yaml`](spark-master-controller.yaml)
 file to create a
 [replication controller](../../docs/user-guide/replication-controller.md)
 running the Spark Master service.
 
 ```console
-$ kubectl create -f examples/spark/spark-master-controller.yaml
+$ kubectl create -f examples/staging/spark/spark-master-controller.yaml
 replicationcontroller "spark-master-controller" created
 ```
 
 Then, use the
-[`examples/spark/spark-master-service.yaml`](spark-master-service.yaml) file to
+[`examples/staging/spark/spark-master-service.yaml`](spark-master-service.yaml) file to
 create a logical service endpoint that Spark workers can use to access the
 Master pod:
 
 ```console
-$ kubectl create -f examples/spark/spark-master-service.yaml
+$ kubectl create -f examples/staging/spark/spark-master-service.yaml
 service "spark-master" created
 ```
 
@@ -113,17 +113,17 @@ Spark Command: /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java -cp /opt/spark-1.5
 
 Once the master is started, we'll want to check the Spark WebUI. In order to access the Spark WebUI, we will deploy a [specialized proxy](https://github.com/aseigneurin/spark-ui-proxy). This proxy is neccessary to access worker logs from the Spark UI.
 
-Deploy the proxy controller with [`examples/spark/spark-ui-proxy-controller.yaml`](spark-ui-proxy-controller.yaml):
+Deploy the proxy controller with [`examples/staging/spark/spark-ui-proxy-controller.yaml`](spark-ui-proxy-controller.yaml):
 
 ```console
-$ kubectl create -f examples/spark/spark-ui-proxy-controller.yaml
+$ kubectl create -f examples/staging/spark/spark-ui-proxy-controller.yaml
 replicationcontroller "spark-ui-proxy-controller" created
 ```
 
-We'll also need a corresponding Loadbalanced service for our Spark Proxy [`examples/spark/spark-ui-proxy-service.yaml`](spark-ui-proxy-service.yaml):
+We'll also need a corresponding Loadbalanced service for our Spark Proxy [`examples/staging/spark/spark-ui-proxy-service.yaml`](spark-ui-proxy-service.yaml):
 
 ```console
-$ kubectl create -f examples/spark/spark-ui-proxy-service.yaml
+$ kubectl create -f examples/staging/spark/spark-ui-proxy-service.yaml
 service "spark-ui-proxy" created
 ```
 
@@ -155,11 +155,11 @@ program.
 
 The Spark workers need the Master service to be running.
 
-Use the [`examples/spark/spark-worker-controller.yaml`](spark-worker-controller.yaml) file to create a
+Use the [`examples/staging/spark/spark-worker-controller.yaml`](spark-worker-controller.yaml) file to create a
 [replication controller](../../docs/user-guide/replication-controller.md) that manages the worker pods.
 
 ```console
-$ kubectl create -f examples/spark/spark-worker-controller.yaml
+$ kubectl create -f examples/staging/spark/spark-worker-controller.yaml
 replicationcontroller "spark-worker-controller" created
 ```
 
@@ -195,14 +195,14 @@ for more details.
 Deploy Zeppelin:
 
 ```console
-$ kubectl create -f examples/spark/zeppelin-controller.yaml
+$ kubectl create -f examples/staging/spark/zeppelin-controller.yaml
 replicationcontroller "zeppelin-controller" created
 ```
 
 And the corresponding service:
 
 ```console
-$ kubectl create -f examples/spark/zeppelin-service.yaml
+$ kubectl create -f examples/staging/spark/zeppelin-service.yaml
 service "zeppelin" created
 ```
 
@@ -311,7 +311,7 @@ information.
 ## tl;dr
 
 ```console
-kubectl create -f examples/spark
+kubectl create -f examples/staging/spark
 ```
 
 After it's setup:
@@ -352,7 +352,7 @@ Then visit [http://localhost:8080/](http://localhost:8080/).
   to submit jobs using external client other than Zeppelin or `spark-submit` on
   the `zeppelin` pod, you will need to provide a way for your clients to get to
   the
-  [`examples/spark/spark-master-service.yaml`](spark-master-service.yaml). See
+  [`examples/staging/spark/spark-master-service.yaml`](spark-master-service.yaml). See
   [Services](../../docs/user-guide/services.md) for more information.
 
 ## Known Issues With Zeppelin
@@ -369,5 +369,5 @@ Then visit [http://localhost:8080/](http://localhost:8080/).
   restarted. See #12179.
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/spark/README.md?pixel)]()
+[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/spark/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->
