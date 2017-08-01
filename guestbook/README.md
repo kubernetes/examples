@@ -31,12 +31,12 @@ This tutorial shows you how to build a simple, multi-tier web application using 
 
 {% include task-tutorial-prereqs.md %}
 Download the following configuration files:
-1. [redis-master-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-master-deployment.yaml): Redis master deployment 
-2. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-master-service.yaml): Redis master service
-3. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-slave-deployment.yaml): Redis workers deployment
-4. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-slave-service.yaml): Redis workers service
-5. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/frontend-deployment.yaml): the guestbook frontend deployment
-6. [frontend-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/frontend-service.yaml): the guestbook frontend service
+1. [redis-master-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-master-deployment.yaml)
+2. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-master-service.yaml)
+3. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-slave-deployment.yaml)
+4. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/redis-slave-service.yaml)
+5. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/frontend-deployment.yaml)
+6. [frontend-service.yaml](https://kubernetes.io/docs/tutorials//docs/tutorials/stateless-application/frontend-service.yaml)
 
 {% endcapture %}
 
@@ -88,7 +88,7 @@ kubectl create -f redis-master-service.yaml
 {% include code.html language="yaml" file="redis-master-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml" %}
 
 {:start="2"}
-2. Get the service to verify that the Redis Master Service is running:
+2. Get the Service to verify that the Redis Master Service is running:
 ```shell
 kubectl get service
 ```
@@ -156,7 +156,7 @@ redis-slave    10.0.0.223   <none>        6379/TCP   6s
 ```
 
 ## Set up and Expose the Guestbook Frontend
-This tutorial uses a simple PHP server that is configured to talk to either the slave or master services, depending on whether the client request is a read or a write. It exposes a simple JSON interface, and serves a jQuery-Ajax-based UX.
+This tutorial uses a simple PHP server that is configured to talk to either the slave or master Services, depending on whether the client request is a read or a write. It exposes a simple JSON interface, and serves a jQuery-Ajax-based UX.
 
 ### Creating the Guestbook Frontend Deployment
 1. Create the frontend Deployment from the following `.yaml` file:
