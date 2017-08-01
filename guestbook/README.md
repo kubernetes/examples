@@ -67,6 +67,7 @@ The response should be similar to this:
 NAME                            READY     STATUS    RESTARTS   AGE
 redis-master-1068406935-3lswp   1/1       Running   0          28s
 ```
+
 {:start="4"}
 4. Run the following command to view the logs from the Redis Master Pod:
 
@@ -89,6 +90,7 @@ kubectl create -f redis-master-service.yaml
 
 {:start="2"}
 2. Get the Service to verify that the Redis Master Service is running:
+
 ```shell
 kubectl get service
 ```
@@ -114,6 +116,7 @@ If there are not any replicas running, this Deployment would start the two repli
 ```shell
 kubectl create -f redis-slave-deployment.yaml
 ```
+
 {% include code.html language="yaml" file="redis-slave-deployment.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-slave-deployment.yaml" %}
 
 {:start="2"}
@@ -138,6 +141,7 @@ The guestbook application needs to communicate to Redis workers to read data. To
 ```shell
 kubectl create -f redis-slave-service.yaml
 ```
+
 {% include code.html language="yaml" file="redis-slave-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-slave-service.yaml" %}
 
 {:start="2"}
@@ -164,6 +168,7 @@ This tutorial uses a simple PHP server that is configured to talk to either the 
 ```shell
 kubectl create -f frontend-deployment.yaml
 ```
+
 {% include code.html language="yaml" file="frontend-deployment.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/frontend-deployment.yaml" %}
 
 {:start="2"}
@@ -172,7 +177,9 @@ kubectl create -f frontend-deployment.yaml
 ```shell
 kubectl get pods -l app=guestbook -l tier=frontend
 ```
+
 The response should be similar to this:
+
 ```shell
 NAME                        READY     STATUS    RESTARTS   AGE
 frontend-3823415956-dsvc5   1/1       Running   0          54s
@@ -181,7 +188,7 @@ frontend-3823415956-w9gbt   1/1       Running   0          54s
 ```
 
 ### Creating the Frontend Service
-The `redis-slave` and `redis-master` Services you created are only accessible within the container cluster because the default type for a Service is `[ClusterIP](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types)`. `ClusterIP` provides a single IP address for the set of Pods the Service is pointing to. This IP address is accessible only within the cluster.
+The `redis-slave` and `redis-master` Services you created are only accessible within the container cluster because the default type for a Service is [ClusterIP](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types). `ClusterIP` provides a single IP address for the set of Pods the Service is pointing to. This IP address is accessible only within the cluster.
 
 If you want guests to be able to access your guestbook, you must configure the frontend Service to be externally visible, so a client can request the Service from outside the container cluster. Minikube can only expose Services through `NodePort`.  
 
@@ -193,15 +200,18 @@ If you want guests to be able to access your guestbook, you must configure the f
 ```shell
 kubectl create -f frontend-service.yaml
 ```
+
 {% include code.html language="yaml" file="frontend-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/frontend-service.yaml" %}
 
 {:start="2"}
 2. Get the Services to verify that the frontend Service is running:
 
 ```shell
-kubectl get services 
+kubectl
+get services 
 ```
 The response should be similar to this:
+
 ```shell
 NAME           CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
 frontend       10.0.0.112   <nodes>       80:31323/TCP   6s
@@ -244,6 +254,7 @@ The response should be similar to this:
 NAME       CLUSTER-IP      EXTERNAL-IP        PORT(S)        AGE
 frontend   10.51.242.136   109.197.92.229     80:32372/TCP   1m
 ```
+
 {:start="2"}
 2. Copy the External IP address, and load the page.
 
@@ -275,6 +286,7 @@ redis-master-1068406935-3lswp   1/1       Running   0          56m
 redis-slave-2005841000-fpvqc    1/1       Running   0          55m
 redis-slave-2005841000-phfv9    1/1       Running   0          55m
 ```
+
 {:start="3"}
 3. Run the following command to scale down the number of frontend Pods:
 
@@ -299,6 +311,7 @@ redis-master-1068406935-3lswp   1/1       Running   0          1h
 redis-slave-2005841000-fpvqc    1/1       Running   0          1h
 redis-slave-2005841000-phfv9    1/1       Running   0          1h
 ```
+
 {% endcapture %}
 
 {% capture cleanup %}
