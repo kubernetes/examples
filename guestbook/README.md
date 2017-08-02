@@ -40,9 +40,11 @@ Download the following configuration files:
 {% capture lessoncontent %}
 
 ## Start up the Redis Master
-The guestbook application uses Redis to store its data. It writes its data to a Redis master instance and reads data from multiple Redis worker (slave) instances.
+The guestbook application uses Redis to store its data. It writes its data to a Redis master instance and reads data from multiple Redis slave instances.
 
 ### Creating the Redis Master Deployment
+The manifest file, included below, specifies a Deployment controller that runs a single replica Redis master Pod.
+
 1. Launch a terminal window in the directory you downloaded the manifest files.
 2. Apply the Redis Master Deployment from the `redis-master-deployment.yaml` file:
 
@@ -69,13 +71,16 @@ The guestbook application uses Redis to store its data. It writes its data to a 
 {: .note}
 
 ### Creating the Redis Master Service
-The guestbook applications needs to communicate to the Redis master to write its data. You need to apply a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) to proxy the traffic to the Redis master Pod.
+The guestbook applications needs to communicate to the Redis master to write its data. You need to apply a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) to proxy the traffic to the Redis master Pod. A Service defines a set of Pods and a policy to access them.
 
 1. Apply the Redis Master Service from the following `redis-master-service.yaml` file: 
 
         kubectl apply -f redis-master-service.yaml
 
 include code.html language="yaml" file="redis-master-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml"
+
+**Note:** This manifest file creates a Service named `redis-master` with a set of labels that match the labels previously defined, so the Service routes network traffic to the Redis master Pod.   
+{: .note}
 
 {:start="2"}
 2. Query the list of Services to verify that the Redis Master Service is running:
