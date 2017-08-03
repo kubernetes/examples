@@ -112,7 +112,7 @@ However, docker containers mount the host path with the "_svirt_sandbox_file_t_"
 label type, which is incompatible with the default label type for /tmp ("_tmp_t_"),
 resulting in a permissions error when the mysql container attempts to `chown`
 _/var/lib/mysql_.
-Therefore, on selinx systems using host path, you should pre-create the host path
+Therefore, on selinux systems using host path, you should pre-create the host path
 directory (/tmp/data/) and change it's selinux label type to "_svirt_sandbox_file_t_",
 as follows:
 
