@@ -61,8 +61,7 @@ kind: PersistentVolumeClaim
 metadata:
   # This name uniquely identifies the PVC. Will be used in deployment below.
   name: minio-pv-claim
-  annotations:
-    volume.alpha.kubernetes.io/storage-class: anything
+  storageClassName: standard
   labels:
     app: minio-storage-claim
 spec:
@@ -277,11 +276,10 @@ spec:
   volumeClaimTemplates:
   - metadata:
       name: data
-      annotations:
-        volume.alpha.kubernetes.io/storage-class: anything
     spec:
       accessModes:
         - ReadWriteOnce
+      storageClassName: standard
       resources:
         requests:
           storage: 10Gi
