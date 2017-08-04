@@ -28,12 +28,13 @@ This tutorial shows you how to build and deploy a simple, multi-tier web applica
 
 {% include task-tutorial-prereqs.md %}
 Download the following configuration files:
+
 1. [redis-master-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-master-deployment.yaml)
-2. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml)
-3. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-deployment.yaml)
-4. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-service.yaml)
-5. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-deployment.yaml)
-6. [frontend-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-service.yaml)
+1. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml)
+1. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-deployment.yaml)
+1. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-service.yaml)
+1. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-deployment.yaml)
+1. [frontend-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-service.yaml)
 
 {% endcapture %}
 
@@ -52,7 +53,7 @@ The manifest file, included below, specifies a Deployment controller that runs a
 
        kubectl apply -f redis-master-deployment.yaml
         
-   {% include code.html language="yaml" file="redis-master-deployment.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-master-deployment.yaml" %}
+   {% include code.html language="yaml" file="redis-master-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-deployment.yaml" %}
 
 3. Query the list of Pods to verify that the Redis Master Pod is running:
 
@@ -62,7 +63,6 @@ The manifest file, included below, specifies a Deployment controller that runs a
 
        NAME                            READY     STATUS    RESTARTS   AGE
        redis-master-1068406935-3lswp   1/1       Running   0          28s
-
 
 4. Run the following command to view the logs from the Redis Master Pod:
 
@@ -79,7 +79,7 @@ The guestbook applications needs to communicate to the Redis master to write its
 
        kubectl apply -f redis-master-service.yaml
 
-   {% include code.html language="yaml" file="redis-master-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml" %}
+   {% include code.html language="yaml" file="redis-master-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-service.yaml" %}
 
 **Note:** This manifest file creates a Service named `redis-master` with a set of labels that match the labels previously defined, so the Service routes network traffic to the Redis master Pod.   
 {: .note}
@@ -108,7 +108,7 @@ If there are not any replicas running, this Deployment would start the two repli
 
        kubectl apply -f redis-slave-deployment.yaml
 
-   {% include code.html language="yaml" file="redis-slave-deployment.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-slave-deployment.yaml" %}
+   {% include code.html language="yaml" file="redis-slave-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-deployment.yaml" %}
 
 2. Query the list of Pods to verify that the Redis Slave Pods are running:
 
@@ -129,7 +129,7 @@ The guestbook application needs to communicate to Redis slaves to read data. To 
 
        kubectl apply -f redis-slave-service.yaml
 
-   {% include code.html language="yaml" file="redis-slave-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/redis-slave-service.yaml" %}
+   {% include code.html language="yaml" file="redis-slave-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-service.yaml" %}
 
 2. Query the list of Services to verify that the Redis Slave Service is running:
 
@@ -144,7 +144,7 @@ The guestbook application needs to communicate to Redis slaves to read data. To 
 
 ## Set up and Expose the Guestbook Frontend
 
-The guestbook application has a web frontend serving the HTTP requests written in PHP. It is configured to connect to the 'redis-master' Service for write requests and the 'redis-slave' service for Read requests.
+The guestbook application has a web frontend serving the HTTP requests written in PHP. It is configured to connect to the `redis-master` Service for write requests and the `redis-slave` service for Read requests.
 
 ### Creating the Guestbook Frontend Deployment
 
@@ -152,7 +152,7 @@ The guestbook application has a web frontend serving the HTTP requests written i
 
        kubectl apply -f frontend-deployment.yaml
 
-   {% include code.html language="yaml" file="frontend-deployment.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/frontend-deployment.yaml" %}
+   {% include code.html language="yaml" file="frontend-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-deployment.yaml" %}
 
 2. Query the list of Pods to verify that the three frontend replicas are running:
 
@@ -172,13 +172,13 @@ The `redis-slave` and `redis-master` Services you applied are only accessible wi
 If you want guests to be able to access your guestbook, you must configure the frontend Service to be externally visible, so a client can request the Service from outside the container cluster. Minikube can only expose Services through `NodePort`.  
 
 **Note:** Some cloud providers, like Google Compute Engine or Google Container Engine, support external load balancers. If your cloud provider supports load balancers and you want to use it, simply delete or comment out `type: NodePort`, and uncomment `type: LoadBalancer`. 
-{: note}
+{: .note}
 
 1. Apply the frontend Service from the following `frontend-service.yaml` file:
 
        kubectl apply -f frontend-service.yaml
         
-   {% include code.html language="yaml" file="frontend-service.yaml" ghlink="/docs/tutorials/docs/tutorials/stateless-application/frontend-service.yaml" %}
+   {% include code.html language="yaml" file="frontend-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-service.yaml" %}
 
 2. Query the list of Services to verify that the frontend Service is running:
 
@@ -194,7 +194,7 @@ If you want guests to be able to access your guestbook, you must configure the f
 
 ### Viewing the Frontend Service via `NodePort`
 
-Once the frontend Service is running, you need to find the IP address to view your Guestbook.
+If you deployed this application to Minikube or a local cluster, you need to find the IP address to view your Guestbook.
 
 1. Run the following command to get the IP address for the frontend Service.
 
@@ -208,7 +208,7 @@ Once the frontend Service is running, you need to find the IP address to view yo
 
 ### Viewing the Frontend Service via `LoadBalancer`
 
-Once the frontend Service is running, you need to find the IP address to view your Guestbook.
+If you deployed the `frontend-service.yaml` manifest with type: `LoadBalancer` you need to find the IP address to view your Guestbook.
 
 1. Run the following command to get the IP address for the frontend Service.
 
@@ -219,7 +219,7 @@ Once the frontend Service is running, you need to find the IP address to view yo
        NAME       CLUSTER-IP      EXTERNAL-IP        PORT(S)        AGE
        frontend   10.51.242.136   109.197.92.229     80:32372/TCP   1m
 
-2. Copy the External IP address, and load the page.
+2. Copy the External IP address, and load the page in your browser to view your guestbook.
 
 ## Scale the Web Frontend 
 
@@ -278,12 +278,9 @@ Deleting the Deployments and Services also deletes any running Pods. Use labels 
 
        deployment "redis-master" deleted
        deployment "redis-slave" deleted
-
        service "redis-master" deleted
        service "redis-slave" deleted
-
-       deployment "frontend" deleted
-       
+       deployment "frontend" deleted    
        service "frontend" deleted
        
 2. Query the list of Pods to verify that no Pods are running:
@@ -297,6 +294,8 @@ Deleting the Deployments and Services also deletes any running Pods. Use labels 
 {% endcapture %}
 
 {% capture whatsnext %}
+* Complete the [Kubernetes Basics](https://kubernetes.io//docs/tutorials/kubernetes-basics/) Interactive Tutorials
+* Use Kubernetes to create a blog using [Persistant Volumes for MySQL and Wordpress](https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/#visit-your-new-wordpress-blog) 
 * Read more about [connecting applications](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/)
 * Read more about [Managing Resources](https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#using-labels-effectively)
 {% endcapture %}
