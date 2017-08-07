@@ -29,12 +29,12 @@ This tutorial shows you how to build and deploy a simple, multi-tier web applica
 {% include task-tutorial-prereqs.md %}
 Download the following configuration files:
 
-1. [redis-master-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-master-deployment.yaml)
-1. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-master-service.yaml)
-1. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-deployment.yaml)
-1. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/redis-slave-service.yaml)
-1. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-deployment.yaml)
-1. [frontend-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/frontend-service.yaml)
+1. [redis-master-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/redis-master-deployment.yaml)
+1. [redis-master-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/redis-master-service.yaml)
+1. [redis-slave-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/redis-slave-deployment.yaml)
+1. [redis-slave-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/redis-slave-service.yaml)
+1. [frontend-deployment.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/frontend-deployment.yaml)
+1. [frontend-service.yaml](https://kubernetes.io/docs/tutorials/docs/tutorials/stateless-application/guestbook/frontend-service.yaml)
 
 {% endcapture %}
 
