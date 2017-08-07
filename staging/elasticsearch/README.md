@@ -5,7 +5,7 @@ Current Elasticsearch version is `5.5.1`.
 
 [A more robust example that follows Elasticsearch best-practices of separating nodes concern is also available](production_cluster/README.md).
 
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING" width="25" height="25"> Current pod descriptors use an `emptyDir` for storing data in each data node container. This is meant to be for the sake of simplicity and [should be adapted according to your storage needs](../../docs/design/persistent-storage.md).
+Current pod descriptors use an `emptyDir` for storing data in each data node container. This is meant to be for the sake of simplicity and [should be adapted according to your storage needs](../../docs/design/persistent-storage.md).
 
 ## Docker image
 
@@ -31,34 +31,6 @@ es-kfymw         1/1       Running   0          7m
 
 ```
 $ kubectl logs es-kfymw
-[2017-08-07T16:55:12,912][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initializing ...
-[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.6gb], net total_space [94.3gb], spins? [possibly], types [ext4]
-[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] heap size [247.5mb], compressed ordinary object pointers [true]
-[2017-08-07T16:55:13,025][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] node name [aeeb186a-aee4-4215-8b51-b8019cbbd134], node ID [EoGZYDTZRhqlQ2_Cq2qGvA]
-[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] version[5.5.1], pid[9], build[19c13d0/2017-07-18T20:44:24.823Z], OS[Linux/4.4.52+/amd64], JVM[Oracle Corporation/OpenJDK 64-Bit Server VM/1.8.0_131/25.131-b11]
-[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] JVM arguments [-XX:+UseConcMarkSweepGC, -XX:CMSInitiatingOccupancyFraction=75, -XX:+UseCMSInitiatingOccupancyOnly, -XX:+DisableExplicitGC, -XX:+AlwaysPreTouch, -Xss1m, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djna.nosys=true, -Djdk.io.permissionsUseCanonicalPath=true, -Dio.netty.noUnsafe=true, -Dio.netty.noKeySetOptimization=true, -Dlog4j.shutdownHookEnabled=false, -Dlog4j2.disable.jmx=true, -Dlog4j.skipJansi=true, -XX:+HeapDumpOnOutOfMemoryError, -Xms256m, -Xmx256m, -Des.path.home=/elasticsearch]
-[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [aggs-matrix-stats]
-[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [ingest-common]
-[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-expression]
-[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-groovy]
-[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-mustache]
-[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-painless]
-[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [parent-join]
-[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [percolator]
-[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [reindex]
-[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty3]
-[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty4]
-[2017-08-07T16:55:14,402][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] no plugins loaded
-[2017-08-07T16:55:16,509][INFO ][o.e.d.DiscoveryModule    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using discovery type [zen]
-[2017-08-07T16:55:17,533][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initialized
-[2017-08-07T16:55:17,536][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] starting ...
-[2017-08-07T16:55:17,956][INFO ][o.e.t.TransportService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9300}, bound_addresses {10.44.0.13:9300}
-[2017-08-07T16:55:17,971][INFO ][o.e.b.BootstrapChecks    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] bound or publishing to a non-loopback or non-link-local address, enforcing bootstrap checks
-[2017-08-07T16:55:21,083][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] new_master {aeeb186a-aee4-4215-8b51-b8019cbbd134}{EoGZYDTZRhqlQ2_Cq2qGvA}{y4aevupxRKyFekYHULuGjA}{10.44.0.13}{10.44.0.13:9300}, reason: zen-disco-elected-as-master ([0] nodes joined)
-[2017-08-07T16:55:21,137][INFO ][o.e.g.GatewayService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] recovered [0] indices into cluster_state
-[2017-08-07T16:55:21,143][INFO ][o.e.h.n.Netty4HttpServerTransport] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9200}, bound_addresses {10.44.0.13:9200}
-[2017-08-07T16:55:21,143][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] started
-MacBook-Pro:examples-master SHUAI$ kubectl logs es-5p86c
 [2017-08-07T16:55:12,912][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initializing ...
 [2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.6gb], net total_space [94.3gb], spins? [possibly], types [ext4]
 [2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] heap size [247.5mb], compressed ordinary object pointers [true]
