@@ -1,7 +1,7 @@
 # Elasticsearch for Kubernetes
 
 Kubernetes makes it trivial for anyone to easily build and scale [Elasticsearch](http://www.elasticsearch.org/) clusters. Here, you'll find how to do so.
-Current Elasticsearch version is `1.7.1`.
+Current Elasticsearch version is `5.5.1`.
 
 [A more robust example that follows Elasticsearch best-practices of separating nodes concern is also available](production_cluster/README.md).
 
@@ -16,9 +16,9 @@ The [pre-built image](https://github.com/pires/docker-elasticsearch-kubernetes) 
 Let's kickstart our cluster with 1 instance of Elasticsearch.
 
 ```
-kubectl create -f examples/elasticsearch/service-account.yaml
-kubectl create -f examples/elasticsearch/es-svc.yaml
-kubectl create -f examples/elasticsearch/es-rc.yaml
+kubectl create -f staging/elasticsearch/service-account.yaml
+kubectl create -f staging/elasticsearch/es-svc.yaml
+kubectl create -f staging/elasticsearch/es-rc.yaml
 ```
 
 Let's see if it worked:
@@ -27,26 +27,65 @@ Let's see if it worked:
 $ kubectl get pods
 NAME             READY     STATUS    RESTARTS   AGE
 es-kfymw         1/1       Running   0          7m
-kube-dns-p3v1u   3/3       Running   0          19m
 ```
 
 ```
 $ kubectl logs es-kfymw
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-[2015-08-30 10:01:31,946][INFO ][node                     ] [Hammerhead] version[1.7.1], pid[7], build[b88f43f/2015-07-29T09:54:16Z]
-[2015-08-30 10:01:31,946][INFO ][node                     ] [Hammerhead] initializing ...
-[2015-08-30 10:01:32,110][INFO ][plugins                  ] [Hammerhead] loaded [cloud-kubernetes], sites []
-[2015-08-30 10:01:32,153][INFO ][env                      ] [Hammerhead] using [1] data paths, mounts [[/data (/dev/sda9)]], net usable_space [14.4gb], net total_space [15.5gb], types [ext4]
-[2015-08-30 10:01:37,188][INFO ][node                     ] [Hammerhead] initialized
-[2015-08-30 10:01:37,189][INFO ][node                     ] [Hammerhead] starting ...
-[2015-08-30 10:01:37,499][INFO ][transport                ] [Hammerhead] bound_address {inet[/0:0:0:0:0:0:0:0:9300]}, publish_address {inet[/10.244.48.2:9300]}
-[2015-08-30 10:01:37,550][INFO ][discovery                ] [Hammerhead] myesdb/n2-6uu_UT3W5XNrjyqBPiA
-[2015-08-30 10:01:43,966][INFO ][cluster.service          ] [Hammerhead] new_master [Hammerhead][n2-6uu_UT3W5XNrjyqBPiA][es-kfymw][inet[/10.244.48.2:9300]]{master=true}, reason: zen-disco-join (elected_as_master)
-[2015-08-30 10:01:44,010][INFO ][http                     ] [Hammerhead] bound_address {inet[/0:0:0:0:0:0:0:0:9200]}, publish_address {inet[/10.244.48.2:9200]}
-[2015-08-30 10:01:44,011][INFO ][node                     ] [Hammerhead] started
-[2015-08-30 10:01:44,042][INFO ][gateway                  ] [Hammerhead] recovered [0] indices into cluster_state
+[2017-08-07T16:55:12,912][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initializing ...
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.6gb], net total_space [94.3gb], spins? [possibly], types [ext4]
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] heap size [247.5mb], compressed ordinary object pointers [true]
+[2017-08-07T16:55:13,025][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] node name [aeeb186a-aee4-4215-8b51-b8019cbbd134], node ID [EoGZYDTZRhqlQ2_Cq2qGvA]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] version[5.5.1], pid[9], build[19c13d0/2017-07-18T20:44:24.823Z], OS[Linux/4.4.52+/amd64], JVM[Oracle Corporation/OpenJDK 64-Bit Server VM/1.8.0_131/25.131-b11]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] JVM arguments [-XX:+UseConcMarkSweepGC, -XX:CMSInitiatingOccupancyFraction=75, -XX:+UseCMSInitiatingOccupancyOnly, -XX:+DisableExplicitGC, -XX:+AlwaysPreTouch, -Xss1m, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djna.nosys=true, -Djdk.io.permissionsUseCanonicalPath=true, -Dio.netty.noUnsafe=true, -Dio.netty.noKeySetOptimization=true, -Dlog4j.shutdownHookEnabled=false, -Dlog4j2.disable.jmx=true, -Dlog4j.skipJansi=true, -XX:+HeapDumpOnOutOfMemoryError, -Xms256m, -Xmx256m, -Des.path.home=/elasticsearch]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [aggs-matrix-stats]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [ingest-common]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-expression]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-groovy]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-mustache]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-painless]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [parent-join]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [percolator]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [reindex]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty3]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty4]
+[2017-08-07T16:55:14,402][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] no plugins loaded
+[2017-08-07T16:55:16,509][INFO ][o.e.d.DiscoveryModule    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using discovery type [zen]
+[2017-08-07T16:55:17,533][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initialized
+[2017-08-07T16:55:17,536][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] starting ...
+[2017-08-07T16:55:17,956][INFO ][o.e.t.TransportService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9300}, bound_addresses {10.44.0.13:9300}
+[2017-08-07T16:55:17,971][INFO ][o.e.b.BootstrapChecks    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] bound or publishing to a non-loopback or non-link-local address, enforcing bootstrap checks
+[2017-08-07T16:55:21,083][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] new_master {aeeb186a-aee4-4215-8b51-b8019cbbd134}{EoGZYDTZRhqlQ2_Cq2qGvA}{y4aevupxRKyFekYHULuGjA}{10.44.0.13}{10.44.0.13:9300}, reason: zen-disco-elected-as-master ([0] nodes joined)
+[2017-08-07T16:55:21,137][INFO ][o.e.g.GatewayService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] recovered [0] indices into cluster_state
+[2017-08-07T16:55:21,143][INFO ][o.e.h.n.Netty4HttpServerTransport] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9200}, bound_addresses {10.44.0.13:9200}
+[2017-08-07T16:55:21,143][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] started
+MacBook-Pro:examples-master SHUAI$ kubectl logs es-5p86c
+[2017-08-07T16:55:12,912][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initializing ...
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.6gb], net total_space [94.3gb], spins? [possibly], types [ext4]
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] heap size [247.5mb], compressed ordinary object pointers [true]
+[2017-08-07T16:55:13,025][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] node name [aeeb186a-aee4-4215-8b51-b8019cbbd134], node ID [EoGZYDTZRhqlQ2_Cq2qGvA]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] version[5.5.1], pid[9], build[19c13d0/2017-07-18T20:44:24.823Z], OS[Linux/4.4.52+/amd64], JVM[Oracle Corporation/OpenJDK 64-Bit Server VM/1.8.0_131/25.131-b11]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] JVM arguments [-XX:+UseConcMarkSweepGC, -XX:CMSInitiatingOccupancyFraction=75, -XX:+UseCMSInitiatingOccupancyOnly, -XX:+DisableExplicitGC, -XX:+AlwaysPreTouch, -Xss1m, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djna.nosys=true, -Djdk.io.permissionsUseCanonicalPath=true, -Dio.netty.noUnsafe=true, -Dio.netty.noKeySetOptimization=true, -Dlog4j.shutdownHookEnabled=false, -Dlog4j2.disable.jmx=true, -Dlog4j.skipJansi=true, -XX:+HeapDumpOnOutOfMemoryError, -Xms256m, -Xmx256m, -Des.path.home=/elasticsearch]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [aggs-matrix-stats]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [ingest-common]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-expression]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-groovy]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-mustache]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-painless]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [parent-join]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [percolator]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [reindex]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty3]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty4]
+[2017-08-07T16:55:14,402][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] no plugins loaded
+[2017-08-07T16:55:16,509][INFO ][o.e.d.DiscoveryModule    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using discovery type [zen]
+[2017-08-07T16:55:17,533][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initialized
+[2017-08-07T16:55:17,536][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] starting ...
+[2017-08-07T16:55:17,956][INFO ][o.e.t.TransportService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9300}, bound_addresses {10.44.0.13:9300}
+[2017-08-07T16:55:17,971][INFO ][o.e.b.BootstrapChecks    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] bound or publishing to a non-loopback or non-link-local address, enforcing bootstrap checks
+[2017-08-07T16:55:21,083][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] new_master {aeeb186a-aee4-4215-8b51-b8019cbbd134}{EoGZYDTZRhqlQ2_Cq2qGvA}{y4aevupxRKyFekYHULuGjA}{10.44.0.13}{10.44.0.13:9300}, reason: zen-disco-elected-as-master ([0] nodes joined)
+[2017-08-07T16:55:21,137][INFO ][o.e.g.GatewayService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] recovered [0] indices into cluster_state
+[2017-08-07T16:55:21,143][INFO ][o.e.h.n.Netty4HttpServerTransport] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9200}, bound_addresses {10.44.0.13:9200}
+[2017-08-07T16:55:21,143][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] started
 ```
 
 So we have a 1-node Elasticsearch cluster ready to handle some work.
@@ -67,30 +106,42 @@ NAME             READY     STATUS    RESTARTS   AGE
 es-78e0s         1/1       Running   0          8m
 es-kfymw         1/1       Running   0          17m
 es-rjmer         1/1       Running   0          8m
-kube-dns-p3v1u   3/3       Running   0          30m
 ```
 
 Let's take a look at logs:
 
 ```
 $ kubectl logs es-kfymw
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-log4j:WARN No such property [maxBackupIndex] in org.apache.log4j.DailyRollingFileAppender.
-[2015-08-30 10:01:31,946][INFO ][node                     ] [Hammerhead] version[1.7.1], pid[7], build[b88f43f/2015-07-29T09:54:16Z]
-[2015-08-30 10:01:31,946][INFO ][node                     ] [Hammerhead] initializing ...
-[2015-08-30 10:01:32,110][INFO ][plugins                  ] [Hammerhead] loaded [cloud-kubernetes], sites []
-[2015-08-30 10:01:32,153][INFO ][env                      ] [Hammerhead] using [1] data paths, mounts [[/data (/dev/sda9)]], net usable_space [14.4gb], net total_space [15.5gb], types [ext4]
-[2015-08-30 10:01:37,188][INFO ][node                     ] [Hammerhead] initialized
-[2015-08-30 10:01:37,189][INFO ][node                     ] [Hammerhead] starting ...
-[2015-08-30 10:01:37,499][INFO ][transport                ] [Hammerhead] bound_address {inet[/0:0:0:0:0:0:0:0:9300]}, publish_address {inet[/10.244.48.2:9300]}
-[2015-08-30 10:01:37,550][INFO ][discovery                ] [Hammerhead] myesdb/n2-6uu_UT3W5XNrjyqBPiA
-[2015-08-30 10:01:43,966][INFO ][cluster.service          ] [Hammerhead] new_master [Hammerhead][n2-6uu_UT3W5XNrjyqBPiA][es-kfymw][inet[/10.244.48.2:9300]]{master=true}, reason: zen-disco-join (elected_as_master)
-[2015-08-30 10:01:44,010][INFO ][http                     ] [Hammerhead] bound_address {inet[/0:0:0:0:0:0:0:0:9200]}, publish_address {inet[/10.244.48.2:9200]}
-[2015-08-30 10:01:44,011][INFO ][node                     ] [Hammerhead] started
-[2015-08-30 10:01:44,042][INFO ][gateway                  ] [Hammerhead] recovered [0] indices into cluster_state
-[2015-08-30 10:08:02,517][INFO ][cluster.service          ] [Hammerhead] added {[Tenpin][2gv5MiwhRiOSsrTOF3DhuA][es-78e0s][inet[/10.244.54.4:9300]]{master=true},}, reason: zen-disco-receive(join from node[[Tenpin][2gv5MiwhRiOSsrTOF3DhuA][es-78e0s][inet[/10.244.54.4:9300]]{master=true}])
-[2015-08-30 10:10:10,645][INFO ][cluster.service          ] [Hammerhead] added {[Evilhawk][ziTq2PzYRJys43rNL2tbyg][es-rjmer][inet[/10.244.33.3:9300]]{master=true},}, reason: zen-disco-receive(join from node[[Evilhawk][ziTq2PzYRJys43rNL2tbyg][es-rjmer][inet[/10.244.33.3:9300]]{master=true}])
+[2017-08-07T16:55:12,912][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initializing ...
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using [1] data paths, mounts [[/data (/dev/sda1)]], net usable_space [92.6gb], net total_space [94.3gb], spins? [possibly], types [ext4]
+[2017-08-07T16:55:13,023][INFO ][o.e.e.NodeEnvironment    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] heap size [247.5mb], compressed ordinary object pointers [true]
+[2017-08-07T16:55:13,025][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] node name [aeeb186a-aee4-4215-8b51-b8019cbbd134], node ID [EoGZYDTZRhqlQ2_Cq2qGvA]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] version[5.5.1], pid[9], build[19c13d0/2017-07-18T20:44:24.823Z], OS[Linux/4.4.52+/amd64], JVM[Oracle Corporation/OpenJDK 64-Bit Server VM/1.8.0_131/25.131-b11]
+[2017-08-07T16:55:13,026][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] JVM arguments [-XX:+UseConcMarkSweepGC, -XX:CMSInitiatingOccupancyFraction=75, -XX:+UseCMSInitiatingOccupancyOnly, -XX:+DisableExplicitGC, -XX:+AlwaysPreTouch, -Xss1m, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djna.nosys=true, -Djdk.io.permissionsUseCanonicalPath=true, -Dio.netty.noUnsafe=true, -Dio.netty.noKeySetOptimization=true, -Dlog4j.shutdownHookEnabled=false, -Dlog4j2.disable.jmx=true, -Dlog4j.skipJansi=true, -XX:+HeapDumpOnOutOfMemoryError, -Xms256m, -Xmx256m, -Des.path.home=/elasticsearch]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [aggs-matrix-stats]
+[2017-08-07T16:55:14,393][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [ingest-common]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-expression]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-groovy]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-mustache]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [lang-painless]
+[2017-08-07T16:55:14,394][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [parent-join]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [percolator]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [reindex]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty3]
+[2017-08-07T16:55:14,395][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] loaded module [transport-netty4]
+[2017-08-07T16:55:14,402][INFO ][o.e.p.PluginsService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] no plugins loaded
+[2017-08-07T16:55:16,509][INFO ][o.e.d.DiscoveryModule    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] using discovery type [zen]
+[2017-08-07T16:55:17,533][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] initialized
+[2017-08-07T16:55:17,536][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] starting ...
+[2017-08-07T16:55:17,956][INFO ][o.e.t.TransportService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9300}, bound_addresses {10.44.0.13:9300}
+[2017-08-07T16:55:17,971][INFO ][o.e.b.BootstrapChecks    ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] bound or publishing to a non-loopback or non-link-local address, enforcing bootstrap checks
+[2017-08-07T16:55:21,083][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] new_master {aeeb186a-aee4-4215-8b51-b8019cbbd134}{EoGZYDTZRhqlQ2_Cq2qGvA}{y4aevupxRKyFekYHULuGjA}{10.44.0.13}{10.44.0.13:9300}, reason: zen-disco-elected-as-master ([0] nodes joined)
+[2017-08-07T16:55:21,137][INFO ][o.e.g.GatewayService     ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] recovered [0] indices into cluster_state
+[2017-08-07T16:55:21,143][INFO ][o.e.h.n.Netty4HttpServerTransport] [aeeb186a-aee4-4215-8b51-b8019cbbd134] publish_address {10.44.0.13:9200}, bound_addresses {10.44.0.13:9200}
+[2017-08-07T16:55:21,143][INFO ][o.e.n.Node               ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] started
+[2017-08-07T16:58:52,532][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] added {{c8ad534d-4c6c-4700-898b-90e7a6520351}{GOSVvuRnTf27l859On7UQQ}{LvmvxUf4RWiup-GRsHIhGA}{10.44.0.14}{10.44.0.14:9300},}, reason: zen-disco-node-join[{c8ad534d-4c6c-4700-898b-90e7a6520351}{GOSVvuRnTf27l859On7UQQ}{LvmvxUf4RWiup-GRsHIhGA}{10.44.0.14}{10.44.0.14:9300}]
+[2017-08-07T16:58:52,628][WARN ][o.e.d.z.ElectMasterService] [aeeb186a-aee4-4215-8b51-b8019cbbd134] value for setting "discovery.zen.minimum_master_nodes" is too low. This can result in data loss! Please set it to at least a quorum of master-eligible nodes (current value: [1], total number of master-eligible nodes used for publishing in this round: [2])
+[2017-08-07T16:58:56,246][INFO ][o.e.c.s.ClusterService   ] [aeeb186a-aee4-4215-8b51-b8019cbbd134] added {{d6f412cd-3ef0-45c2-9f56-c9f62fd35e9c}{ne558ZbWTkK9v_mnzSDcYA}{_XOZrkQQT8Solatn1WRO4Q}{10.44.0.15}{10.44.0.15:9300},}, reason: zen-disco-node-join[{d6f412cd-3ef0-45c2-9f56-c9f62fd35e9c}{ne558ZbWTkK9v_mnzSDcYA}{_XOZrkQQT8Solatn1WRO4Q}{10.44.0.15}{10.44.0.15:9300}]
 ```
 
 So we have a 3-node Elasticsearch cluster ready to handle more work.
@@ -101,15 +152,14 @@ So we have a 3-node Elasticsearch cluster ready to handle more work.
 
 ```
 $ kubectl get service elasticsearch
-NAME            LABELS                    SELECTOR                  IP(S)           PORT(S)
-elasticsearch   component=elasticsearch   component=elasticsearch   10.100.108.94   9200/TCP
-                                                                                    9300/TCP
+NAME            CLUSTER-IP     EXTERNAL-IP      PORT(S)                         AGE
+elasticsearch   10.47.253.42   35.189.128.215   9200:31959/TCP,9300:32749/TCP   18m
 ```
 
 From any host on your cluster (that's running `kube-proxy`), run:
 
 ```
-$ curl 10.100.108.94:9200
+$ curl 35.189.128.215:9200
 ```
 
 You should see something similar to the following:
@@ -117,15 +167,15 @@ You should see something similar to the following:
 
 ```json
 {
-  "status" : 200,
-  "name" : "Hammerhead",
+  "name" : "c8ad534d-4c6c-4700-898b-90e7a6520351",
   "cluster_name" : "myesdb",
+  "cluster_uuid" : "KhEJKtkgTq-BeOpgJsGMaQ",
   "version" : {
-    "number" : "1.7.1",
-    "build_hash" : "b88f43fc40b0bcd7f173a1f9ee2e97816de80b19",
-    "build_timestamp" : "2015-07-29T09:54:16Z",
+    "number" : "5.5.1",
+    "build_hash" : "19c13d0",
+    "build_date" : "2017-07-18T20:44:24.823Z",
     "build_snapshot" : false,
-    "lucene_version" : "4.10.4"
+    "lucene_version" : "6.6.0"
   },
   "tagline" : "You Know, for Search"
 }
@@ -135,7 +185,7 @@ Or if you want to check cluster information:
 
 
 ```
-curl 10.100.108.94:9200/_cluster/health?pretty
+curl 35.189.128.215:9200/_cluster/health?pretty
 ```
 
 You should see something similar to the following:
@@ -154,7 +204,9 @@ You should see something similar to the following:
   "unassigned_shards" : 0,
   "delayed_unassigned_shards" : 0,
   "number_of_pending_tasks" : 0,
-  "number_of_in_flight_fetch" : 0
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 100.0
 }
 ```
 
