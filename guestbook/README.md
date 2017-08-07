@@ -53,7 +53,7 @@ The manifest file, included below, specifies a Deployment controller that runs a
 
        kubectl apply -f redis-master-deployment.yaml
         
-   {% include code.html language="yaml" file="redis-master-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-deployment.yaml" %}
+   {% include code.html language="yaml" file="guestbook/redis-master-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-deployment.yaml" %}
 
 3. Query the list of Pods to verify that the Redis Master Pod is running:
 
@@ -79,7 +79,7 @@ The guestbook applications needs to communicate to the Redis master to write its
 
        kubectl apply -f redis-master-service.yaml
 
-   {% include code.html language="yaml" file="redis-master-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-service.yaml" %}
+   {% include code.html language="yaml" file="guestbook/redis-master-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-master-service.yaml" %}
 
 **Note:** This manifest file creates a Service named `redis-master` with a set of labels that match the labels previously defined, so the Service routes network traffic to the Redis master Pod.   
 {: .note}
@@ -108,7 +108,7 @@ If there are not any replicas running, this Deployment would start the two repli
 
        kubectl apply -f redis-slave-deployment.yaml
 
-   {% include code.html language="yaml" file="redis-slave-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-deployment.yaml" %}
+   {% include code.html language="yaml" file="guestbook/redis-slave-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-deployment.yaml" %}
 
 2. Query the list of Pods to verify that the Redis Slave Pods are running:
 
@@ -129,7 +129,7 @@ The guestbook application needs to communicate to Redis slaves to read data. To 
 
        kubectl apply -f redis-slave-service.yaml
 
-   {% include code.html language="yaml" file="redis-slave-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-service.yaml" %}
+   {% include code.html language="yaml" file="guestbook/redis-slave-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/redis-slave-service.yaml" %}
 
 2. Query the list of Services to verify that the Redis Slave Service is running:
 
@@ -152,7 +152,7 @@ The guestbook application has a web frontend serving the HTTP requests written i
 
        kubectl apply -f frontend-deployment.yaml
 
-   {% include code.html language="yaml" file="frontend-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-deployment.yaml" %}
+   {% include code.html language="yaml" file="guestbook/frontend-deployment.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-deployment.yaml" %}
 
 2. Query the list of Pods to verify that the three frontend replicas are running:
 
@@ -178,7 +178,7 @@ If you want guests to be able to access your guestbook, you must configure the f
 
        kubectl apply -f frontend-service.yaml
         
-   {% include code.html language="yaml" file="frontend-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-service.yaml" %}
+   {% include code.html language="yaml" file="guestbook/frontend-service.yaml" ghlink="/docs/tutorials/stateless-application/guestbook/frontend-service.yaml" %}
 
 2. Query the list of Services to verify that the frontend Service is running:
 
