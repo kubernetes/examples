@@ -1,6 +1,6 @@
 ## Kubernetes DNS example
 
-This is a toy example demonstrating how to use kubernetes DNS.
+This is a toy example demonstrating how to use Kubernetes DNS.
 
 ### Step Zero: Prerequisites
 
@@ -37,7 +37,7 @@ $ kubectl config set-context dev --namespace=development --cluster=${CLUSTER_NAM
 $ kubectl config set-context prod --namespace=production --cluster=${CLUSTER_NAME} --user=${USER_NAME}
 ```
 
-You can view your cluster name and user name in kubernetes config at ~/.kube/config.
+You can view your cluster name and user name in Kubernetes config at ~/.kube/config.
 
 ### Step Two: Create backend replication controller in each namespace
 
