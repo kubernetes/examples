@@ -22,3 +22,6 @@ spec:
         readOnly: true
         user: admin
         keyring: /etc/ceph/keyring
+        imageformat: "2"
+        imagefeatures: "layering"
+

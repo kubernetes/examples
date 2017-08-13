@@ -193,6 +193,7 @@ parameters:
     userId: kube
     userSecretName: ceph-secret-user
     fsType: ext4
+    imageFormat: "1"
 ```
 
 * `monitors`: Ceph monitors, comma delimited. It is required.
@@ -203,6 +204,10 @@ parameters:
 * `userId`: Ceph client ID that is used to map the RBD image. Default is the same as `adminId`.
 * `userSecretName`: The name of Ceph Secret for `userId` to map RBD image. It must exist in the same namespace as PVCs. It is required.
 * `fsType`: fsType that are supported by kubernetes. Default: `"ext4"`.
+* `imageFormat`: Ceph RBD image format, "1" or "2". Default is "1".
+* `imageFeatures`: Ceph RBD image format 2 features, comma delimited. This is optional, and only be used if you set `imageFormat` to "2". Currently supported features are `layering` only. Default is "", no features is turned on.
+
+NOTE: We cannot turn on `exclusive-lock` feature for now (and `object-map`, `fast-diff`, `journaling` which require `exclusive-lock`), because exclusive lock and advisory lock cannot work together. (See [#45805](https://issue.k8s.io/45805))
 
 #### Quobyte
 
