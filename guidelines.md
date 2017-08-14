@@ -36,7 +36,7 @@ Examples are not:
   cloudprovider with external load balancers, etc.
   * Point to general documentation about alternatives for those
     mechanisms rather than present the alternatives in each example.
-  * Tries to balance between using using new features, and being
+  * Tries to balance between using new features, and being
     compatible across environments.
 
 ### Throughout
@@ -67,7 +67,7 @@ Examples are not:
 * Only use the code highlighting types
   [supported by Rouge](https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers),
   as this is what GitHub Pages uses.
-* Commands to be copied use the `shell` syntax highlighting type, and
+* Commands to be copied using the `shell` syntax highlighting type, and
   do not include any kind of prompt.
 * Example output is in a separate block quote to distinguish it from
   the command (which doesn't have a prompt).
