@@ -152,7 +152,7 @@ Use `kubectl edit` to modify the size of of a Cassandra StatefulSet.
 
        kubectl edit statefulset cassandra
 
-   This command opens an editor in your terminal. The line you need to change is the replicas field.
+   This command opens an editor in your terminal. The line you need to change is the `replicas` field.
    
    **Note:** The following sample is an excerpt of the StatefulSet file.
    {: .note}
