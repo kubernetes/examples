@@ -74,7 +74,6 @@ Examples are not:
 * When providing an example command or config for which the user is
   expected to substitute text with something specific to them, use
   angle brackets: `<IDENTIFIER>` for the text to be substituted.
-* Use `kubectl` for example cli commands.
 
 ### At the end
 
