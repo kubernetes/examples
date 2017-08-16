@@ -21,7 +21,7 @@ This tutorial shows you how to deploy a WordPress site and a MySQL database usin
 
 A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PV) is a set amount of storage in a cluster, and a [PeristantVolume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) (PVC) is an set amout of storage in a PV. PVs and PVCs are independent from Pod lifecycles and preserve data through restarting, rescheduling, and even deleting Pods. 
 
-**Wanring:** This tutorial uses Minikube to run a local, single-node Kubernetes cluster. Do not make this your permanent WordPress Deployment.
+**Warning:**  This deployment is not suitable for production use cases, as it uses single instance WordPress and MySQL Pods. Consider using [WordPress Helm Chart](https://github.com/kubernetes/charts/tree/master/stable/wordpress) to deploy WordPress in production.
 {: .warning}
 
 {% endcapture %}
@@ -43,9 +43,9 @@ Download the following configuration files:
 
 1. [local-volumes.yaml](https://kubernetes.io/docs/tutorials/stateful-application/local-volumes.yaml)
 
-2. [mysql-deployment.yaml](https://kubernetes.io//docs/tutorials/stateful-application/mysql-deployment.yaml)
+1. [mysql-deployment.yaml](https://kubernetes.io//docs/tutorials/stateful-application/mysql-deployment.yaml)
 
-3. [wordpress-deployment.yaml](https://kubernetes.io/docs/tutorials/stateful-application/wordpress-deployment.yaml)
+1. [wordpress-deployment.yaml](https://kubernetes.io/docs/tutorials/stateful-application/wordpress-deployment.yaml)
 
 {% endcapture %}
 
@@ -53,16 +53,16 @@ Download the following configuration files:
 
 ## Create a PersistentVolume
 
-MySQL and Wordpress each use a Persistent Volume to store data. While Kubernetes supports many different [Types of PersistentVolumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#types-of-persistent-volumes), this tutorial covers [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath).
+MySQL and Wordpress each use a Persistent Volume to store data. While Kubernetes supports many different [types of PersistentVolumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#types-of-persistent-volumes), this tutorial covers [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath).
 
 **Note:** If you have a Kubernetes cluster running on Google Container Engine, please follow [this guide](https://cloud.google.com/container-engine/docs/tutorials/persistent-disk).
 {: .note}
 
 ### Setting up a hostPath Volume
 
-A `hostPath` volume emulates network-attached storage. 
+A `hostPath` mounts a file or directory from the host node’s filesystem into your Pod. 
 
-**Warning:** Only use `hostPaths` for developing and testing. Data does not move between nodes. If a Pod dies, the data disappears even if the Pod restarts on a new node. 
+**Warning:** Only use `hostPath` for developing and testing. With hostPath, your data lives on the node the Pod is scheduled onto and does not move between nodes. If a Pod dies and gets scheduled to another node in the cluster, the data is lost. 
 {: .warning}
 
 1. Launch a terminal window in the directory you downloaded the manifest files.
@@ -121,18 +121,17 @@ The following manifest describes a single-instance MySQL Pod Deployment. The MyS
 
        kubectl create -f mysql-deployment.yaml
 
-   **Note:** It can take up to a few minutes for the Pod's Status to be `RUNNING`.
-   {: .note}
-
 2. Verify that the Pod is running by running the following command:
 
        kubectl get pods
+
+   **Note:** It can take up to a few minutes for the Pod's Status to be `RUNNING`.
+   {: .note}
 
    The response should be like this:
 
        NAME                               READY     STATUS    RESTARTS   AGE
        wordpress-mysql-1894417608-x5dzt   1/1       Running   0          40s
-
 
 ## Deploy WordPress
 
@@ -166,7 +165,7 @@ The following manifest describes a single-instance WordPress Pod Deployment. It 
 
 4. Copy the IP address, and load the page in your browser to view your blog.
 
-   You should see the familiar WordPress init page.
+   You should see the WordPress set up page similar to the following screenshot.
 
    ![wordpress-init](https://github.com/kubernetes/examples/blob/master/mysql-wordpress-pd/WordPress.png)
 
@@ -179,20 +178,20 @@ The following manifest describes a single-instance WordPress Pod Deployment. It 
 
 1. Run the following command to delete your Secret:
 
-       kubectl delete deployment -l app=wordpress
+       kubectl delete secret mysql-pass
 
 2. Run the following commands to delete all Deployments and Services:
 
        kubectl delete deployment -l app=wordpress
        kubectl delete service -l app=wordpress
 
-   **Note:** Any other Type of PersistentVolume would allow you to recreate the Deployments and Services at this point without losing data, but `hostPath` loses the data as soon as the Pod stops running.
-   {: .note}   
-
 3. Run the following commands to delete the PersistentVolumeClaims and the PersistentVolumes:
 
        kubectl delete pvc -l app=wordpress
        kubectl delete pv local-pv-1 local-pv-2
+       
+   **Note:** Any other Type of PersistentVolume would allow you to recreate the Deployments and Services at this point without losing data, but `hostPath` loses the data as soon as the Pod stops running.
+   {: .note}         
 
 {% endcapture %}
 
