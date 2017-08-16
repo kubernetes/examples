@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM redis
+FROM redis:3.2.9
 
-ADD run.sh /run.sh
-
-RUN chmod a+x /run.sh
+COPY run.sh /
 
 CMD /run.sh
