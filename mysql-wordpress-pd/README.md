@@ -113,7 +113,7 @@ A [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) is an obje
 
 ## Deploy MySQL
 
-The following manifest describes a single-instance MySQL Pod Deployment. The MySQL container mounts the PersistentVolume at /var/lib/mysql. The `MYSQL_ROOT_PASSWORD` environment variable sets the database password from the Secret. 
+The following manifest describes a single-instance MySQL Deployment. The MySQL container mounts the PersistentVolume at /var/lib/mysql. The `MYSQL_ROOT_PASSWORD` environment variable sets the database password from the Secret. 
 
 {% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/mysql-deployment.yaml %}
 
@@ -135,7 +135,7 @@ The following manifest describes a single-instance MySQL Pod Deployment. The MyS
 
 ## Deploy WordPress
 
-The following manifest describes a single-instance WordPress Pod Deployment. It uses many of the same features like a PVC for persistent storage and a Secret for the password. But it also uses a different setting: `"type": NodePort`. This setting exposes WordPress to traffic from outside of the cluster.
+The following manifest describes a single-instance WordPress Deployment. It uses many of the same features like a PVC for persistent storage and a Secret for the password. But it also uses a different setting: `"type": NodePort`. This setting exposes WordPress to traffic from outside of the cluster.
 
 {% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/wordpress-deployment.yaml %}
 
