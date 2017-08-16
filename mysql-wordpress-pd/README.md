@@ -19,7 +19,7 @@
 {% capture overview %}
 This tutorial shows you how to deploy a WordPress site and a MySQL database using Minikube. Both applications use PersistentVolumes and PersistentVolumeClaims to store data. 
 
-A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PV) is a set amount of storage in a cluster, and a [PeristantVolume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) (PVC) is an set ammout of storage in a PV. PVs and PVCs are independent from Pod lifecycles and preserve data through restarting, rescheduling, and even deleting Pods. 
+A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PV) is a set amount of storage in a cluster, and a [PeristantVolume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) (PVC) is an set amout of storage in a PV. PVs and PVCs are independent from Pod lifecycles and preserve data through restarting, rescheduling, and even deleting Pods. 
 
 **Wanring:** This tutorial uses Minikube to run a local, single-node Kubernetes cluster. Do not make this your permanent WordPress Deployment.
 {: .warning}
