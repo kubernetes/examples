@@ -7,19 +7,10 @@
 # Using Persistent Volumes with MySQL and WordPress
 <!-- EXCLUDE_FROM_DOCS END -->
 
-<!-- EXCLUDE_FROM_DOCS BEGIN -->
-
-> :warning: :warning: Follow this tutorial on the Kubernetes website:
-> https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/.
-> Otherwise some of the URLs will not work properly.
-
-# Using Persistent Volumes with MySQL and WordPress
-<!-- EXCLUDE_FROM_DOCS END -->
-
 {% capture overview %}
 This tutorial shows you how to deploy a WordPress site and a MySQL database using Minikube. Both applications use PersistentVolumes and PersistentVolumeClaims to store data. 
 
-A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PV) is a set amount of storage in a cluster, and a [PeristantVolume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) (PVC) is an set amout of storage in a PV. PVs and PVCs are independent from Pod lifecycles and preserve data through restarting, rescheduling, and even deleting Pods. 
+A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PV) is is a piece of storage in the cluster that has been provisioned by an administrator., and a [PeristentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) (PVC) is an set amout of storage in a PV. PersistentVolumes and PeristentVolumeClaims are independent from Pod lifecycles and preserve data through restarting, rescheduling, and even deleting Pods. 
 
 **Warning:**  This deployment is not suitable for production use cases, as it uses single instance WordPress and MySQL Pods. Consider using [WordPress Helm Chart](https://github.com/kubernetes/charts/tree/master/stable/wordpress) to deploy WordPress in production.
 {: .warning}
@@ -53,7 +44,7 @@ Download the following configuration files:
 
 ## Create a PersistentVolume
 
-MySQL and Wordpress each use a Persistent Volume to store data. While Kubernetes supports many different [types of PersistentVolumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#types-of-persistent-volumes), this tutorial covers [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath).
+MySQL and Wordpress each use a PersistentVolume to store data. While Kubernetes supports many different [types of PersistentVolumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#types-of-persistent-volumes), this tutorial covers [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath).
 
 **Note:** If you have a Kubernetes cluster running on Google Container Engine, please follow [this guide](https://cloud.google.com/container-engine/docs/tutorials/persistent-disk).
 {: .note}
@@ -67,14 +58,14 @@ A `hostPath` mounts a file or directory from the host node’s filesystem into y
 
 1. Launch a terminal window in the directory you downloaded the manifest files.
 
-2. Create a Persistent Volume from the `local-volumes.yaml` file:
+2. Create two PersistentVolumes from the `local-volumes.yaml` file:
 
        kubectl create -f local-volumes.yaml
 
-{% include code.html language="yaml" file="local-volumes.yaml" ghlink="/docs/tutorials/stateful-application/local-volumes.yaml %}
+{% include code.html language="yaml" file="local-volumes.yaml" ghlink="/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/local-volumes.yaml %}
 
 {:start="3"} 
-3. Run the following command to verify that two 20GiB PVs are available:
+3. Run the following command to verify that two 20GiB PersistentVolumes are available:
 
        kubectl get pv
 
@@ -84,29 +75,25 @@ A `hostPath` mounts a file or directory from the host node’s filesystem into y
        local-pv-1   20Gi       RWO           Retain          Available                                      1m
        local-pv-2   20Gi       RWO           Retain          Available                                      1m
 
-## Create a Secret
+## Create a Secret for MySQL Password
 
 A [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) is an object that stores a piece of sensitive data like a password or key. The manifest files are already configured to use a Secret, but you have to create your own Secret.
 
-1. Create a file called `password.txt` in the same directory as the manifest files.
+1. Create the Secret object from the following command:
 
-2. Set a password by typing your desired password, and then save the file. 
-
-   **Caution:** Make sure that there is no trailing newline at the end of the password.
-   {: .caution}
-
-3. Create the Secret object from the following command:
-
-       kubectl create secret generic mysql-pass --from-file=password.txt
-
-4. Verify that the Secret exists by running the following command:
+       kubectl create secret generic mysql-pass --from-literal=password=YOUR_PASSWORD
+       
+   **Note:** Replace `YOUR_PASSWORD` with the password you want to apply.     
+   {: .note}
+   
+2. Verify that the Secret exists by running the following command:
 
        kubectl get secrets
 
    The response should be like this:
 
        NAME                  TYPE                                  DATA      AGE
-       mysql-pass            Opaque                                1         42s
+       mysql-pass                 Opaque                                1         42s
 
    **Note:** To protect the Secret from exposure, neither `get` nor `describe` show its contents. 
    {: .note}
@@ -115,7 +102,7 @@ A [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) is an obje
 
 The following manifest describes a single-instance MySQL Deployment. The MySQL container mounts the PersistentVolume at /var/lib/mysql. The `MYSQL_ROOT_PASSWORD` environment variable sets the database password from the Secret. 
 
-{% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/mysql-deployment.yaml %}
+{% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/mysql-deployment.yaml %}
 
 1. Deploy MySQL from the `mysql-deployment.yaml` file:
 
@@ -135,11 +122,11 @@ The following manifest describes a single-instance MySQL Deployment. The MySQL c
 
 ## Deploy WordPress
 
-The following manifest describes a single-instance WordPress Deployment. It uses many of the same features like a PVC for persistent storage and a Secret for the password. But it also uses a different setting: `"type": NodePort`. This setting exposes WordPress to traffic from outside of the cluster.
+The following manifest describes a single-instance WordPress Deployment and Service. It uses many of the same features like a PVC for persistent storage and a Secret for the password. But it also uses a different setting: `type: NodePort`. This setting exposes WordPress to traffic from outside of the cluster.
 
-{% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/wordpress-deployment.yaml %}
+{% include code.html language="yaml" file="mysql-deployment.yaml" ghlink="/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/wordpress-deployment.yaml %}
 
-1. Deploy WordPress from the `wordpress-deployment.yaml` file:
+1. Create a WordPress Service and Deployment from the `wordpress-deployment.yaml` file:
 
        kubectl create -f wordpress-deployment.yaml
 
@@ -163,7 +150,7 @@ The following manifest describes a single-instance WordPress Deployment. It uses
 
        http://1.2.3.4:32406
 
-4. Copy the IP address, and load the page in your browser to view your blog.
+4. Copy the IP address, and load the page in your browser to view your site.
 
    You should see the WordPress set up page similar to the following screenshot.
 
@@ -197,10 +184,10 @@ The following manifest describes a single-instance WordPress Deployment. It uses
 
 {% capture whatsnext %}
 
-* [Introspection and Debugging](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application-introspection/)
-* [Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/)
-* [Exec](https://kubernetes.io/docs/tasks/debug-application-cluster/get-shell-running-container/)
-* [Port Forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
+* Learn more about [Introspection and Debugging](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application-introspection/)
+* Learn more about [Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/)
+* Learn more about [Port Forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
+* Learn how to [Get a Shell to a Container](https://kubernetes.io/docs/tasks/debug-application-cluster/get-shell-running-container/)
 
 {% endcapture %}
 
