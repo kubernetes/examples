@@ -32,11 +32,11 @@ A [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volu
 
 Download the following configuration files:
 
-1. [local-volumes.yaml](https://kubernetes.io/docs/tutorials/stateful-application/local-volumes.yaml)
+1. [local-volumes.yaml](https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/local-volumes.yaml)
 
-1. [mysql-deployment.yaml](https://kubernetes.io//docs/tutorials/stateful-application/mysql-deployment.yaml)
+1. [mysql-deployment.yaml](https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/mysql-deployment.yaml)
 
-1. [wordpress-deployment.yaml](https://kubernetes.io/docs/tutorials/stateful-application/wordpress-deployment.yaml)
+1. [wordpress-deployment.yaml](https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume//wordpress-deployment.yaml)
 
 {% endcapture %}
 
