@@ -10,7 +10,7 @@ https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/prereqs.md
 
 In Kubernetes a [_Pod_](../../docs/user-guide/pods.md) is the smallest deployable unit that can be created, scheduled, and managed. It's a collocated group of containers that share an IP and storage volume.
 
-Here is the config for MySQL pod: [mysql-pod.yaml](mysql-pod.yaml).
+Here is the config for MySQL pod: [mysql-pod.yaml](mysql-pod.yaml)：
 
 <!-- BEGIN MUNGE: mysql-pod.yaml -->
 <!-- END MUNGE: EXAMPLE -->
@@ -80,7 +80,7 @@ WildFly is a lightweight Java EE 7 compliant application server. It is wrapped i
 
 In Kubernetes a [_Replication Controller_](../../docs/user-guide/replication-controller.md) is responsible for replicating sets of identical pods. Like a _Service_ it has a selector query which identifies the members of its set.  Unlike a service it also has a desired number of replicas, and it will create or delete pods to ensure that the number of pods matches up with its desired state.
 
-Here is definition of the MySQL service: [wildfly-rc.yaml](wildfly-rc.yaml).
+Here is definition of the MySQL service: [wildfly-rc.yaml](wildfly-rc.yaml)：
 
 <!-- BEGIN MUNGE: wildfly-rc.yaml -->
 <!-- END MUNGE: EXAMPLE -->
