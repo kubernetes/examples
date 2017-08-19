@@ -12,21 +12,21 @@ section.
 ### Sources
 
 The Docker images are heavily based on https://github.com/mattf/docker-spark.
-And are curated in https://github.com/kubernetes/application-images/tree/master/spark
+And are curated in https://github.com/kubernetes/application-images/tree/master/spark.
 
 The Spark UI Proxy is taken from https://github.com/aseigneurin/spark-ui-proxy.
 
-The PySpark examples are taken from http://stackoverflow.com/questions/4114167/checking-if-a-number-is-a-prime-number-in-python/27946768#27946768
+The PySpark examples are taken from http://stackoverflow.com/questions/4114167/checking-if-a-number-is-a-prime-number-in-python/27946768#27946768.
 
 ## Step Zero: Prerequisites
 
 This example assumes
 
 - You have a Kubernetes cluster installed and running.
-- That you have installed the ```kubectl``` command line tool installed in your path and configured to talk to your Kubernetes cluster
+- That you have the ```kubectl``` command line tool installed in your path and configured to talk to your Kubernetes cluster.
 - That your Kubernetes cluster is running [kube-dns](https://github.com/kubernetes/dns) or an equivalent integration.
 
-Optionally, your Kubernetes cluster should be configured with a Loadbalancer integration (automatically configured via kube-up or GKE)
+Optionally, your Kubernetes cluster should be configured with a Loadbalancer integration (automatically configured via kube-up or GKE).
 
 ## Step One: Create namespace
 
@@ -111,7 +111,7 @@ Spark Command: /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java -cp /opt/spark-1.5
 15/10/27 21:25:07 INFO Master: I have been elected leader! New state: ALIVE
 ```
 
-Once the master is started, we'll want to check the Spark WebUI. In order to access the Spark WebUI, we will deploy a [specialized proxy](https://github.com/aseigneurin/spark-ui-proxy). This proxy is neccessary to access worker logs from the Spark UI.
+Once the master is started, we'll want to check the Spark WebUI. In order to access the Spark WebUI, we will deploy a [specialized proxy](https://github.com/aseigneurin/spark-ui-proxy). This proxy is necessary to access worker logs from the Spark UI.
 
 Deploy the proxy controller with [`examples/staging/spark/spark-ui-proxy-controller.yaml`](spark-ui-proxy-controller.yaml):
 
@@ -135,7 +135,7 @@ $ kubectl get svc spark-ui-proxy -o wide
 spark-ui-proxy   10.0.51.107   aad59283284d611e6839606c214502b5-833417581.us-east-1.elb.amazonaws.com   80/TCP    9m        component=spark-ui-proxy
 ```
 
-The Spark UI in the above example output will be available at http://aad59283284d611e6839606c214502b5-833417581.us-east-1.elb.amazonaws.com
+The Spark UI in the above example output will be available at http://aad59283284d611e6839606c214502b5-833417581.us-east-1.elb.amazonaws.com.
 
 If your Kubernetes cluster is not equipped with a Loadbalancer integration, you will need to use the [kubectl proxy](../../docs/user-guide/accessing-the-cluster.md#using-kubectl-proxy) to
 connect to the Spark WebUI:
