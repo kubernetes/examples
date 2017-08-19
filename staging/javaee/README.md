@@ -10,7 +10,7 @@ https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/prereqs.md
 
 In Kubernetes a [_Pod_](../../docs/user-guide/pods.md) is the smallest deployable unit that can be created, scheduled, and managed. It's a collocated group of containers that share an IP and storage volume.
 
-Here is the config for MySQL pod: [mysql-pod.yaml](mysql-pod.yaml)
+Here is the config for MySQL pod: [mysql-pod.yaml](mysql-pod.yaml)：
 
 <!-- BEGIN MUNGE: mysql-pod.yaml -->
 <!-- END MUNGE: EXAMPLE -->
@@ -40,7 +40,7 @@ We are creating a [_Service_](../../docs/user-guide/services.md) to expose the T
 
 In this application, we will use a Kubernetes Service to provide a discoverable endpoints for the MySQL endpoint in the cluster.  MySQL service target pods with the labels `name: mysql-pod` and `context: docker-k8s-lab`.
 
-Here is definition of the MySQL service: [mysql-service.yaml](mysql-service.yaml)
+Here is definition of the MySQL service: [mysql-service.yaml](mysql-service.yaml).
 
 <!-- BEGIN MUNGE: mysql-service.yaml -->
 <!-- END MUNGE: EXAMPLE -->
@@ -78,9 +78,9 @@ Our service name is ``mysql-service'' and so ``MYSQL_SERVICE_SERVICE_HOST'' and 
 
 WildFly is a lightweight Java EE 7 compliant application server. It is wrapped in a Replication Controller and used as the Java EE runtime.
 
-In Kubernetes a [_Replication Controller_](../../docs/user-guide/replication-controller.md) is responsible for replicating sets of identical pods. Like a _Service_ it has a selector query which identifies the members of it's set.  Unlike a service it also has a desired number of replicas, and it will create or delete pods to ensure that the number of pods matches up with it's desired state.
+In Kubernetes a [_Replication Controller_](../../docs/user-guide/replication-controller.md) is responsible for replicating sets of identical pods. Like a _Service_ it has a selector query which identifies the members of its set.  Unlike a service it also has a desired number of replicas, and it will create or delete pods to ensure that the number of pods matches up with its desired state.
 
-Here is definition of the MySQL service: [wildfly-rc.yaml](wildfly-rc.yaml).
+Here is definition of the MySQL service: [wildfly-rc.yaml](wildfly-rc.yaml)：
 
 <!-- BEGIN MUNGE: wildfly-rc.yaml -->
 <!-- END MUNGE: EXAMPLE -->
