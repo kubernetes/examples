@@ -53,7 +53,7 @@ flocker-volumes create -m name=my-flocker-vol -s 10G -n <node-uuid>
 
 The following *volume* spec from the [example pod](flocker-pod.yml) illustrates how to use this Flocker dataset as a volume.
 
-> Note, the [example pod](flocker-pod.yml) used here does not include a replication controller, therefore the POD will not be rescheduled upon failure. If your looking for an example that does include a replication controller and service spec you can use [this example pod including a replication controller](flocker-pod-with-rc.yml)
+> Note, the [example pod](flocker-pod.yml) used here does not include a replication controller, therefore the POD will not be rescheduled upon failure. If you're looking for an example that does include a replication controller and service spec you can use [this example pod including a replication controller](flocker-pod-with-rc.yml)
 
 ```yaml
   volumes:
@@ -70,7 +70,7 @@ Use `kubetctl` to create the pod.
 $ kubectl create -f examples/volumes/flocker/flocker-pod.yml
 ```
 
-You should now verify that the pod is running and determine it's IP address:
+You should now verify that the pod is running and determine its IP address:
 
 ```sh
 $ kubectl get pods
