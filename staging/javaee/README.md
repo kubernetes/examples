@@ -78,7 +78,7 @@ Our service name is ``mysql-service'' and so ``MYSQL_SERVICE_SERVICE_HOST'' and 
 
 WildFly is a lightweight Java EE 7 compliant application server. It is wrapped in a Replication Controller and used as the Java EE runtime.
 
-In Kubernetes a [_Replication Controller_](../../docs/user-guide/replication-controller.md) is responsible for replicating sets of identical pods. Like a _Service_ it has a selector query which identifies the members of it's set.  Unlike a service it also has a desired number of replicas, and it will create or delete pods to ensure that the number of pods matches up with it's desired state.
+In Kubernetes a [_Replication Controller_](../../docs/user-guide/replication-controller.md) is responsible for replicating sets of identical pods. Like a _Service_ it has a selector query which identifies the members of its set.  Unlike a service it also has a desired number of replicas, and it will create or delete pods to ensure that the number of pods matches up with its desired state.
 
 Here is definition of the MySQL service: [wildfly-rc.yaml](wildfly-rc.yaml).
 
