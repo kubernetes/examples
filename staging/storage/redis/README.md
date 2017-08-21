@@ -92,8 +92,8 @@ kubectl delete pods redis-master
 Now let's take a close look at what happens after this pod is deleted.  There are three things that happen:
 
   1. The redis replication controller notices that its desired state is 3 replicas, but there are currently only 2 replicas, and so it creates a new redis server to bring the replica count back up to 3
-  2. The redis-sentinel replication controller likewise notices the missing sentinel, and also creates a new sentinel.
-  3. The redis sentinels themselves, realize that the master has disappeared from the cluster, and begin the election procedure for selecting a new master.  They perform this election and selection, and chose one of the existing redis server replicas to be the new master.
+
+  2. The redis sentinels themselves, realize that the redis master has disappeared from the cluster, and begin the election procedure for selecting a new master.  They perform this election and selection, and chose one of the existing redis server replicas to be the new master.
 
 ### Conclusion
 
@@ -124,6 +124,7 @@ kubectl scale rc redis --replicas=3
 kubectl scale rc redis-sentinel --replicas=3
 
 # Delete the original master pod
+# Note: If you are running all the above commands consecutively including this one in a shell script, it may NOT work out. When you run the above commands, let the pods first come up, especially the redis-master pod. Else, the sentinel pods would never be able to know the master redis server and establish a connection with it. 
 kubectl delete pods redis-master
 ```
 
