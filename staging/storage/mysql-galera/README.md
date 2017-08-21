@@ -30,14 +30,14 @@ Create the service and replication controller for the first node:
 
 ### Create services and controllers for the remaining nodes
 
-Repeat the same previous steps for ```pxc-node2``` and ```pxc-node3```
+Repeat the same previous steps for ```pxc-node2``` and ```pxc-node3```.
 
-When complete, you should be able connect with a MySQL client to the IP address
- service ```pxc-cluster``` to find a working cluster
+When completed, you should be able to connect with a MySQL client to the IP address
+ service ```pxc-cluster``` to find a working cluster.
 
 ### An example of creating a cluster
 
-Shown below are examples of Using ```kubectl``` from within the ```./examples/storage/mysql-galera``` directory, the status of the lauched replication controllers and services can be confirmed
+Shown below are examples of Using ```kubectl``` from within the ```./examples/storage/mysql-galera``` directory, the status of the lauched replication controllers and services can be confirmed:
 
 ```
 $ kubectl create -f examples/storage/mysql-galera/pxc-cluster-service.yaml 
@@ -92,7 +92,7 @@ The cluster should be ready for use!
 
 ### Connecting to the cluster
 
-Using the name of ```pxc-cluster``` service running interactively using ```kubernetes exec```, it is possible to connect to any of the pods using the mysql client on the pod's container to verify the cluster size, which should be ```3```. In this example below, pxc-node3 replication controller is chosen, and to find out the pod name, ```kubectl get pods``` and ```awk``` are employed:
+Using the name of ```pxc-cluster``` service running interactively using ```kubectl exec```, it is possible to connect to any of the pods using the mysql client on the pod's container to verify the cluster size, which should be ```3```. In this example below, pxc-node3 replication controller is chosen, and to find out the pod name, ```kubectl get pods``` and ```awk``` are employed:
 
 ```
 $ kubectl get pods|grep pxc-node3|awk '{ print $1 }'
