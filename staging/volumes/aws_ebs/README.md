@@ -1,7 +1,7 @@
 This is a simple web server pod which serves HTML from an AWS EBS
 volume.
 
-If you did not use kube-up script, make sure that your minions have the following IAM permissions ([Amazon IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#create-iam-role-console)):
+If you did not use kube-up script, make sure that your masters have the following IAM permissions ([Amazon IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#create-iam-role-console)):
 
 ```shell
   ec2:AttachVolume
