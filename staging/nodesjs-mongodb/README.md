@@ -2,7 +2,7 @@
 
 The following document describes the deployment of a basic Node.js and MongoDB web stack on Kubernetes.  Currently this example does not use replica sets for MongoDB.
 
-For more a in-depth explanation of this example, please [read this post.](https://medium.com/google-cloud-platform-developer-advocates/running-a-mean-stack-on-google-cloud-platform-with-kubernetes-149ca81c2b5d)
+For an in-depth explanation of this example, please [read this post.](https://medium.com/google-cloud-platform-developer-advocates/running-a-mean-stack-on-google-cloud-platform-with-kubernetes-149ca81c2b5d)
 
 ### Prerequisites
 
@@ -98,7 +98,7 @@ If you are using AWS, replace the "volumes" section with this (untested):
             fsType: ext4
 ```
 
-If you don't have a EBS volume in the same region as your cluster, create a new EBS volume in the same region with this command (untested):
+If you don't have an EBS volume in the same region as your cluster, create a new EBS volume in the same region with this command (untested):
 
 ```sh
 ec2-create-volume --size 200 --region $REGION --availability-zone $ZONE
@@ -163,7 +163,7 @@ You may also need to open appropriate Firewall ports to allow traffic.
 
 ### Creating the Node.js Controller
 
-The final step is deploying the Node.js container that will run the application code. This container can easily by replaced by any other web serving frontend, such as Rails, LAMP, Java, Go, etc.
+The final step is deploying the Node.js container that will run the application code. This container can easily be replaced by any other web serving frontend, such as Rails, LAMP, Java, Go, etc.
 
 The most important thing to keep in mind is how to access the MongoDB service.
 
