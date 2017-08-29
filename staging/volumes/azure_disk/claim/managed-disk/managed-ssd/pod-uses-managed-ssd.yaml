@@ -9,12 +9,12 @@ spec:
   - image: nginx
     name: az-c-01
     command:
-    - "/bin/sh"
-    - "-c"
+    - /bin/sh
+    - -c
     - while true; do echo $(date) >> /mnt/managed/outfile; sleep 1; done
     volumeMounts:
     - name: managed01
-      mountPath: "/mnt/managed"
+      mountPath: /mnt/managed
   volumes:
   - name: managed01
     persistentVolumeClaim:

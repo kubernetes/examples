@@ -47,7 +47,7 @@ $ df -h
 ### Managed Disks
 The entire experience is offloaded to Azure to manage disks:storage accounts. You can use PVC (Kubernetes will automatically create a managed disk for you). Or you can you use an existing disk as PV in your PODs/RCs
 
-> as a general rule, use PV disks provisioned in the same Azure resource group where the cluster is provisioned.   
+> Note: as a general rule, use PV disks provisioned in the same Azure resource group where the cluster is provisioned.   
 
 ### Blob Disks 
 Blob Disks works in two modes. Controlled by #kind# parameter on the storage class. 
@@ -55,7 +55,7 @@ Blob Disks works in two modes. Controlled by #kind# parameter on the storage cla
 ### Dedicated (default mode)
 When *kind* parameter is set to *dedicated* K8S will create a new dedicated storage account for this new disk. No other disks will be allowed in the this storage account. The account will be removed when the PVC is removed (according to K8S PVC reclaim policy) 
 
-> You can still use existing VHDs, again the general rule apply use storage accounts that are part of cluster resource group
+> Note: You can still use existing VHDs, again the general rule apply use storage accounts that are part of cluster resource group
 
 ### The following storage parameter can be used to control the behaviour
 
@@ -86,7 +86,7 @@ The following rules apply:
 ## Additional Notes
 The samples assumes that you have a cluster with node labeled with #disktype=blob# for VMs that are using blob disks and #disktype=managed# for VMs that are using managed disks. You can label your nodes or remove the node selector before using the files. 
 
-> You can not attach managed disks to VMs that are not using managed OS disks. This applies also the other way around no blob disks on VMS that are using managed OS disks
+> Note: You can not attach managed disks to VMs that are not using managed OS disks. This applies also the other way around no blob disks on VMS that are using managed OS disks
 
 To label your nodes use the following command 
 ```

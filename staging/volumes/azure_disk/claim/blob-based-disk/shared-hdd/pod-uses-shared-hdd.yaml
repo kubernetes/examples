@@ -9,12 +9,12 @@ spec:
   - image: nginx
     name: az-c-01
     command:
-    - "/bin/sh"
-    - "-c"
+    - /bin/sh
+    - -c
     - while true; do echo $(date) >> /mnt/blobdisk/outfile; sleep 1; done
     volumeMounts:
     - name: blobdisk01
-      mountPath: "/mnt/blobdisk"
+      mountPath: /mnt/blobdisk
   volumes:
   - name: blobdisk01
     persistentVolumeClaim:
