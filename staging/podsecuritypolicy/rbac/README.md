@@ -33,8 +33,8 @@ testing.  It relies on the `ALLOW_ANY_TOKEN` setting.
 ### Policies
 
 The first step to enforcing cluster constraints via PSP is to create your policies.  In this
-example we will use two policies, `restricted` and `privileged`.  For simplicity, the only difference
-between these policies is the ability to run a privileged container.
+example we will use two policies, `restricted` and `privileged`. The `privileged` policy allows any type of pod.
+The `restricted` policy only allows limited users, groups, volume types, and does not allow host access or privileged containers.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -53,23 +53,37 @@ spec:
     rule: RunAsAny
   volumes:
   - '*'
+  hostPID: true
+  hostIPC: true
+  hostNetwork: true
+  hostPorts:
+  - min: 1
+    max: 65536
 ---
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: restricted
 spec:
+  privileged: false
   fsGroup:
     rule: RunAsAny
   runAsUser:
-    rule: RunAsAny
+    rule: MustRunAsNonRoot
   seLinux:
     rule: RunAsAny
   supplementalGroups:
     rule: RunAsAny
   volumes:
-  - '*'
-
+  - 'emptyDir'
+  - 'secret'
+  - 'downwardAPI'
+  - 'configMap'
+  - 'persistentVolumeClaim'
+  - 'projected'
+  hostPID: false
+  hostIPC: false
+  hostNetwork: false
 ```
 
 To create these policies run
@@ -84,19 +98,27 @@ podsecuritypolicy "restricted" created
 
 In order to create a pod, either the creating user or the service account
 specified by the pod must be authorized to use a `PodSecurityPolicy` object
-that allows the pod. That authorization is determined by the ability to perform
-the `use` verb on a particular `podsecuritypolicies` resource. The `use` verb
-is a special verb that grants access to use a policy while not permitting any
-other access. For this example, we'll first create RBAC `ClusterRoles` that
-enable access to `use` specific policies.
+that allows the pod, within the pod's namespace.
+
+That authorization is determined by the ability to perform the `use` verb 
+on a particular `podsecuritypolicies` resource, at the scope of the pod's namespace.
+The `use` verb is a special verb that grants access to use a policy while not permitting any
+other access.
+
+Note that a user with superuser permissions within a namespace (access to `*` verbs on `*` resources)
+would be allowed to use any PodSecurityPolicy within that namespace.
+
+For this example, we'll first create RBAC `ClusterRoles` that enable access to `use` specific policies.
 
 1. `restricted-psp-user`: this role allows the `use` verb on the `restricted` policy only
 2. `privileged-psp-user`: this role allows the `use` verb on the `privileged` policy only
 
+We can then create role bindings to grant those permissions.
 
-We can then create `ClusterRoleBindings` to grant groups of users the
-"restricted" and/or "privileged" `ClusterRoles`.  In this example, the bindings
-grant the following roles to groups.
+* A `RoleBinding` would grant those permissions within a particular namespace
+* A `ClusterRoleBinding` would grant those permissions across all namespaces
+
+In this example, we will create `ClusterRoleBindings` to grant the roles to groups cluster-wide.
 
 1. `privileged`: this group is bound to the `privilegedPSP` role and `restrictedPSP` role which gives users
 in this group access to both policies.
