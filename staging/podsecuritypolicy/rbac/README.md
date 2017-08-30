@@ -33,8 +33,8 @@ testing.  It relies on the `ALLOW_ANY_TOKEN` setting.
 ### Policies
 
 The first step to enforcing cluster constraints via PSP is to create your policies.  In this
-example we will use two policies, `restricted` and `privileged`.  For simplicity, the only difference
-between these policies is the ability to run a privileged container.
+example we will use two policies, `restricted` and `privileged`. The `privileged` policy allows any type of pod.
+The `restricted` policy only allows limited users, groups, volume types, and does not allow host access or privileged containers.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -53,23 +53,37 @@ spec:
     rule: RunAsAny
   volumes:
   - '*'
+  hostPID: true
+  hostIPC: true
+  hostNetwork: true
+  hostPorts:
+  - min: 1
+    max: 65536
 ---
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: restricted
 spec:
+  privileged: false
   fsGroup:
     rule: RunAsAny
   runAsUser:
-    rule: RunAsAny
+    rule: MustRunAsNonRoot
   seLinux:
     rule: RunAsAny
   supplementalGroups:
     rule: RunAsAny
   volumes:
-  - '*'
-
+  - 'emptyDir'
+  - 'secret'
+  - 'downwardAPI'
+  - 'configMap'
+  - 'persistentVolumeClaim'
+  - 'projected'
+  hostPID: false
+  hostIPC: false
+  hostNetwork: false
 ```
 
 To create these policies run
