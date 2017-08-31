@@ -10,6 +10,7 @@ spec:
     metadata:
       labels:
         name: redis
+        role: master
     spec:
       containers:
       - name: redis
@@ -24,5 +25,3 @@ spec:
           name: data
       volumes:
         - name: data
-          emptyDir: {}
-
