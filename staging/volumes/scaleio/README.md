@@ -44,13 +44,12 @@ This document assumes you are familiar with ScaleIO and have a cluster ready to 
 
 For this demonstration, ensure the following: 
 
- - The ScaleIO `SDC` component is installed and properly configured on all Kubernetes nodes where deployed pods will consume ScaleIO-backed volumes.
+ - The ScaleIO `SDC` component is installed and properly configured on all Kubernetes nodes where deployed pods will consume ScaleIO-backed storage.
  - You have a configured ScaleIO gateway that is accessible from the Kubernetes nodes. 
 
 ## Deploy Kubernetes Secret for ScaleIO
 
-The ScaleIO plugin uses a Kubernetes Secret object to store the `username` and `password` credentials.  
-Kuberenetes requires the secret values to be base64-encoded to simply obfuscate (not encrypt) the clear text as shown below.
+The ScaleIO plugin uses a Kubernetes Secret object to store the `username` and `password` credentials.  Kubernetes requires the secret values to be base64-encoded to simply obfuscate (not encrypt) the clear text as shown below.
 
 ```
 $> echo -n "siouser" | base64
@@ -74,32 +73,32 @@ data:
   password: c2NAbDNJMA==
 ```
 
-Notice the name of the secret specified above as `sio-secret`.  It will be referred in other YAML files.  Next, deploy the secret.
+Notice the name of the secret specified above as `sio-secret`.  It will be referred in other YAML configuration files later.  Next, deploy the secret.
 
 ```
 $ kubectl create -f ./examples/volumes/scaleio/secret.yaml
 ```
+Read more about Kubernetes secrets [here](https://kubernetes.io/docs/concepts/configuration/secret/).
 
 ## Deploying Pods with Persistent Volumes
 
-The example presented in this section shows how the ScaleIO volume plugin can automatically attach, format, and mount an existing ScaleIO volume for pod. 
-The Kubernetes ScaleIO volume spec supports the following attributes:
+The example presented in this section shows how the ScaleIO volume plugin can automatically attach, format, and mount an existing ScaleIO volume for pod.  The Kubernetes ScaleIO volume spec supports the following attributes:
 
 | Attribute | Description |
 |-----------|-------------|
 | gateway | address to a ScaleIO API gateway (required)|
 | system  | the name of the ScaleIO system (required)|
-| protectionDomain| the name of the ScaleIO protection domain (default `default`)|
-| storagePool| the name of the volume storage pool (default `default`)|
+| protectionDomain| the name of the ScaleIO protection domain (required)|
+| storagePool| the name of the volume storage pool (required)|
 | storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
 | volumeName| the name of an existing volume in ScaleIO (required)|
-| secretRef:name| reference to a configuered Secret object (required, see Secret earlier)|
+| secretRef:name| references the name of a Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
 | fsType| the file system to use for the volume (default `ext4`)|
 
 ### Create Volume
 
-Static persistent volumes require that the volume, to be consumed by the pod, be already created in ScaleIO.  You can use your ScaleIO tooling to create a new volume or use the name of a volume that already exists in ScaleIO.  For this demo, we assume there's a volume named `vol-0`.  If you want to use an existing volume, ensure its name is reflected properly in the `volumeName` attribute below.
+When using static persistent volumes, it is required that the volume, to be consumed by the pod, be already created in ScaleIO.  For this demo, we assume there's an existing ScaleIO volume named `vol-0` which is reflected configuration properly `volumeName:`  below.
 
 ### Deploy Pod YAML
 
@@ -124,16 +123,14 @@ spec:
     scaleIO:
       gateway: https://localhost:443/api
       system: scaleio
+      protectionDomain: pd01
+      storagePool: sp01
       volumeName: vol-0
       secretRef:
         name: sio-secret
       fsType: xfs
 ```
-Notice the followings in the previous YAML:
-
-- Update the `gatewway` to point to your ScaleIO gateway endpoint.
-- The `volumeName` attribute refers to the name of an existing volume in ScaleIO.
-- The `secretRef:name` attribute references the name of the secret object deployed earlier.
+Remember to change the ScaleIO attributes above to reflect that of your own environment.
 
 Next, deploy the pod.
 
@@ -160,24 +157,24 @@ scinia      252:0    0    8G  0 disk /var/lib/kubelet/pods/135986c7-dcb7-11e6-9f
 
 ## StorageClass and Dynamic Provisioning
 
-In the example in this section, we will see how the ScaleIO volume plugin can automatically provision described in a `StorageClass`.
-The ScaleIO volume plugin is a dynamic provisioner identified as `kubernetes.io/scaleio` and supports the following parameters:
+The ScaleIO volume plugin can also dynamically provision storage to a Kubernetes cluster. 
+The ScaleIO dynamic provisioner plugin can be used with a `StorageClass` and is identified as `kubernetes.io/scaleio`.  
+
+### ScaleIO StorageClass
+The ScaleIO dynamic provisioning plugin supports the following StorageClass parameters:
 
 | Parameter | Description |
 |-----------|-------------|
 | gateway | address to a ScaleIO API gateway (required)|
 | system  | the name of the ScaleIO system (required)|
-| protectionDomain| the name of the ScaleIO protection domain (default `default`)|
-| storagePool| the name of the volume storage pool (default `default`)|
+| protectionDomain| the name of the ScaleIO protection domain (required)|
+| storagePool| the name of the volume storage pool (required)|
 | storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
 | secretRef| reference to the name of a configuered Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
 | fsType| the file system to use for the volume (default `ext4`)|
 
-
-### ScaleIO StorageClass
-
-Define a new `StorageClass` as shown in the following YAML.
+The following shows an example of ScaleIO  `StorageClass` configuration YAML:
 
 File [sc.yaml](sc.yaml)
 
@@ -190,14 +187,12 @@ provisioner: kubernetes.io/scaleio
 parameters:
   gateway: https://localhost:443/api
   system: scaleio
-  protectionDomain: default
+  protectionDomain: pd01
+  storagePool: sp01
   secretRef: sio-secret
   fsType: xfs
 ```
-Note the followings:
-
-- The `name` attribute is set to sio-small . It will be referenced later.
-- The `secretRef` attribute matches the name of the Secret object created earlier.
+Note the `metadata:name` attribute of the StorageClass is set to `sio-small` and will be referenced later.  Again, remember to update other parameters to reflect your environment setup.
 
 Next, deploy the storage class file.
 
@@ -220,9 +215,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pvc-sio-small
-  annotations:
-      volume.beta.kubernetes.io/storage-class: sio-small
 spec:
+  storageClassName: sio-small
   accessModes:
     - ReadWriteOnce
   resources:
@@ -230,17 +224,17 @@ spec:
       storage: 10Gi
 ```
 
-Note the `annotations:` entry which specifies annotation `volume.beta.kubernetes.io/storage-class: sio-small` which references the name of the storage class defined earlier.
+Note the `spec:storageClassName` entry which specifies the name of the perviously defined StorageClass `sio-small` .
 
-Next, we deploy PVC file for the storage class.  This step will cause the Kubernetes ScaleIO plugin to create the volume in the storage system.  
+Next, deploy the PVC file.  This step will cause the Kubernetes ScaleIO plugin to create the volume in the storage system.  
 ```
 $> kubectl create -f examples/volumes/scaleio/sc-pvc.yaml
 ```
 You verify that a new volume created in the ScaleIO dashboard.  You can also verify the newly created volume as follows.
 ```
  kubectl get pvc
-NAME            STATUS    VOLUME                                     CAPACITY   ACCESSMODES   AGE
-pvc-sio-small   Bound     pvc-5fc78518-dcae-11e6-a263-080027c990a7   10Gi       RWO           1h
+NAME            STATUS    VOLUME                CAPACITY   ACCESSMODES   AGE
+pvc-sio-small   Bound     k8svol-5fc78518dcae   10Gi       RWO           1h
 ```
 
 ###Pod for PVC and SC
@@ -266,7 +260,7 @@ spec:
         claimName: pvc-sio-small
 ```
 
-Notice that the `claimName:` attribute refers to the name of the PVC defined and deployed earlier.  Next, let us deploy the file.
+Notice that the `claimName:` attribute refers to the name of the PVC, `pvc-sio-small`, defined and deployed earlier.  Next, let us deploy the file.
 
 ```
 $> kubectl create -f examples/volumes/scaleio/pod-sc-pvc.yaml
@@ -277,26 +271,7 @@ kubectl get pod
 NAME            READY     STATUS    RESTARTS   AGE
 pod-0           1/1       Running   0          23m
 pod-sio-small   1/1       Running   0          5s
-```
-You can use the ScaleIO dashboard to verify that the new volume has one attachment.  You can verify the volume information for the pod:
-```
-$> kubectl describe pod pod-sio-small
-...
-Volumes:
-  test-data:
-    Type:	PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
-    ClaimName:	pvc-sio-small
-    ReadOnly:	false
-...
-```
-Lastly, you can see the volume's attachment on the Kubernetes node:
-```
-$> lsblk
-...
-scinia      252:0    0    8G  0 disk /var/lib/kubelet/pods/135986c7-dcb7-11e6-9fbf-080027c990a7/volumes/kubernetes.io~scaleio/vol-0
-scinib      252:16   0   16G  0 disk /var/lib/kubelet/pods/62db442e-dcba-11e6-9fbf-080027c990a7/volumes/kubernetes.io~scaleio/sio-5fc9154ddcae11e68db708002
-
-```
+``` 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
 [![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/scaleio/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->
