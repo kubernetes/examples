@@ -6,6 +6,7 @@ provisioner: kubernetes.io/scaleio
 parameters:
   gateway: https://localhost:443/api 
   system: scaleio
-  protectionDomain: default
+  protectionDomain: pd01
+  storagePool: pd01
   secretRef: sio-secret
   fsType: xfs

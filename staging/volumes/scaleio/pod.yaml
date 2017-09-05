@@ -14,6 +14,8 @@ spec:
     scaleIO:
       gateway: https://localhost:443/api
       system: scaleio
+      protectionDoamin: pd01
+      storagePool: sp01
       volumeName: vol-0
       secretRef:
         name: sio-secret
