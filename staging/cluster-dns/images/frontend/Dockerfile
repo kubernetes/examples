@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:2.7-slim
+FROM BASEIMAGE
+
+CROSS_BUILD_COPY qemu-ARCH-static /usr/bin/
 
 RUN pip install requests
 
