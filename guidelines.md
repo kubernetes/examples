@@ -28,7 +28,7 @@ Examples are not:
   commands (TL;DR / quickstart), without cloning the repo (kubectl
   apply -f http://...).
 * Points to documentation of prerequisites.
-  * [Create a cluster](https://github.com/kubernetes/community/tree/master/contributors/devel/local-cluster) (e.g., single-node docker).
+  * [Create a cluster](https://github.com/kubernetes/community/blob/master/contributors/devel/running-locally.md) (e.g., single-node docker).
   * [Setup kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
   * etc.
 * Should specify which release of Kubernetes is required and any other
