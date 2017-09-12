@@ -92,12 +92,12 @@ NAME      READY     STATUS    RESTARTS   AGE
 
 ### CPU limits
 
-So what do you do if you want to control the maximum amount of CPU that your container can burst to use in order provide a consistent
+So what do you do if you want to control the maximum amount of CPU that your container can burst to use in order to provide a consistent
 level of service independent of CPU contention on the node?  You can specify an upper limit on the total amount of CPU that a pod's
 container may consume.
 
 To enforce this feature, your node must run a docker version >= 1.7, and your operating system kernel must
-have support for CFS quota enabled.  Finally, your the Kubelet must be started with the following flag:
+have support for CFS quota enabled.  Finally, your Kubelet must be started with the following flag:
 
 ```
 kubelet --cpu-cfs-quota=true

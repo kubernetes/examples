@@ -16,8 +16,7 @@ DaemonSets must be enabled on your cluster. Instructions for enabling DaemonSet 
 
 The New Relic agent is configured via environment variables. We will configure these environment variables in a sourced bash script, encode the environment file data, and store it in a secret which will be loaded at container runtime.
 
-The [New Relic Linux Server configuration page]
-(https://docs.newrelic.com/docs/servers/new-relic-servers-linux/installation-configuration/configuring-servers-linux) lists all the other settings for nrsysmond.
+The [New Relic Linux Server configuration page](https://docs.newrelic.com/docs/servers/new-relic-servers-linux/installation-configuration/configuring-servers-linux) lists all the other settings for nrsysmond.
 
 To create an environment variable for a setting, prepend NRSYSMOND_ to its name. For example,
 

@@ -44,7 +44,7 @@ Build a container for your Meteor app
 
 To be able to run your Meteor app on Kubernetes you need to build a
 Docker container for it first. To do that you need to install
-[Docker](https://www.docker.com) Once you have that you need to add 2
+[Docker](https://www.docker.com). Once you have that you need to add 2
 files to your existing Meteor project `Dockerfile` and
 `.dockerignore`.
 

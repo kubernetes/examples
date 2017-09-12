@@ -25,7 +25,7 @@ Make sure that kubelet host machine has the following executables
 /usr/bin/udevadm -- To probe the volume attached so that a symlink is created under /dev/disk/by-id/ with a virtio- prefix
 ```
 
-Ensure cinder is installed and configured properly in the region in which kubelet is spun up
+Ensure cinder is installed and configured properly in the region in which kubelet is spun up.
 
 ### Example
 
@@ -33,8 +33,8 @@ Create a cinder volume Ex:
 
 `cinder create --display-name=test-repo 2`
 
-Use the id of the cinder volume created to create a pod [definition](mysql.yaml)
-Create a new pod with the definition
+Use the id of the cinder volume created to create a pod [definition](mysql.yaml).
+Create a new pod with the definition:
 
 `cluster/kubectl.sh create -f examples/mysql-cinder-pd/mysql.yaml`
 
