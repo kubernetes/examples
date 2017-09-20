@@ -19,6 +19,13 @@ If you are using the `local-up-cluster.sh` script you may enable these settings 
 PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true ALLOW_ANY_TOKEN=true ENABLE_RBAC=true RUNTIME_CONFIG="extensions/v1beta1=true,extensions/v1beta1/podsecuritypolicy=true" hack/local-up-cluster.sh
 ```
 
+The `kubectl` commands in this document assume that the current directory is the root directory of the cloned repository:
+
+```console
+$ git clone https://github.com/kubernetes/examples
+$ cd examples
+```
+
 ### Using the protected port
 
 It is important to note that this example uses the following syntax to test with RBAC
@@ -89,7 +96,7 @@ spec:
 To create these policies run
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f examples/podsecuritypolicy/rbac/policies.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f staging/podsecuritypolicy/rbac/policies.yaml
 podsecuritypolicy "privileged" created
 podsecuritypolicy "restricted" created
 ```
@@ -129,11 +136,11 @@ role which is already provided by the cluster.
 To create these roles and bindings run
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f examples/podsecuritypolicy/rbac/roles.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f staging/podsecuritypolicy/rbac/roles.yaml
 clusterrole "restricted-psp-user" created
 clusterrole "privileged-psp-user" created
 
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f examples/podsecuritypolicy/rbac/bindings.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/system:masters create -f staging/podsecuritypolicy/rbac/bindings.yaml
 clusterrolebinding "privileged-psp-users" created
 clusterrolebinding "restricted-psp-users" created
 clusterrolebinding "edit" created
@@ -146,7 +153,7 @@ clusterrolebinding "edit" created
 Create the pod
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/restricted-psp-users create -f examples/podsecuritypolicy/rbac/pod.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/restricted-psp-users create -f staging/podsecuritypolicy/rbac/pod.yaml
 pod "nginx" created
 ```
 
@@ -169,14 +176,14 @@ pod "nginx" deleted
 Create the privileged pod
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/restricted-psp-users create -f examples/podsecuritypolicy/rbac/pod_priv.yaml 
-Error from server (Forbidden): error when creating "examples/podsecuritypolicy/rbac/pod_priv.yaml": pods "nginx" is forbidden: unable to validate against any pod security policy: [spec.containers[0].securityContext.privileged: Invalid value: true: Privileged containers are not allowed]
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/restricted-psp-users create -f staging/podsecuritypolicy/rbac/pod_priv.yaml
+Error from server (Forbidden): error when creating "staging/podsecuritypolicy/rbac/pod_priv.yaml": pods "nginx" is forbidden: unable to validate against any pod security policy: [spec.containers[0].securityContext.privileged: Invalid value: true: Privileged containers are not allowed]
 ```
 
 ### Privileged user can create non-privileged pods
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users create -f examples/podsecuritypolicy/rbac/pod.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users create -f staging/podsecuritypolicy/rbac/pod.yaml
 pod "nginx" created
 ```
 
@@ -201,7 +208,7 @@ pod "nginx" deleted
 Create the privileged pod
 
 ```
-$ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users create -f examples/podsecuritypolicy/rbac/pod_priv.yaml 
+$ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users create -f staging/podsecuritypolicy/rbac/pod_priv.yaml
 pod "nginx" created
 ```
 
