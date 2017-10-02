@@ -22,11 +22,10 @@ spec:
       containers:
       - name: es
         securityContext:
-          privileged: true
           capabilities:
             add:
               - IPC_LOCK
-        image: quay.io/pires/docker-elasticsearch-kubernetes:5.5.1
+        image: quay.io/pires/docker-elasticsearch-kubernetes:5.6.2
         env:
         - name: KUBERNETES_CA_CERTIFICATE_FILE
           value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -44,8 +43,6 @@ spec:
           value: "true"
         - name: HTTP_ENABLE
           value: "true"
-        - name: "ES_JAVA_OPTS"
-          value: "-Xms256m -Xmx256m"
         ports:
         - containerPort: 9200
           name: http
