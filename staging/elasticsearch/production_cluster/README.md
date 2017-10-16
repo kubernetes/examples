@@ -19,27 +19,27 @@ This example uses [this pre-built image](https://github.com/pires/docker-elastic
 ## Deploy
 
 ```
-kubectl create -f examples/elasticsearch/production_cluster/service-account.yaml
-kubectl create -f examples/elasticsearch/production_cluster/es-discovery-svc.yaml
-kubectl create -f examples/elasticsearch/production_cluster/es-svc.yaml
-kubectl create -f examples/elasticsearch/production_cluster/es-master-rc.yaml
+kubectl create -f staging/elasticsearch/production_cluster/service-account.yaml
+kubectl create -f staging/elasticsearch/production_cluster/es-discovery-svc.yaml
+kubectl create -f staging/elasticsearch/production_cluster/es-svc.yaml
+kubectl create -f staging/elasticsearch/production_cluster/es-master-rc.yaml
 ```
 
 Wait until `es-master` is provisioned, and
 
 ```
-kubectl create -f examples/elasticsearch/production_cluster/es-client-rc.yaml
+kubectl create -f staging/elasticsearch/production_cluster/es-client-rc.yaml
 ```
 
 Wait until `es-client` is provisioned, and
 
 ```
-kubectl create -f examples/elasticsearch/production_cluster/es-data-rc.yaml
+kubectl create -f staging/elasticsearch/production_cluster/es-data-rc.yaml
 ```
 
 Wait until `es-data` is provisioned.
 
-Now, I leave up to you how to validate the cluster, but a first step is to wait for containers to be in ```RUNNING``` state and check the Elasticsearch master logs:
+Now, I leave up to you how to validate the cluster, but a first step is to wait for containers to be in `RUNNING` state and check the Elasticsearch master logs:
 
 ```
 $ kubectl get pods
