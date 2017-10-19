@@ -49,36 +49,33 @@ For this demonstration, ensure the following:
 
 ## Deploy Kubernetes Secret for ScaleIO
 
-The ScaleIO plugin uses a Kubernetes Secret object to store the `username` and `password` credentials.  Kubernetes requires the secret values to be base64-encoded to simply obfuscate (not encrypt) the clear text as shown below.
+The ScaleIO plugin uses a Kubernetes Secret object to store the `username` and `password` credentials used to access the ScaleIO cluster.  As a pre-requisite, a Kubernetes admin must create the secret prior to using the ScaleIO plugin.    
 
-```
-$> echo -n "siouser" | base64
-c2lvdXNlcg==
-$> echo -n "sc@l3I0" | base64
-c2NAbDNJMA==
-```
-The previous will generate `base64-encoded` values for the username and password.  
-Remember to generate the credentials for your own environment and copy them in a secret file similar to the following.  
+### Create/identify namespace
+As a measure of security, the secret must be associated with a namespace that is not accessible by non-administrative Kubernetes users.  As a first step, an admin should create the namespace or identify a suitable one that is already available. 
 
-File: [secret.yaml](secret.yaml)
-
+The following example creates namespace `scaleio-ns`:
 ```
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sio-secret
-type: kubernetes.io/scaleio
-data:
-  username: c2lvdXNlcg==
-  password: c2NAbDNJMA==
+$> kubectl create namespace scaleio-ns
 ```
 
-Notice the name of the secret specified above as `sio-secret`.  It will be referred in other YAML configuration files later.  Next, deploy the secret.
+> For more info on administering namespaces [here](https://kubernetes.io/docs/tasks/administer-cluster/namespaces/).
 
+### Create Secret object
+As a next step, the following example shows how to create a generic username/password secret, associated with the namespace from earlier, to be used as ScaleIO credentials:
+
+```bash
+$> kubectl create secret generic top-secret \
+    --type="kubernetes.io/scaleio" \
+    --from-literal=username=siouser \
+    --from-literal=password=sc@l3IO \
+    --namespace=scaleio-ns
 ```
-$ kubectl create -f ./examples/volumes/scaleio/secret.yaml
-```
-Read more about Kubernetes secrets [here](https://kubernetes.io/docs/concepts/configuration/secret/).
+> Remember to replace the credential values with your own. 
+
+Kubernetes secrets are base64-encoded to obfuscate (not encrypt) their text values. 
+
+You can also create secrets from a file as well [secret.yaml](secret.yaml).  For more bout Kubernetes secrets [see here](https://kubernetes.io/docs/concepts/configuration/secret/).
 
 ## Deploying Pods with Persistent Volumes
 
@@ -157,7 +154,7 @@ scinia      252:0    0    8G  0 disk /var/lib/kubelet/pods/135986c7-dcb7-11e6-9f
 
 ## StorageClass and Dynamic Provisioning
 
-The ScaleIO volume plugin can also dynamically provision storage to a Kubernetes cluster. 
+The ScaleIO volume plugin can dynamically provision storage to a Kubernetes cluster. 
 The ScaleIO dynamic provisioner plugin can be used with a `StorageClass` and is identified as `kubernetes.io/scaleio`.  
 
 ### ScaleIO StorageClass
@@ -170,7 +167,8 @@ The ScaleIO dynamic provisioning plugin supports the following StorageClass para
 | protectionDomain| the name of the ScaleIO protection domain (required)|
 | storagePool| the name of the volume storage pool (required)|
 | storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
-| secretRef| reference to the name of a configuered Secret object (required)|
+| secretRef| reference to the name a configuered Secret object (required)|
+| secretNamespace| reference to the namespace a configuered Secret object, if omitted it defaults to the PV's namespace (optional)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
 | fsType| the file system to use for the volume (default `ext4`)|
 
@@ -190,9 +188,12 @@ parameters:
   protectionDomain: pd01
   storagePool: sp01
   secretRef: sio-secret
+  secretNamespace: scaleio-ns
   fsType: xfs
 ```
-Note the `metadata:name` attribute of the StorageClass is set to `sio-small` and will be referenced later.  Again, remember to update other parameters to reflect your environment setup.
+Note the `metadata:name` attribute of the StorageClass is set to `sio-small` and will be referenced later. Parameters `secretRef` and `secretNamespace` are used to sepcify a fully-qualified referenced of the secret object created earlier. 
+
+Again, remember to update other parameters to reflect your environment setup.
 
 Next, deploy the storage class file.
 
