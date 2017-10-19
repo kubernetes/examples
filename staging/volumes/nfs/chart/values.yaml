@@ -1,0 +1,2 @@
+service:
+  clusterIP: 10.0.0.99
