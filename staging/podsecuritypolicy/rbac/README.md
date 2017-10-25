@@ -129,9 +129,9 @@ We can then create role bindings to grant those permissions.
 
 In this example, we will create `ClusterRoleBindings` to grant the roles to groups cluster-wide.
 
-1. `privileged`: this group is bound to the `privilegedPSP` role and `restrictedPSP` role which gives users
+1. `privileged-psp-user`: this group is bound to the `privileged-psp-user` role and `restricted-psp-user` role which gives users
 in this group access to both policies.
-1. `restricted`: this group is bound to the `restrictedPSP` role.
+1. `restricted-psp-user`: this group is bound to the `restricted-psp-user` role.
 1. `system:authenticated`: this is a system group for any authenticated user.  It is bound to the `edit`
 role which is already provided by the cluster.
 
