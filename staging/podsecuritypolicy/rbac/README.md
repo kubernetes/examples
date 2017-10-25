@@ -16,7 +16,7 @@ The server must be started to enable the appropriate APIs and flags
 If you are using the `local-up-cluster.sh` script you may enable these settings with the following syntax
 
 ```
-PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true ALLOW_ANY_TOKEN=true ENABLE_RBAC=true RUNTIME_CONFIG="extensions/v1beta1=true,extensions/v1beta1/podsecuritypolicy=true" hack/local-up-cluster.sh
+PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true ALLOW_ANY_TOKEN=true RUNTIME_CONFIG="extensions/v1beta1=true,extensions/v1beta1/podsecuritypolicy=true" hack/local-up-cluster.sh
 ```
 
 The `kubectl` commands in this document assume that the current directory is the root directory of the cloned repository:
