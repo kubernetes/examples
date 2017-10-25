@@ -37,6 +37,9 @@ testing.  It relies on the `ALLOW_ANY_TOKEN` setting.
 
 ## Creating the policies, roles, and bindings
 
+NOTE: If you are using `local-up-cluster.sh` you don't need to create these
+policies, roles, and bindings as they already have been created by the script.
+
 ### Policies
 
 The first step to enforcing cluster constraints via PSP is to create your policies.  In this
