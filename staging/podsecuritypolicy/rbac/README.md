@@ -191,14 +191,17 @@ $ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users creat
 pod "nginx" created
 ```
 
-Check the PSP that allowed the pod.  Note, this could be the `restricted` or `privileged` PSP since both allow
-for the creation of non-privileged pods.
+Check the PSP that allowed the pod.
 
 ```
 $ kubectl get pod nginx -o yaml | egrep "psp|privileged"
     kubernetes.io/psp: privileged
-      privileged: false
 ```
+
+In the versions prior 1.9 this could be the `restricted` or `privileged` PSP
+since both allow for the creation of non-privileged pods. Starting from 1.9
+release, the `privileged` PSP will always be used as it accepts the pod as-is
+(without defaulting/mutating).
 
 ### Privileged user can create privileged pods
 
