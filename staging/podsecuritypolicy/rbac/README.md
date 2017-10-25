@@ -9,14 +9,14 @@ The server must be started to enable the appropriate APIs and flags
 
 1.  allow privileged containers
 1.  allow security contexts
-1.  enable RBAC and accept any token
+1.  enable RBAC
 1.  enable PodSecurityPolicies
 1.  use the PodSecurityPolicy admission controller
 
 If you are using the `local-up-cluster.sh` script you may enable these settings with the following syntax
 
 ```
-PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true ALLOW_ANY_TOKEN=true hack/local-up-cluster.sh
+PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true hack/local-up-cluster.sh
 ```
 
 The `kubectl` commands in this document assume that the current directory is the root directory of the cloned repository:
@@ -32,8 +32,7 @@ It is important to note that this example uses the following syntax to test with
 
 1.  `--server=https://127.0.0.1:6443`: when performing requests this ensures that the protected port is used so
 that RBAC will be enforced
-1.  `--token={user}/{group(s)}`: this syntax allows a request to specify the username and groups to use for
-testing.  It relies on the `ALLOW_ANY_TOKEN` setting.
+1.  `--token=<token>`: this allows to make requests from a different users during testing.
 
 ## Creating the policies, roles, and bindings
 
