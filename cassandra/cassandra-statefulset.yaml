@@ -86,7 +86,7 @@ spec:
           storage: 1Gi
 ---
 kind: StorageClass
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 metadata:
   name: fast
 provisioner: k8s.io/minikube-hostpath
