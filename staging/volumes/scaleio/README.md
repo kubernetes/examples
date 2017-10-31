@@ -61,7 +61,7 @@ The example presented in this section shows how the ScaleIO volume plugin can au
 | system  | the name of the ScaleIO system (required)|
 | protectionDomain| the name of the ScaleIO protection domain (required)|
 | storagePool| the name of the volume storage pool (required)|
-| storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
+| storageMode| the storage provision mode: `ThinProvisioned` (default) or `ThickProvisioned`|
 | volumeName| the name of an existing volume in ScaleIO (required)|
 | secretRef:name| references the name of a Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
@@ -140,7 +140,7 @@ The ScaleIO dynamic provisioning plugin supports the following StorageClass para
 | system  | the name of the ScaleIO system (required)|
 | protectionDomain| the name of the ScaleIO protection domain (required)|
 | storagePool| the name of the volume storage pool (required)|
-| storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
+| storageMode| the storage provision mode: `ThinProvisioned` (default) or `ThickProvisioned`|
 | secretRef| reference to the name of a configuered Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
 | fsType| the file system to use for the volume (default `ext4`)|
