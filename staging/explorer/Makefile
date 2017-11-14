@@ -12,19 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-all: push
-
 # Keep this one version ahead, so no one accidentally blows away the latest published version.
 TAG = 1.1
 
-explorer: explorer.go
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w' ./explorer.go
+REGISTRY = gcr.io/google_containers
+ARCH ?= $(shell go env GOARCH)
+ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
-container: explorer
-	docker build --pull -t gcr.io/google_containers/explorer:$(TAG) .
 
-push: container
-	gcloud docker -- push gcr.io/google_containers/explorer:$(TAG)
+IMAGE = $(REGISTRY)/explorer
+MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
+
+
+TEMP_DIR := $(shell mktemp -d)
+
+all: all-container
+
+sub-container-%:
+	$(MAKE) --no-print-directory ARCH=$* container
+
+sub-push-%:
+	$(MAKE) --no-print-directory ARCH=$* push
+
+all-container: $(addprefix sub-container-,$(ALL_ARCH))
+
+all-push: $(addprefix sub-push-,$(ALL_ARCH))
+
+container: .container-$(ARCH)
+.container-$(ARCH):
+	cp -r * $(TEMP_DIR)
+	CGO_ENABLED=0 GOARCH=$(ARCH) GOOS=linux go build -a -o $(TEMP_DIR)/explorer -installsuffix cgo -ldflags '-w' ./explorer.go
+	docker build -t $(MULTI_ARCH_IMG):$(TAG) $(TEMP_DIR)
+
+ifeq ($(ARCH), amd64)
+	# Adding check for amd64
+	docker tag $(MULTI_ARCH_IMG):$(TAG) $(IMAGE):$(TAG)
+endif
+
+
+push: .push-$(ARCH)
+.push-$(ARCH): .container-$(ARCH)
+	gcloud docker -- push $(MULTI_ARCH_IMG):$(TAG)
+ifeq ($(ARCH), amd64)
+	gcloud docker -- push $(IMAGE):$(TAG)
+endif
 
 clean:
 	rm -f explorer
