@@ -12,13 +12,18 @@ $(document).ready(function() {
       entriesElement.append("<p>" + val + "</p>");
     });
   }
+  
+  var onSubmissionSuccess = function(data) {
+    appendGuestbookEntries(data);
+    entryContentElement.val("");
+  }
 
   var handleSubmission = function(e) {
     e.preventDefault();
     var entryValue = entryContentElement.val()
     if (entryValue.length > 0) {
       entriesElement.append("<p>...</p>");
-      $.getJSON("rpush/guestbook/" + entryValue, appendGuestbookEntries);
+      $.getJSON("rpush/guestbook/" + entryValue, onSubmissionSuccess);
     }
     return false;
   }
