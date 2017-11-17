@@ -1,8 +1,11 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
   name: etcd-discovery
 spec:
+  selector:
+    matchLabels:
+      name: etcd-discovery
   strategy:
     type: Recreate
   replicas: 1

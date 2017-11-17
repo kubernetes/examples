@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1beta2
 kind: DaemonSet
 metadata:
   name: newrelic-agent
@@ -7,6 +7,9 @@ metadata:
     app: newrelic-agent
     version: v1
 spec:
+  selector:
+    matchLabels:
+      name: newrelic
   template:
     metadata:
       labels:

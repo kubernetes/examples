@@ -1,32 +1,3 @@
-<!-- BEGIN MUNGE: UNVERSIONED_WARNING -->
-
-<!-- BEGIN STRIP_FOR_RELEASE -->
-
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING"
-     width="25" height="25">
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING"
-     width="25" height="25">
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING"
-     width="25" height="25">
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING"
-     width="25" height="25">
-<img src="http://kubernetes.io/kubernetes/img/warning.png" alt="WARNING"
-     width="25" height="25">
-
-<h2>PLEASE NOTE: This document applies to the HEAD of the source tree</h2>
-
-If you are using a released version of Kubernetes, you should
-refer to the docs that go with that version.
-
-Documentation for other releases can be found at
-[releases.k8s.io](http://releases.k8s.io).
-</strong>
---
-
-<!-- END STRIP_FOR_RELEASE -->
-
-<!-- END MUNGE: UNVERSIONED_WARNING -->
-
 # Dell EMC ScaleIO Volume Plugin for Kubernetes
 
 This document shows how to configure Kubernetes resources to consume storage from volumes hosted on ScaleIO cluster.
@@ -90,7 +61,7 @@ The example presented in this section shows how the ScaleIO volume plugin can au
 | system  | the name of the ScaleIO system (required)|
 | protectionDomain| the name of the ScaleIO protection domain (required)|
 | storagePool| the name of the volume storage pool (required)|
-| storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
+| storageMode| the storage provision mode: `ThinProvisioned` (default) or `ThickProvisioned`|
 | volumeName| the name of an existing volume in ScaleIO (required)|
 | secretRef:name| references the name of a Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
@@ -169,7 +140,7 @@ The ScaleIO dynamic provisioning plugin supports the following StorageClass para
 | system  | the name of the ScaleIO system (required)|
 | protectionDomain| the name of the ScaleIO protection domain (required)|
 | storagePool| the name of the volume storage pool (required)|
-| storageMode| the storage provision mode: `ThinProvisionned` (default) or `ThickProvisionned`|
+| storageMode| the storage provision mode: `ThinProvisioned` (default) or `ThickProvisioned`|
 | secretRef| reference to the name of a configuered Secret object (required)|
 | readOnly| specifies the access mode to the mounted volume (default `false`)|
 | fsType| the file system to use for the volume (default `ext4`)|
