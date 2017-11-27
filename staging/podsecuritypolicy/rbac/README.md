@@ -9,14 +9,14 @@ The server must be started to enable the appropriate APIs and flags
 
 1.  allow privileged containers
 1.  allow security contexts
-1.  enable RBAC and accept any token
+1.  enable RBAC
 1.  enable PodSecurityPolicies
 1.  use the PodSecurityPolicy admission controller
 
 If you are using the `local-up-cluster.sh` script you may enable these settings with the following syntax
 
 ```
-PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true ALLOW_ANY_TOKEN=true ENABLE_RBAC=true RUNTIME_CONFIG="extensions/v1beta1=true,extensions/v1beta1/podsecuritypolicy=true" hack/local-up-cluster.sh
+PSP_ADMISSION=true ALLOW_PRIVILEGED=true ALLOW_SECURITY_CONTEXT=true hack/local-up-cluster.sh
 ```
 
 The `kubectl` commands in this document assume that the current directory is the root directory of the cloned repository:
@@ -32,10 +32,12 @@ It is important to note that this example uses the following syntax to test with
 
 1.  `--server=https://127.0.0.1:6443`: when performing requests this ensures that the protected port is used so
 that RBAC will be enforced
-1.  `--token={user}/{group(s)}`: this syntax allows a request to specify the username and groups to use for
-testing.  It relies on the `ALLOW_ANY_TOKEN` setting.
+1.  `--token=<token>`: this allows to make requests from a different users during testing.
 
 ## Creating the policies, roles, and bindings
+
+NOTE: If you are using `local-up-cluster.sh` you don't need to create these
+policies, roles, and bindings as they already have been created by the script.
 
 ### Policies
 
@@ -129,9 +131,9 @@ We can then create role bindings to grant those permissions.
 
 In this example, we will create `ClusterRoleBindings` to grant the roles to groups cluster-wide.
 
-1. `privileged`: this group is bound to the `privilegedPSP` role and `restrictedPSP` role which gives users
+1. `privileged-psp-user`: this group is bound to the `privileged-psp-user` role and `restricted-psp-user` role which gives users
 in this group access to both policies.
-1. `restricted`: this group is bound to the `restrictedPSP` role.
+1. `restricted-psp-user`: this group is bound to the `restricted-psp-user` role.
 1. `system:authenticated`: this is a system group for any authenticated user.  It is bound to the `edit`
 role which is already provided by the cluster.
 
@@ -189,14 +191,17 @@ $ kubectl --server=https://127.0.0.1:6443 --token=foo/privileged-psp-users creat
 pod "nginx" created
 ```
 
-Check the PSP that allowed the pod.  Note, this could be the `restricted` or `privileged` PSP since both allow
-for the creation of non-privileged pods.
+Check the PSP that allowed the pod.
 
 ```
 $ kubectl get pod nginx -o yaml | egrep "psp|privileged"
     kubernetes.io/psp: privileged
-      privileged: false
 ```
+
+In the versions prior 1.9 this could be the `restricted` or `privileged` PSP
+since both allow for the creation of non-privileged pods. Starting from 1.9
+release, the `privileged` PSP will always be used as it accepts the pod as-is
+(without defaulting/mutating).
 
 ### Privileged user can create privileged pods
 
