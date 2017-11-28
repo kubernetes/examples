@@ -42,7 +42,7 @@ NOTE: you should define `war` container **first** as it is the "provider".
 
 <!-- BEGIN MUNGE: javaweb.yaml -->
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -97,7 +97,7 @@ What's more, if you don't want to enclose a build-in `mv.sh` script in the `war`
 
 <!-- BEGIN MUNGE: javaweb-2.yaml -->
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
