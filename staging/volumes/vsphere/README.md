@@ -578,12 +578,12 @@
             claimName: pvcsc-vsan
       ```
 
-      [Download example](vsphere-volume-pvcscpod.yaml?raw=true)
+      [Download example](vsphere-volume-pvcscvsanpod.yaml?raw=true)
 
       Creating the pod:
 
       ``` bash
-      $ kubectl create -f examples/volumes/vsphere/vsphere-volume-pvcscpod.yaml
+      $ kubectl create -f examples/volumes/vsphere/vsphere-volume-pvcscvsanpod.yaml
       ```
 
       Verifying pod is created:
