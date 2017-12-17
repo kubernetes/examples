@@ -1,6 +1,6 @@
 ## Reliable, Scalable Redis on Kubernetes
 
-The following document describes the deployment of a reliable, multi-node Redis on Kubernetes.  It deploys a master with replicated slaves, as well as replicated redis sentinels which are use for health checking and failover.
+The following document describes the deployment of a reliable, multi-node Redis on Kubernetes.  It deploys a master with replicated slaves, as well as replicated redis sentinels which are used for health checking and failover.
 
 ### Prerequisites
 
