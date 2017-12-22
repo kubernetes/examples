@@ -84,7 +84,7 @@ metadata:
   name: pod-0
 spec:
   containers:
-  - image: gcr.io/google_containers/test-webserver
+  - image: k8s.gcr.io/test-webserver
     name: pod-0
     volumeMounts:
     - mountPath: /test-pd
@@ -221,7 +221,7 @@ metadata:
 spec:
   containers:
     - name: pod-sio-small-container
-      image: gcr.io/google_containers/test-webserver
+      image: k8s.gcr.io/test-webserver
       volumeMounts:
       - mountPath: /test
         name: test-data
