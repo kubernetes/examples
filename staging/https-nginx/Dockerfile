@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nginx
+FROM BASEIMAGE
 
+CROSS_BUILD_COPY qemu-ARCH-static /usr/bin/
 
 COPY index2.html /usr/share/nginx/html/index2.html
 RUN chmod +r /usr/share/nginx/html/index2.html
