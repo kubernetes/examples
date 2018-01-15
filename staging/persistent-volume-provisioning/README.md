@@ -101,7 +101,7 @@ For a complete example refer ([Portworx Volume docs](../volumes/portworx/README.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: slow
+  name: fast
 provisioner: kubernetes.io/glusterfs
 parameters:
   resturl: "http://127.0.0.1:8081"
@@ -150,6 +150,12 @@ For available volume types and its administration options refer: ([Administratio
 * `volumeoptions` : This option allows to specify the gluster volume option which has to be set on the dynamically provisioned GlusterFS volume. The value string should be comma seperated strings which need to be set on the volume. As shown in example, if you want to enable encryption on gluster dynamically provisioned volumes you can pass `client.ssl on, server.ssl on` options. This is an optional parameter.
 
 For available volume options and its administration refer: ([Administration Guide](https://access.redhat.com/documentation/en-us/red_hat_gluster_storage/3.2/html/administration_guide/chap-managing_red_hat_storage_volumes))
+
+* `volumenameprefix` : By default dynamically provisioned volumes has the naming schema of `vol_UUID` format. With this option present in storageclass, an admin can now prefix the desired volume name from storageclass. If `volumenameprefix` storageclass parameter is set, the dynamically provisioned volumes are created in below format where `_` is the field seperator/delimiter:
+
+`customvolumeprefix_PVCname_randomUUID`
+
+Please note that, the value for this parameter cannot contain `_` in storageclass. This is an optional parameter.
 
 Reference : ([How to configure Gluster on Kubernetes](https://github.com/gluster/gluster-kubernetes/blob/master/docs/setup-guide.md))
 
