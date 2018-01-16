@@ -145,11 +145,11 @@ For example:
   'Distribute volume':
     `volumetype: none`
 
-For available volume types and its administration options refer: ([Administration Guide](https://access.redhat.com/documentation/en-US/Red_Hat_Storage/3.1/html/Administration_Guide/part-Overview.html))
+For available volume types and its administration options refer: ([Administration Guide](http://docs.gluster.org/en/latest/Administrator%20Guide/Setting%20Up%20Volumes/))
 
 * `volumeoptions` : This option allows to specify the gluster volume option which has to be set on the dynamically provisioned GlusterFS volume. The value string should be comma seperated strings which need to be set on the volume. As shown in example, if you want to enable encryption on gluster dynamically provisioned volumes you can pass `client.ssl on, server.ssl on` options. This is an optional parameter.
 
-For available volume options and its administration refer: ([Administration Guide](https://access.redhat.com/documentation/en-us/red_hat_gluster_storage/3.2/html/administration_guide/chap-managing_red_hat_storage_volumes))
+For available volume options and its administration refer: ([Administration Guide](http://docs.gluster.org/en/latest/Administrator%20Guide/Managing%20Volumes/))
 
 * `volumenameprefix` : By default dynamically provisioned volumes has the naming schema of `vol_UUID` format. With this option present in storageclass, an admin can now prefix the desired volume name from storageclass. If `volumenameprefix` storageclass parameter is set, the dynamically provisioned volumes are created in below format where `_` is the field seperator/delimiter:
 
