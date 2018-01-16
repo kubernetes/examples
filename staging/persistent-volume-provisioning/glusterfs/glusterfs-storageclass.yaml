@@ -13,3 +13,4 @@ parameters:
   gidMax: "50000"
   volumetype: "replicate:3"
   volumeoptions: "client.ssl on, server.ssl on"
+  volumenameprefix: "dept-dev"
