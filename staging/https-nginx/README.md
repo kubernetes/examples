@@ -9,7 +9,7 @@ It uses an [nginx server block](http://wiki.nginx.org/ServerBlockExample) to ser
 First generate a self signed rsa key and certificate that the server can use for TLS.
 
 ```sh
-$ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/nginx.key -out /tmp/nginx.crt -subj "/CN=nginxsvc/O=nginxsvc"
+$ make keys KEY=/tmp/nginx.key CERT=/tmp/nginx.crt
 ```
 
 ### Create a https nginx application running in a kubernetes cluster
