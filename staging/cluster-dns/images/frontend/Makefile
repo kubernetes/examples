@@ -13,7 +13,7 @@
 # limitations under the License.
 
 TAG = v1
-PREFIX = k8s.gcr.io
+PREFIX = staging-k8s.gcr.io
 IMAGE = example-dns-frontend
 
 all: push
