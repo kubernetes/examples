@@ -153,7 +153,7 @@ For available volume options and its administration refer: ([Administration Guid
 
 * `volumenameprefix` : By default dynamically provisioned volumes has the naming schema of `vol_UUID` format. With this option present in storageclass, an admin can now prefix the desired volume name from storageclass. If `volumenameprefix` storageclass parameter is set, the dynamically provisioned volumes are created in below format where `_` is the field seperator/delimiter:
 
-`customvolumeprefix_PVCname_randomUUID`
+`volumenameprefix_Namespace_PVCname_randomUUID`
 
 Please note that, the value for this parameter cannot contain `_` in storageclass. This is an optional parameter.
 
