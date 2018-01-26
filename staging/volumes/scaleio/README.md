@@ -195,7 +195,7 @@ spec:
       storage: 10Gi
 ```
 
-Note the `spec:storageClassName` entry which specifies the name of the perviously defined StorageClass `sio-small` .
+Note the `spec:storageClassName` entry which specifies the name of the previously defined StorageClass `sio-small` .
 
 Next, deploy the PVC file.  This step will cause the Kubernetes ScaleIO plugin to create the volume in the storage system.  
 ```
