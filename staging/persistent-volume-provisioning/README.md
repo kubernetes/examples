@@ -147,11 +147,11 @@ For example:
 
 For available volume types and its administration options refer: ([Administration Guide](http://docs.gluster.org/en/latest/Administrator%20Guide/Setting%20Up%20Volumes/))
 
-* `volumeoptions` : This option allows to specify the gluster volume option which has to be set on the dynamically provisioned GlusterFS volume. The value string should be comma seperated strings which need to be set on the volume. As shown in example, if you want to enable encryption on gluster dynamically provisioned volumes you can pass `client.ssl on, server.ssl on` options. This is an optional parameter.
+* `volumeoptions` : This option allows to specify the gluster volume option which has to be set on the dynamically provisioned GlusterFS volume. The value string should be comma separated strings which need to be set on the volume. As shown in example, if you want to enable encryption on gluster dynamically provisioned volumes you can pass `client.ssl on, server.ssl on` options. This is an optional parameter.
 
 For available volume options and its administration refer: ([Administration Guide](http://docs.gluster.org/en/latest/Administrator%20Guide/Managing%20Volumes/))
 
-* `volumenameprefix` : By default dynamically provisioned volumes has the naming schema of `vol_UUID` format. With this option present in storageclass, an admin can now prefix the desired volume name from storageclass. If `volumenameprefix` storageclass parameter is set, the dynamically provisioned volumes are created in below format where `_` is the field seperator/delimiter:
+* `volumenameprefix` : By default dynamically provisioned volumes has the naming schema of `vol_UUID` format. With this option present in storageclass, an admin can now prefix the desired volume name from storageclass. If `volumenameprefix` storageclass parameter is set, the dynamically provisioned volumes are created in below format where `_` is the field separator/delimiter:
 
 `volumenameprefix_Namespace_PVCname_randomUUID`
 
@@ -280,19 +280,19 @@ Access Modes:   RWO
 No events.
 
 $ kubectl describe pv
-Name:  		pvc-bdb82652-694a-11e6-b811-080027242396
+Name:       pvc-bdb82652-694a-11e6-b811-080027242396
 Labels:		<none>
 Status:		Bound
-Claim: 		default/claim1
+Claim:      default/claim1
 Reclaim Policy:	Delete
-Access Modes:  	RWO
-Capacity:      	3Gi
+Access Modes:   RWO
+Capacity:       3Gi
 Message:
 Source:
-    Type:      	Quobyte (a Quobyte mount on the host that shares a pod's lifetime)
-    Registry:  	138.68.79.14:7861
-    Volume:    	kubernetes-dynamic-pvc-bdb97c58-694a-11e6-91b6-080027242396
-    ReadOnly:  	false
+    Type:       Quobyte (a Quobyte mount on the host that shares a pod's lifetime)
+    Registry:   138.68.79.14:7861
+    Volume:     kubernetes-dynamic-pvc-bdb97c58-694a-11e6-91b6-080027242396
+    ReadOnly:   false
 No events.
 ```
 
@@ -440,7 +440,7 @@ The kube-controller-manager is now able to provision storage, however we still n
 $ ceph osd pool create kube 512
 $ ceph auth get-or-create client.kube mon 'allow r' osd 'allow rwx pool=kube'
 [client.kube]
-	key = AQBQyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy==
+    key = AQBQyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy==
 ```
 
 This key will be made into a secret, just like the admin secret. However this user secret will need to be created in every namespace where you intend to consume RBD volumes provisioned in our example storage class. Let's create a namespace called `myns`, and create the user secret in that namespace.
@@ -486,7 +486,7 @@ Source:
     Type:		RBD (a Rados Block Device mount on the host that shares a pod's lifetime)
     CephMonitors:	[127.0.0.1:6789]
     RBDImage:		kubernetes-dynamic-pvc-1cfb1862-664b-11e6-9a5d-90b11c09520d
-    FSType:		
+    FSType:
     RBDPool:		kube
     RadosUser:		kube
     Keyring:		/etc/ceph/keyring
