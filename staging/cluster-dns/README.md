@@ -30,14 +30,15 @@ development   name=development   Active
 production    name=production    Active
 ```
 
-For kubectl client to work with each namespace, we define two contexts:
+For kubectl client to work with each namespace, we define two contexts using our current context as a base:
 
 ```sh
+$ CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
+$ USER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.user}')
+$ CLUSTER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.cluster}')
 $ kubectl config set-context dev --namespace=development --cluster=${CLUSTER_NAME} --user=${USER_NAME}
 $ kubectl config set-context prod --namespace=production --cluster=${CLUSTER_NAME} --user=${USER_NAME}
 ```
-
-You can view your cluster name and user name in Kubernetes config at ~/.kube/config.
 
 ### Step Two: Create backend replication controller in each namespace
 
@@ -143,7 +144,7 @@ If you prefer not using namespace, then all your services can be addressed using
 
 ### tl; dr;
 
-For those of you who are impatient, here is the summary of the commands we ran in this tutorial. Remember to set first `$CLUSTER_NAME` and `$USER_NAME` to the values found in `~/.kube/config`.
+For those of you who are impatient, here is the summary of the commands we ran in this tutorial. Remember the values of `$CLUSTER_NAME` and `$USER_NAME` are based on current context found in `~/.kube/config`.
 
 ```sh
 # create dev and prod namespaces
@@ -151,6 +152,9 @@ kubectl create -f examples/cluster-dns/namespace-dev.yaml
 kubectl create -f examples/cluster-dns/namespace-prod.yaml
 
 # create two contexts
+CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
+USER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.user}')
+CLUSTER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.cluster}')
 kubectl config set-context dev --namespace=development --cluster=${CLUSTER_NAME} --user=${USER_NAME}
 kubectl config set-context prod --namespace=production --cluster=${CLUSTER_NAME} --user=${USER_NAME}
 
