@@ -122,7 +122,7 @@ $ curl https://104.198.1.26:30028 -k
 ...
 ```
 
-For more information on how to run this in a kubernetes cluster, please see the [user-guide](https://kubernetes.io/docs/concepts/).
+For more information on how to run this in a kubernetes cluster, please see the [user-guide](https://kubernetes.io/docs/concepts/services-networking/service/).
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
 [![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/https-nginx/README.md?pixel)]()
