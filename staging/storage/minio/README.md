@@ -237,7 +237,8 @@ A StatefulSet provides a deterministic name and a unique identity to each pod, m
 This is the Statefulset description.
 
 ```sh
-apiVersion: apps/v
+# for versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: minio
