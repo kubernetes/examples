@@ -138,7 +138,7 @@ This creates two pods, each of which serve the `index.html` from above. We can
 then use a simple service to front it:
 
 ```console
-kubectl create -f examples/volumes/nfs/nfs-web-service.yaml
+$ kubectl create -f examples/volumes/nfs/nfs-web-service.yaml
 ```
 
 We can then use the busybox container we launched before to check that `nginx`
