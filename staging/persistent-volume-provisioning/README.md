@@ -204,7 +204,7 @@ parameters:
 
 * `monitors`: Ceph monitors, comma delimited. It is required.
 * `adminId`: Ceph client ID that is capable of creating images in the pool. Default is "admin".
-* `adminSecret`: Secret Name for `adminId`. It is required. The provided secret must have type "kubernetes.io/rbd".
+* `adminSecretName`: Secret Name for `adminId`. It is required. The provided secret must have type "kubernetes.io/rbd".
 * `adminSecretNamespace`: The namespace for `adminSecret`. Default is "default".
 * `pool`: Ceph RBD pool. Default is "rbd".
 * `userId`: Ceph client ID that is used to map the RBD image. Default is the same as `adminId`.
