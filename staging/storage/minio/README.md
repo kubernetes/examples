@@ -237,13 +237,18 @@ A StatefulSet provides a deterministic name and a unique identity to each pod, m
 This is the Statefulset description.
 
 ```sh
-apiVersion: apps/v1beta1
+apiVersion: apps/v
 kind: StatefulSet
 metadata:
   name: minio
+  labels:
+    app: minio
 spec:
   serviceName: minio
   replicas: 4
+  selector:
+    matchLabels:
+      app: minio
   template:
     metadata:
       labels:

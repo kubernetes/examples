@@ -633,12 +633,18 @@ vSphere volumes can be consumed by Stateful Sets.
        selector:
          app: nginx
      ---
-     apiVersion: apps/v1beta1
+     # for versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use apps/v1beta1
+     apiVersion:apps/v1
      kind: StatefulSet
      metadata:
        name: web
+       labels:
+         app: nginx
      spec:
        serviceName: "nginx"
+       selector:
+         matchLabels:
+           app: nginx
        replicas: 14
        template:
          metadata:
