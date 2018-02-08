@@ -1,0 +1,37 @@
+apiVersion: apps/v1  # for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: storm-worker-controller
+  labels:
+     name: storm-worker
+spec:
+  replicas: 2
+  selector:
+     matchLabels:
+        name: storm-worker
+        uses: nimbus
+  template:
+    metadata:
+      labels:
+        name: storm-worker
+        uses: nimbus
+    spec:
+      containers:
+      - name: storm-worke
+        image: mattf/storm-worker
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - hostPort: 6700
+          containerPort: 6700
+        - hostPort: 6701
+          containerPort: 6701
+        - hostPort: 6702
+          containerPort: 6702
+        - hostPort: 6703
+          containerPort: 6703

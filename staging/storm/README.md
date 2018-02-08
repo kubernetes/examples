@@ -22,15 +22,15 @@ Source is freely available at:
 This example assumes you have a Kubernetes cluster installed and
 running, and that you have installed the ```kubectl``` command line
 tool somewhere in your path. Please see the [getting
-started](../../docs/getting-started-guides/) for installation
+started](https://kubernetes.io/docs/user-journeys/users/application-developer/foundational/#section-1) for installation
 instructions for your platform.
 
 ## Step One: Start your ZooKeeper service
 
-ZooKeeper is a distributed coordination [service](../../docs/user-guide/services.md) that Storm uses as a
+ZooKeeper is a distributed coordination [service](https://kubernetes.io/docs/concepts/services-networking/service/) that Storm uses as a
 bootstrap and for state storage.
 
-Use the [`examples/storm/zookeeper.json`](zookeeper.json) file to create a [pod](../../docs/user-guide/pods.md) running
+Use the [`examples/storm/zookeeper.json`](zookeeper.json) file to create a [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod/) running
 the ZooKeeper service.
 
 ```sh
@@ -113,11 +113,11 @@ the Nimbus service.
 The Storm workers need both the ZooKeeper and Nimbus services to be
 running.
 
-Use the [`examples/storm/storm-worker-controller.json`](storm-worker-controller.json) file to create a
-[replication controller](../../docs/user-guide/replication-controller.md) that manages the worker pods.
+Use the [`examples/storm/storm-worker-controller.yaml`](storm-worker-controller.yaml) file to create a
+[deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) that manages the worker pods.
 
 ```sh
-$ kubectl create -f examples/storm/storm-worker-controller.json
+$ kubectl create -f examples/storm/storm-worker-controller.yaml
 ```
 
 ### Check to see if the workers are running
@@ -164,7 +164,7 @@ Make sure the ZooKeeper Pod is running (use: ```kubectl get pods```).
 
 Make sure the Nimbus Pod is running.
 
-```kubectl create -f storm-worker-controller.json```
+```kubectl create -f storm-worker-controller.yaml```
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
