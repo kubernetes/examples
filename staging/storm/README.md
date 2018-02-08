@@ -22,7 +22,7 @@ Source is freely available at:
 This example assumes you have a Kubernetes cluster installed and
 running, and that you have installed the ```kubectl``` command line
 tool somewhere in your path. Please see the [getting
-started](https://kubernetes.io/docs/setup/) for installation
+started](https://kubernetes.io/docs/user-journeys/users/application-developer/foundational/#section-1) for installation
 instructions for your platform.
 
 ## Step One: Start your ZooKeeper service
@@ -113,11 +113,11 @@ the Nimbus service.
 The Storm workers need both the ZooKeeper and Nimbus services to be
 running.
 
-Use the [`examples/storm/storm-worker-controller.json`](storm-worker-controller.json) file to create a
-[replication controller](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/) that manages the worker pods.
+Use the [`examples/storm/storm-worker-controller.yaml`](storm-worker-controller.yaml) file to create a
+[deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) that manages the worker pods.
 
 ```sh
-$ kubectl create -f examples/storm/storm-worker-controller.json
+$ kubectl create -f examples/storm/storm-worker-controller.yaml
 ```
 
 ### Check to see if the workers are running
@@ -164,7 +164,7 @@ Make sure the ZooKeeper Pod is running (use: ```kubectl get pods```).
 
 Make sure the Nimbus Pod is running.
 
-```kubectl create -f storm-worker-controller.json```
+```kubectl create -f storm-worker-controller.yaml```
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
