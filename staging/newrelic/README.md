@@ -70,7 +70,7 @@ The DaemonSet definition instructs Kubernetes to place a newrelic sysmond agent 
 <!-- BEGIN MUNGE: EXAMPLE newrelic-daemonset.yaml -->
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: newrelic-agent
@@ -79,6 +79,9 @@ metadata:
     app: newrelic-agent
     version: v1
 spec:
+  selector:
+    matchLabels:
+      name: newrelic
   template:
     metadata:
       labels:

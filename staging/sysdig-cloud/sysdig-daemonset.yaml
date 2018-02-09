@@ -1,6 +1,6 @@
 #Use this sysdig.yaml when Daemon Sets are enabled on Kubernetes (minimum version 1.1.1). Otherwise use the RC method.
 
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+apiVersion: apps/v1  #for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: sysdig-agent

@@ -88,12 +88,15 @@ A deployment encapsulates replica sets and pods — so, if a pod goes down, 
 This is the deployment description.
 
 ```sh
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: Deployment
 metadata:
   # This name uniquely identifies the Deployment
   name: minio-deployment
 spec:
+  selector:
+    matchLabels:
+      app: minio
   strategy:
     type: Recreate
   template:
@@ -237,7 +240,7 @@ A StatefulSet provides a deterministic name and a unique identity to each pod, m
 This is the Statefulset description.
 
 ```sh
-# for versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use apps/v1beta1
+#  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
