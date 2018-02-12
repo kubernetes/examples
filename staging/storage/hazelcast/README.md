@@ -72,13 +72,16 @@ Deployments will "adopt" existing pods that match their selector query, so let's
 <!-- BEGIN MUNGE: EXAMPLE hazelcast-controller.yaml -->
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: "apps/v1" # for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: Deployment
 metadata: 
   name: hazelcast
   labels: 
     name: hazelcast
-spec: 
+spec:
+  selector:
+    matchLabels:
+      name: hazelcast
   template: 
     metadata: 
       labels: 
