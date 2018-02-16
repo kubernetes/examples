@@ -112,6 +112,8 @@ parameters:
   gidMin: "40000"
   gidMax: "50000"
   volumetype: "replicate:3"
+  volumeoptions: "client.ssl on, server.ssl on"
+  volumenameprefix: "dept-dev"
 ```
 
 Example storageclass can be found in [glusterfs-storageclass.yaml](glusterfs/glusterfs-storageclass.yaml).
@@ -161,7 +163,7 @@ Reference : ([How to configure Gluster on Kubernetes](https://github.com/gluster
 
 Reference : ([How to configure Heketi](https://github.com/heketi/heketi/wiki/Setting-up-the-topology))
 
-When the persistent volumes are dynamically provisioned, the Gluster plugin automatically create an endpoint and a headless service in the name `gluster-dynamic-<claimname>`. This dynamic endpoint and service will be deleted automatically when the persistent volume claim is deleted.
+When the persistent volumes are dynamically provisioned, the Gluster plugin automatically create an endpoint and a headless service in the name `glusterfs-dynamic-<claimname>`. This dynamic endpoint and service will be deleted automatically when the persistent volume claim is deleted.
 
 
 #### OpenStack Cinder
