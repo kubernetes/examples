@@ -16,48 +16,32 @@
 
 package io.k8s.cassandra;
 
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertThat;
+
+import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.List;
+
 import org.apache.cassandra.locator.SeedProvider;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.hamcrest.Matchers.*;
-
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
-import static org.junit.Assert.*;
-
 public class KubernetesSeedProviderTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(KubernetesSeedProviderTest.class);
+	private static final Logger logger = LoggerFactory.getLogger(KubernetesSeedProviderTest.class);
 
-    @Test
-    @Ignore("has to be run inside of a kube cluster")
-    public void getSeeds() throws Exception {
-        SeedProvider provider = new KubernetesSeedProvider(new HashMap<String, String>());
-        List<InetAddress> seeds = provider.getSeeds();
+	@Test
+	@Ignore("has to be run inside of a kube cluster")
+	public void getSeeds() throws Exception {
+		SeedProvider provider = new KubernetesSeedProvider(new HashMap<String, String>());
+		List<InetAddress> seeds = provider.getSeeds();
 
-        assertThat(seeds, is(not(empty())));
+		assertThat(seeds, is(not(empty())));
 
-    }
-
-    @Test
-    public void testDefaultSeeds() throws  Exception {
-
-        KubernetesSeedProvider provider = new KubernetesSeedProvider(new HashMap<String,String>());
-        List<InetAddress>  seeds = provider.getDefaultSeeds();
-        List<InetAddress> seedsTest = new ArrayList<>();
-        seedsTest.add(InetAddress.getByName("8.4.4.4"));
-        seedsTest.add(InetAddress.getByName("8.8.8.8"));
-        assertThat(seeds, is(not(empty())));
-        assertThat(seeds, is(seedsTest));
-        logger.debug("seeds loaded {}", seeds);
-
-    }
-
-
+	}
 }

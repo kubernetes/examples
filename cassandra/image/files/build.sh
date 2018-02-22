@@ -55,6 +55,10 @@ else
     rm -rf  $CASSANDRA_HOME/pylib;
 fi
 
+mv /kubernetes-cassandra.jar /usr/local/apache-cassandra-${CASSANDRA_VERSION}/lib
+mv /cassandra-seed.so /etc/cassandra/ 
+mv /cassandra-seed.h /usr/local/lib/include
+
 apt-get -y purge localepurge
 apt-get -y autoremove
 apt-get clean

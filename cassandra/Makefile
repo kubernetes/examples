@@ -13,24 +13,29 @@
 # limitations under the License.
 
 # build the cassandra image.
-VERSION=v13
+VERSION=v14
 PROJECT_ID?=google_samples
 PROJECT=gcr.io/${PROJECT_ID}
 CASSANDRA_VERSION=3.11.2
 
 all: kubernetes-cassandra.jar build
 
-kubernetes-cassandra.jar: ../java/* ../java/src/main/java/io/k8s/cassandra/*.java
-	cd ../java && mvn clean && mvn package
-	mv ../java/target/kubernetes-cassandra*.jar files/kubernetes-cassandra.jar
-	cd ../java && mvn clean
+build-go:
+	go build -a -installsuffix cgo \
+		-ldflags "-s -w" \
+		-o image/files/cassandra-seed.so -buildmode=c-shared go/main.go
+
+kubernetes-cassandra.jar:
+	@echo "Building kubernetes-cassandra.jar"
+	docker run -v ${PWD}/java:/usr/src/app maven:3-jdk-8-onbuild-alpine mvn clean install
+	cp java/target/kubernetes-cassandra*.jar image/files/kubernetes-cassandra.jar
 
 container:
 	@echo "Building ${PROJECT}/cassandra:${VERSION}"
-	docker build --pull --build-arg "CASSANDRA_VERSION=${CASSANDRA_VERSION}" -t ${PROJECT}/cassandra:${VERSION} .
+	docker build --pull --build-arg "CASSANDRA_VERSION=${CASSANDRA_VERSION}" -t ${PROJECT}/cassandra:${VERSION} image
 
 container-dev:
-	docker build --pull --build-arg "CASSANDRA_VERSION=${CASSANDRA_VERSION}" --build-arg "DEV_CONTAINER=true" -t ${PROJECT}/cassandra:${VERSION}-dev .
+	docker build --pull --build-arg "CASSANDRA_VERSION=${CASSANDRA_VERSION}" --build-arg "DEV_CONTAINER=true" -t ${PROJECT}/cassandra:${VERSION}-dev image
 
 build: container container-dev
 
