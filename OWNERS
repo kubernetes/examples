@@ -1,9 +1,8 @@
 reviewers:
-  - brendandburns
-  - thockin
-  - zmerlynn
+  - idvoretskyi
+  - ahmetb
+  - sebgoa
 approvers:
-  - brendandburns
-  - eparis
-  - thockin
-  - zmerlynn
+  - idvoretskyi
+  - ahmetb
+  - sebgoa
