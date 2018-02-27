@@ -16,26 +16,26 @@
 
 # Usage:
 #   [VERSION=v3] [REGISTRY="staging-k8s.gcr.io"] make build
-VERSION?=v3
-REGISTRY?=staging-k8s.gcr.io
+VERSION?=v1
+REGISTRY?=docker.io/linsun
 
 release: clean build push clean
 
 # builds a docker image that builds the app and packages it into a minimal docker image
 build:
-	@cp ../../bazel-bin/examples/guestbook-go/guestbook-go guestbook_bin
-	docker build --pull --rm --force-rm -t ${REGISTRY}/guestbook-builder .
-	docker run --rm ${REGISTRY}/guestbook-builder | docker build --pull -t "${REGISTRY}/guestbook:${VERSION}" -
+	go get github.com/codegangsta/negroni
+	go get github.com/gorilla/mux github.com/xyproto/simpleredis
+	env GOOS=linux GOARCH=amd64 go build main.go
+	mv main guestbook/guestbook
+	cd guestbook && docker build --pull -t "${REGISTRY}/guestbook:${VERSION}" .
 
 # push the image to an registry
 push:
-	gcloud docker -- push ${REGISTRY}/guestbook:${VERSION}
+	docker push ${REGISTRY}/guestbook:${VERSION}
 
 # remove previous images and containers
 clean:
-	rm -f guestbook_bin
-	docker rm -f ${REGISTRY}/guestbook-builder 2> /dev/null || true
-	docker rmi -f ${REGISTRY}/guestbook-builder || true
+	rm -f guestbook/guestbook
 	docker rmi -f "${REGISTRY}/guestbook:${VERSION}" || true
 
 .PHONY: release clean build push
