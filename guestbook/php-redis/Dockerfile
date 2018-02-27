@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM php:5-apache
+# FROM php:5-apache
+FROM php:5.6
 
-RUN apt-get update
+RUN apt-get update -y
 RUN apt-get install -y php-pear
 RUN pear channel-discover pear.nrk.io
 RUN pear install nrk/Predis
