@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+#  annotations:
+#    kubernetes.io/ingress.class: istio
+  name: guestbook-ingress
+spec:
+  rules:
+    - host: linistio3.us-east.containers.mybluemix.net
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: guestbook
+              servicePort: 3000
