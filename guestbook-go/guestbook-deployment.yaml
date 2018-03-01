@@ -21,4 +21,4 @@ spec:
         env:
         ports:
         - containerPort: 3000
-          name: "http-server"
+          name: http

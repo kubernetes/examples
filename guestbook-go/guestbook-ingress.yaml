@@ -8,11 +8,7 @@ spec:
   rules:
     - http:
         paths:
-          - path: /hello/.*
-            backend:
-              serviceName: helloworld-service
-              servicePort: 8080
           - path: /.*
             backend:
               serviceName: guestbook
-              servicePort: 3000
+              servicePort: 80
