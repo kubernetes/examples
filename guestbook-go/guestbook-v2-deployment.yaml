@@ -1,10 +1,10 @@
 apiVersion: extensions/v1beta1
-kind: Deployment
+kind: Deployment 
 metadata:
-  name: guestbook-v1
+  name: guestbook-v2
   labels:
-    app: guestbook-v1
-    version: "1.0"
+    app: guestbook-v2
+    version: "2.0"
 spec:
   selector:
     matchLabels:
@@ -14,11 +14,11 @@ spec:
     metadata:
       labels:
         app: guestbook
-        version: "1.0"
+        version: "2.0"
     spec:
       containers:
       - name: guestbook
-        image: linsun/guestbook:v1
+        image: linsun/guestbook:v2
         resources:
           requests:
             cpu: 100m
