@@ -46,7 +46,7 @@ example we will use two policies, `restricted` and `privileged`. The `privileged
 The `restricted` policy only allows limited users, groups, volume types, and does not allow host access or privileged containers.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: privileged
@@ -71,7 +71,7 @@ spec:
   - min: 1
     max: 65536
 ---
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: restricted
