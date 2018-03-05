@@ -25,6 +25,13 @@ kubectl create -f staging/elasticsearch/production_cluster/es-svc.yaml
 kubectl create -f staging/elasticsearch/production_cluster/es-master-rc.yaml
 ```
 
+The [io.fabric8:elasticsearch-cloud-kubernetes](https://github.com/fabric8io/elasticsearch-cloud-kubernetes) plugin requires limited access to the Kubernetes API in order to fetch the list of Elasticsearch endpoints.
+If your cluster has the RBAC authorization mode enabled, create the additional `Role` and `RoleBinding` with:
+
+```
+kubectl create -f staging/elasticsearch/rbac.yaml
+```
+
 Wait until `es-master` is provisioned, and
 
 ```
