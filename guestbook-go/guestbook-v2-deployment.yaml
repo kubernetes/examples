@@ -19,6 +19,7 @@ spec:
       containers:
       - name: guestbook
         image: linsun/guestbook:v2
+        imagePullPolicy: Always
         resources:
           requests:
             cpu: 100m

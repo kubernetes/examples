@@ -16,7 +16,7 @@
 
 # Usage:
 #   [VERSION=v3] [REGISTRY="staging-k8s.gcr.io"] make build
-VERSION?=v1
+VERSION?=v2
 REGISTRY?=docker.io/linsun
 
 release: clean build push clean
