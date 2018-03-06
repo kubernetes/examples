@@ -59,7 +59,7 @@ if __name__ == '__main__':
     #pwd = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_PASSWORD')
     #url = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_URL')
     username = "7a7620bc-c378-4760-986a-1451fb9dacc9"
-    pwd = "OsgpTOjH8SYN"
+    pwd = "xxxx"
     url = "gateway.watsonplatform.net/tone-analyzer/api"
     # https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false
     tone_analyzer_ep = "http://" + username + ":" + pwd + "@" + url + "/v3/tone?version=2017-09-21&sentences=false"
