@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Deployment 
+metadata:
+  name: analyzer
+  labels:
+    app: analyzer
+spec:
+  selector:
+    matchLabels:
+      app: analyzer
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: analyzer
+    spec:
+      containers:
+      - name: analyzer
+        image: linsun/analyzer:v1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        env:
+        ports:
+        - containerPort: 80
+          name: http

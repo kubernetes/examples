@@ -1,0 +1,10 @@
+apiVersion: config.istio.io/v1alpha2
+kind: EgressRule
+metadata:
+  name: analyzer-egress-rule
+spec:
+  destination:
+    service: gateway.watsonplatform.net
+  ports:
+    - port: 80
+      protocol: https
