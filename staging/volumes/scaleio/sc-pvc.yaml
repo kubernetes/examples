@@ -9,3 +9,4 @@ spec:
   resources:
     requests:
       storage: 10Gi
+  storageClassName: sio-small
