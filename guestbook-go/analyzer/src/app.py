@@ -35,7 +35,7 @@ def analyze_tone(input_text):
  This is the analyzer API that accepts POST data as describes below:
  POST http://localhost:5000/tone body=\
  {
-     "input_text": "hello everyone ..."
+     "input_text": "this is cool"
  }
 '''
 @app.route('/tone', methods=['POST'])

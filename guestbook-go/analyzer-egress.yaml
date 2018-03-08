@@ -6,5 +6,5 @@ spec:
   destination:
     service: gateway.watsonplatform.net
   ports:
-    - port: 80
+    - port: 443
       protocol: https
