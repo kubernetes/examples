@@ -119,7 +119,7 @@ parameters:
 *  `adminSecretNamespace`: The namespace where the API configuration secret is located. Required if adminSecretName set.
 *  `adminSecretName`: The name of the secret to use for obtaining the StorageOS API credentials.  If not specified, default values will be attempted.
 
-For a complete example refer to the ([StorageOS example](../../volumes/storageos/README.md))
+For a complete example refer to the ([StorageOS example](../../staging/volumes/storageos/README.md))
 
 #### GLUSTERFS
 
