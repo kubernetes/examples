@@ -23,9 +23,7 @@ release: clean build push clean
 
 # builds a docker image that builds the app and packages it into a minimal docker image
 build:
-	@cp ../../bazel-bin/examples/guestbook-go/guestbook-go guestbook_bin
-	docker build --pull --rm --force-rm -t ${REGISTRY}/guestbook-builder .
-	docker run --rm ${REGISTRY}/guestbook-builder | docker build --pull -t "${REGISTRY}/guestbook:${VERSION}" -
+	docker build -t ${REGISTRY}/guestbook:${VERSION} .
 
 # push the image to an registry
 push:
@@ -33,9 +31,6 @@ push:
 
 # remove previous images and containers
 clean:
-	rm -f guestbook_bin
-	docker rm -f ${REGISTRY}/guestbook-builder 2> /dev/null || true
-	docker rmi -f ${REGISTRY}/guestbook-builder || true
-	docker rmi -f "${REGISTRY}/guestbook:${VERSION}" || true
+	docker rm -f ${REGISTRY}/guestbook:${VERSION} 2> /dev/null || true
 
 .PHONY: release clean build push
