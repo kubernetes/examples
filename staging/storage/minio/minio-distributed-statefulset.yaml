@@ -5,6 +5,9 @@ metadata:
   labels:
      app: minio
 spec:
+  selector:
+    matchLabels:
+      app: minio
   serviceName: minio
   replicas: 4
   selector:

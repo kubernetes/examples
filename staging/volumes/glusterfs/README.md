@@ -7,7 +7,7 @@ volumes.
 The example assumes that you have already set up a GlusterFS server cluster and
 have a working GlusterFS volume ready to use in the containers.
 
-### Prerequisites
+#### Prerequisites
 
 * Set up a GlusterFS server cluster
 * Create a GlusterFS volume
@@ -15,7 +15,7 @@ have a working GlusterFS volume ready to use in the containers.
   package on the Kubernetes nodes
   ([Guide](http://gluster.readthedocs.io/en/latest/Administrator%20Guide/))
 
-### Create endpoints
+#### Create endpoints
 
 The first step is to create the GlusterFS endpoints definition in Kubernetes.
 Here is a snippet of [glusterfs-endpoints.json](glusterfs-endpoints.json):
@@ -63,7 +63,7 @@ $ kubectl create -f examples/volumes/glusterfs/glusterfs-service.json
 ```
 
 
-### Create a Pod
+#### Create a Pod
 
 The following *volume* spec in [glusterfs-pod.json](glusterfs-pod.json)
 illustrates a sample configuration:
