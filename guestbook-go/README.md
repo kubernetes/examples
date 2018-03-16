@@ -238,11 +238,6 @@ You can now play with the guestbook that you just created by opening it in a bro
 
     ![Guestbook](guestbook-page.png)
 
-    **Further Reading:**
-    If you're using Google Compute Engine, see the details about limiting traffic to specific sources at [Google Compute Engine firewall documentation][gce-firewall-docs].
-
-[cloud-console]: https://console.developer.google.com
-[gce-firewall-docs]: https://cloud.google.com/compute/docs/networking#firewalls
 
 ### Step Eight: Cleanup <a id="step-eight"></a>
 
