@@ -64,8 +64,8 @@ $ kubectl create -f examples/volumes/nfs/provisioner/nfs-server-gce-pv.yaml
 ```
 
 ```console
-$ kubectl create -f examples/volumes/nfs/nfs-server-rc.yaml
 $ kubectl create -f examples/volumes/nfs/nfs-server-service.yaml
+$ kubectl create -f examples/volumes/nfs/nfs-server-rc.yaml
 ```
 
 The directory contains dummy `index.html`. Wait until the pod is running
