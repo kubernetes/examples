@@ -24,16 +24,16 @@ Note, this example uses an NFS container that doesn't support NFSv4.
 ## Quickstart
 
 ```console
-$ kubectl create -f examples/volumes/nfs/provisioner/nfs-server-gce-pv.yaml
-$ kubectl create -f examples/volumes/nfs/nfs-server-rc.yaml
-$ kubectl create -f examples/volumes/nfs/nfs-server-service.yaml
+$ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-gce-pv.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-server-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-server-service.yaml
 # get the cluster IP of the server using the following command
 $ kubectl describe services nfs-server
 # use the NFS server IP to update nfs-pv.yaml and execute the following
-$ kubectl create -f examples/volumes/nfs/nfs-pv.yaml
-$ kubectl create -f examples/volumes/nfs/nfs-pvc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-pv.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-pvc.yaml
 # run a fake backend
-$ kubectl create -f examples/volumes/nfs/nfs-busybox-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-busybox-rc.yaml
 # get pod name from this command
 $ kubectl get pod -l name=nfs-busybox
 # use the pod name to check the test file
