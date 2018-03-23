@@ -15,13 +15,13 @@ Your cluster must have 4 CPU and 6 GB of RAM to complete the example up to the s
 We will be using Selenium Grid Hub to make our Selenium install scalable via a master/worker model. The Selenium Hub is the master, and the Selenium Nodes are the workers(not to be confused with Kubernetes nodes). We only need one hub, but we're using a replication controller to ensure that the hub is always running:
 
 ```console
-kubectl create --filename=examples/selenium/selenium-hub-rc.yaml
+kubectl create --filename=staging/selenium/selenium-hub-deployment.yaml
 ```
 
 The Selenium Nodes will need to know how to get to the Hub, let's create a service for the nodes to connect to.
 
 ```console
-kubectl create --filename=examples/selenium/selenium-hub-svc.yaml
+kubectl create --filename=staging/selenium/selenium-hub-svc.yaml
 ```
 
 ### Verify Selenium Hub Deployment
@@ -59,7 +59,7 @@ curl http://localhost:4444
 If you are using Google Container Engine, you can expose your hub via the internet. This is a bad idea for many reasons, but you can do it as follows:
 
 ```console
-kubectl expose rc selenium-hub --name=selenium-hub-external --labels="app=selenium-hub,external=true" --type=LoadBalancer
+kubectl expose deployment selenium-hub --name=selenium-hub-external --labels="app=selenium-hub,external=true" --type=LoadBalancer
 ```
 
 Then wait a few minutes, eventually your new `selenium-hub-external` service will be assigned a load balanced IP from gcloud. Once `kubectl get svc selenium-hub-external` shows two IPs, run this snippet.
@@ -79,13 +79,13 @@ Now that the Hub is up, we can deploy workers.
 This will deploy 2 Chrome nodes.
 
 ```console
-kubectl create --filename=examples/selenium/selenium-node-chrome-rc.yaml
+kubectl create --filename=staging/selenium/selenium-node-chrome-deployment.yaml
 ```
 
 And 2 Firefox nodes to match.
 
 ```console
-kubectl create --filename=examples/selenium/selenium-node-firefox-rc.yaml
+kubectl create --filename=staging/selenium/selenium-node-firefox-deployment.yaml
 ```
 
 Once the pods start, you will see them show up in the Selenium Hub interface.
@@ -160,8 +160,8 @@ Congratulations, your Selenium Hub is up, with Firefox and Chrome nodes!
 If you need more Firefox or Chrome nodes, your hardware is the limit:
 
 ```console
-kubectl scale rc selenium-node-firefox --replicas=10
-kubectl scale rc selenium-node-chrome --replicas=10
+kubectl scale deployment selenium-node-firefox --replicas=10
+kubectl scale deployment selenium-node-chrome --replicas=10
 ```
 
 You now have 10 Firefox and 10 Chrome nodes, happy Seleniuming!
@@ -185,9 +185,9 @@ Adapted from: https://github.com/SeleniumHQ/docker-selenium
 To remove all created resources, run the following:
 
 ```console
-kubectl delete rc selenium-hub
-kubectl delete rc selenium-node-chrome
-kubectl delete rc selenium-node-firefox
+kubectl delete deployment selenium-hub
+kubectl delete deployment selenium-node-chrome
+kubectl delete deployment selenium-node-firefox
 kubectl delete deployment selenium-python
 kubectl delete svc selenium-hub
 kubectl delete svc selenium-hub-external
