@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: storage-sample
+  name: sample-storage-claim
   # Set this annotation to NOT let Kubernetes automatically create
   # a persistent volume for this volume claim.
   annotations:
@@ -15,4 +15,4 @@ spec:
   selector:
     # To make sure we match the claim with the exact volume, match the label
     matchLabels:
-      usage: storage-sample
+      usage: sample-storage

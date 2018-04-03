@@ -12,4 +12,4 @@ spec:
  volumes:
   - name: azure
     persistentVolumeClaim:
-      claimName: storage-sample
+      claimName: sample-storage-claim
