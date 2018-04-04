@@ -1,5 +1,5 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: selenium-hub 
   labels:
@@ -7,7 +7,8 @@ metadata:
 spec:
   replicas: 1
   selector:
-    app: selenium-hub
+    matchLabels:
+      app: selenium-hub
   template:
     metadata:
       labels:
@@ -15,7 +16,7 @@ spec:
     spec:
       containers:
       - name: selenium-hub
-        image: selenium/hub:2.53.0
+        image: selenium/hub:3.11
         ports:
           - containerPort: 4444 
         resources:
