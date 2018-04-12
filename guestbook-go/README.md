@@ -73,10 +73,73 @@ You can now play with the guestbook that you just created by opening it in a bro
 
     ![Guestbook](guestbook-page.png)
 
+### Step Three: Create the modernized guestbook v2 deployment and service <a id="step-three"></a>
+
+1. Use the [guestbook-v2-deployment.yaml](guestbook-v2-deployment.yaml) file to create the guestbook deployment by running the `kubectl create -f` *`filename`* command:
+
+    ```console
+    $ kubectl apply -f <(istioctl kube-inject -f guestbook-v2-deployment.yaml --debug)
+    ```
+
+2. To verify that the guestbook v2 deployment is running, run the `kubectl get deloyment` command.
+
+3. To verify that the guestbook v2 pods are running (it might take up to thirty seconds to create the pods), list the pods you created in cluster with the `kubectl get pods` command.
+
+    Result: You see a single Redis master, two Redis slaves, three guestbook pods and three guestbook-v2 pods.
+
+5. To verify that the guestbook service is up, list the services you created in the cluster with the `kubectl get services` command:
+
+    ```console
+    $ kubectl get services
+    NAME              CLUSTER_IP       EXTERNAL_IP       PORT(S)       SELECTOR               AGE
+    guestbook         10.0.217.218     146.148.81.8      3000/TCP      app=guestbook          1h
+    redis-master      10.0.136.3       <none>            6379/TCP      app=redis,role=master  1h
+    redis-slave       10.0.21.92       <none>            6379/TCP      app-redis,role=slave   1h
+    ...
+    ```
+
+    Result: The service is created with label `app=guestbook`.
+
+
+### Step Four: Create the analyzer service <a id="step-four"></a>
+ 
+1. Deploy Watson Tone analyzer service.
+
+    ```console
+    $ bx service create tone_analyzer lite my-tone-analyzer-service
+      bx service key-create my-tone-analyzer-service myKey
+      bx service key-show my-tone-analyzer-service myKey
+    ```
+
+2. Find our the id and password from the prior step and update analyzer-deployment.yaml with the id and password.
+
+3. Deploy the analyzer service.  The analyzer service talks to Watson Tone analyzer to help analyze the tone of a message. 
+
+    ```console
+    $ kubectl apply -f <(istioctl kube-inject -f analyzer-deployment.yaml --debug)
+    ```
+4. Apply the egress:
+    ```console
+    $ kubectl apply -f analyzer-egress.yaml
+    ```
+5. You should be able to access the guestbook now via the load balancer IP.  However, you can't control traffic.   Let's config istio-ingress to work with the guestbook.
+
+```console
+    $ kubectl apply -f guestbook-ingress.yaml
+    ```
+
+6. If you want to focus on testing guestbook-v2, you may apply route rule to tweak your testing.  For example, applying the route rule to shift all traffic to guestbook-v2.
+
+    ```console
+    $ kubectl apply -f routerule-all-v2.yaml
+    ```
+7. View the guestbook via Istio-ingress.
+
+TODO: need a pic here.
 
 ### Step Five: Cleanup <a id="step-eight"></a>
 
-After you're done playing with the guestbook, you can cleanup by deleting the guestbook service and removing the associated resources that were created, including load balancers, forwarding rules, target pools, and Kubernetes replication controllers and services.
+After you're done playing with the guestbook, you can cleanup by deleting the guestbook service and removing the associated resources that were created, including load balancers, forwarding rules, target pools, and Kubernetes deployments and services.
 
 Delete all the resources by running the following `kubectl delete -f` *`filename`* command:
 
