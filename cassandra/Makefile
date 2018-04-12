@@ -13,8 +13,8 @@
 # limitations under the License.
 
 # build the cassandra image.
-VERSION=v14
-PROJECT_ID?=google_samples
+VERSION?=v14
+PROJECT_ID?=google-samples
 PROJECT=gcr.io/${PROJECT_ID}
 CASSANDRA_VERSION=3.11.2
 
@@ -40,7 +40,7 @@ container-dev:
 build: container container-dev
 
 push: build
-	gcloud docker -- push ${PROJECT}/cassandra:${VERSION}
-	gcloud docker -- push ${PROJECT}/cassandra:${VERSION}-dev
+	gcloud docker --project="${PROJECT_ID}" -- push ${PROJECT}/cassandra:${VERSION}
+	gcloud docker --project="${PROJECT_ID}" -- push ${PROJECT}/cassandra:${VERSION}-dev
 
 .PHONY: all build push
