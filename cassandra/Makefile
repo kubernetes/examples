@@ -18,7 +18,7 @@ PROJECT_ID?=google-samples
 PROJECT=gcr.io/${PROJECT_ID}
 CASSANDRA_VERSION=3.11.2
 
-all: kubernetes-cassandra.jar build
+all: build-go kubernetes-cassandra.jar build
 
 build-go:
 	go build -a -installsuffix cgo \
@@ -27,7 +27,8 @@ build-go:
 
 kubernetes-cassandra.jar:
 	@echo "Building kubernetes-cassandra.jar"
-	docker run -v ${PWD}/java:/usr/src/app maven:3-jdk-8-onbuild-alpine mvn clean install
+	@docker volume create --name maven-repo || true
+	docker run -v maven-repo:/root/.m2 -v ${PWD}/java:/usr/src/app maven:3-jdk-8-onbuild-alpine mvn clean install
 	cp java/target/kubernetes-cassandra*.jar image/files/kubernetes-cassandra.jar
 
 container:
