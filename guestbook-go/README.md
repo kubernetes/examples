@@ -1,6 +1,6 @@
 ## Guestbook Example
 
-This example was forked from the official kubernetes [guestbook-go](http://github.com/kubernetes/examples/guestbook-go) example.   It shows how to build a simple multi-tier web application using Kubernetes and Docker. The application consists of a web front end, Redis master for storage, and replicated set of Redis slaves, all for which we will create Kubernetes replication controllers, pods, and services.
+This example was forked from the official kubernetes [guestbook-go](https://github.com/kubernetes/examples/tree/master/guestbook-go) example.   It shows how to build a simple multi-tier web application using Kubernetes and Docker. The application consists of a web front end, Redis master for storage, and replicated set of Redis slaves, all for which we will create Kubernetes replication controllers, pods, and services.
 
 As part of the journey to move the application to Istio service mesh, the guestbook application and service is moved to run in Istio.  Also, the guestbook application has been modernized so it can generate a cute emoji upon every single guest comment, by leveraging machine learning capability from IBM Watson Tone Anazlyer.
 
@@ -19,7 +19,7 @@ This example assumes that you have a working cluster. See the [Getting Started G
 
 **Tip:** View all the `kubectl` commands, including their options and descriptions in the [kubectl CLI reference](https://kubernetes.io/docs/user-guide/kubectl-overview/).
 
-Please follow the the [steps](http://github.com/kubernetes/examples/guestbook-go) in the original example to create the redis master pod and service, create the redis slave pod and service.
+Please follow the the [steps](https://github.com/kubernetes/examples/blob/master/guestbook-go/README.md) in the original example to create the redis master pod and service, create the redis slave pod and service.
 
 Also, please follow the [istio.io](http://istio.io) official document to install Istio without mTLS on your k8s cluster.
 
