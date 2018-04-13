@@ -135,7 +135,9 @@ You can now play with the guestbook that you just created by opening it in a bro
     ```
 7. View the guestbook via Istio-ingress.
 
-TODO: need a pic here.
+    Result: The guestbook displays in your browser:
+
+    ![Guestbook-v2](guestbook-v2-page.png)
 
 ### Step Five: Cleanup <a id="step-eight"></a>
 
