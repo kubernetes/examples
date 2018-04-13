@@ -40,7 +40,8 @@ $(document).ready(function() {
   (function fetchGuestbook() {
     $.getJSON("lrange/guestbook").done(appendGuestbookEntries).always(
       function() {
-        setTimeout(fetchGuestbook, 1000);
+        setTimeout(fetchGuestbook, 1000000);
+        // setTimeout(fetchGuestbook, 1000);
       });
   })();
 });

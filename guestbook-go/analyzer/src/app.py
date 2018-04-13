@@ -46,6 +46,7 @@ def tone():
 
     input_text = request.json['input_text']
 
+    log.info("request headers are '%s'", request.headers)
     log.info("input text is '%s'", input_text)
     tone_doc = analyze_tone(input_text)
 
@@ -55,12 +56,10 @@ def tone():
 if __name__ == '__main__':
     PORT = os.getenv('VCAP_APP_PORT', '5000')
     vcap_services = os.getenv('VCAP_SERVICES')
-    #id = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_USERNAME')
-    #pwd = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_PASSWORD')
     #url = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_URL')
-    username = "7a7620bc-c378-4760-986a-1451fb9dacc9"
-    pwd = "xxxx"
-    url = "gateway.watsonplatform.net/tone-analyzer/api"
+    username = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_USERNAME')
+    pwd = os.getenv('VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_PASSWORD')
+    url = "gateway.watsonplatform.net:443/tone-analyzer/api"
     # https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false
     tone_analyzer_ep = "http://" + username + ":" + pwd + "@" + url + "/v3/tone?version=2017-09-21&sentences=false"
 

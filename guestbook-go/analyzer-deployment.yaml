@@ -23,6 +23,10 @@ spec:
             cpu: 100m
             memory: 100Mi
         env:
+          - name: VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_USERNAME
+            value: ""
+          - name: VCAP_SERVICES_TONE_ANALYZER_0_CREDENTIALS_PASSWORD
+            value: ""
         ports:
         - containerPort: 80
           name: http

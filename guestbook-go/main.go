@@ -19,7 +19,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -55,8 +54,11 @@ func ListPushHandler(rw http.ResponseWriter, req *http.Request) {
 	value := mux.Vars(req)["value"]
 	list := simpleredis.NewList(masterPool, key)
 
+	// print out headers
+	// fmt.Printf("ListPushHandler headers %v", req.Header)
+	headers := getForwardHeaders(req.Header)
 	// before push, let's get the tone of the value
-	HandleError(nil, list.Add(value+" : "+getPrimaryTone(value)))
+	HandleError(nil, list.Add(value+" : "+getPrimaryTone(value, headers)))
 	ListRangeHandler(rw, req)
 }
 
@@ -85,16 +87,30 @@ func HandleError(result interface{}, err error) (r interface{}) {
 	return result
 }
 
-func getPrimaryTone(value string) (tone string) {
+func getPrimaryTone(value string, headers http.Header) (tone string) {
 	u := Input{InputText: value}
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(u)
 
-	res, err := http.Post("http://analyzer:80/tone", "application/json", b)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "http://analyzer:80/tone", b)
 	if err != nil {
-		fmt.Println("error occurred talking to the analyzer service", err)
-		return ""
+		return "Error detecting tone"
 	}
+	req.Header.Add("Content-Type", "application/json")
+	// add headers
+	for k := range headers {
+		req.Header.Add(k, headers.Get(k))
+	}
+	// print out headers
+	// fmt.Printf("getPrimaryTone headers %v", req.Header)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return "Error detecting tone"
+	}
+	defer res.Body.Close()
+
 	body := []Tone{}
 	json.NewDecoder(res.Body).Decode(&body)
 	if len(body) > 0 {
@@ -118,6 +134,27 @@ func getPrimaryTone(value string) (tone string) {
 	}
 
 	return "No Tone Detected"
+}
+
+// return the needed header for distributed tracing
+func getForwardHeaders(h http.Header) (headers http.Header) {
+	incomingHeaders := []string{
+		"x-request-id",
+		"x-b3-traceid",
+		"x-b3-spanid",
+		"x-b3-parentspanid",
+		"x-b3-sampled",
+		"x-b3-flags",
+		"x-ot-span-context"}
+
+	header := make(http.Header, len(incomingHeaders))
+	for _, element := range incomingHeaders {
+		val := h.Get(element)
+		if val != "" {
+			header.Set(element, val)
+		}
+	}
+	return header
 }
 
 func main() {
