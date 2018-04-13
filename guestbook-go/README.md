@@ -137,7 +137,7 @@ You can now play with the guestbook that you just created by opening it in a bro
     
 7. View the guestbook via Istio-ingress.
 
-    Result: The guestbook displays in your browser:
+    Result: The guestbook displays in your browser.  As you can see, as guest type messages in the guestbook, an emoji will be automatically generated based on the tone of the message, when the traffic goes to guestbook-v2.
 
     ![Guestbook-v2](guestbook-v2-page.png)
 
