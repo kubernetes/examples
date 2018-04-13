@@ -119,12 +119,13 @@ You can now play with the guestbook that you just created by opening it in a bro
     $ kubectl apply -f <(istioctl kube-inject -f analyzer-deployment.yaml --debug)
     ```
 4. Apply the egress:
+
     ```console
     $ kubectl apply -f analyzer-egress.yaml
     ```
 5. You should be able to access the guestbook now via the load balancer IP.  However, you can't control traffic.   Let's config istio-ingress to work with the guestbook.
 
-```console
+    ```console
     $ kubectl apply -f guestbook-ingress.yaml
     ```
 
@@ -133,11 +134,14 @@ You can now play with the guestbook that you just created by opening it in a bro
     ```console
     $ kubectl apply -f routerule-all-v2.yaml
     ```
+    
 7. View the guestbook via Istio-ingress.
 
-TODO: need a pic here.
+    Result: The guestbook displays in your browser:
 
-### Step Five: Cleanup <a id="step-eight"></a>
+    ![Guestbook-v2](guestbook-v2-page.png)
+
+### Step Five: Cleanup <a id="step-five"></a>
 
 After you're done playing with the guestbook, you can cleanup by deleting the guestbook service and removing the associated resources that were created, including load balancers, forwarding rules, target pools, and Kubernetes deployments and services.
 
