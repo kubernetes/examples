@@ -10,8 +10,9 @@ As part of the journey to move the application to Istio service mesh, the guestb
  * [Step One: Create the guestbook deployment and service](#step-one)
  * [Step Two: View the guestbook](#step-two)
  * [Step Three: Modernize the guestbook](#step-three)
- * [Step Four: View the modernize the guestbook](#step-four)
- * [Step Five: Cleanup](#step-five)
+ * [Step Four: Create the analyzer service (#step-four)
+ * [Step Five: View the modernized guestbook](#step-five)
+ * [Step Six: Cleanup](#step-six)
 
 ### Step Zero: Prerequisites <a id="step-zero"></a>
 
@@ -123,25 +124,28 @@ You can now play with the guestbook that you just created by opening it in a bro
     ```console
     $ kubectl apply -f analyzer-egress.yaml
     ```
-5. You should be able to access the guestbook now via the load balancer IP.  However, you can't control traffic.   Let's config istio-ingress to work with the guestbook.
+
+### Step Five: View the modernized guestbook <a id="step-five"></a>
+
+1. You should be able to access the guestbook now via the load balancer IP.  However, you can't control traffic.   Let's config istio-ingress to work with the guestbook.
 
     ```console
     $ kubectl apply -f guestbook-ingress.yaml
     ```
 
-6. If you want to focus on testing guestbook-v2, you may apply route rule to tweak your testing.  For example, applying the route rule to shift all traffic to guestbook-v2.
+2. If you want to focus on testing guestbook-v2, you may apply route rule to tweak your testing.  For example, applying the route rule to shift all traffic to guestbook-v2.
 
     ```console
     $ kubectl apply -f routerule-all-v2.yaml
     ```
     
-7. View the guestbook via Istio-ingress.
+3. View the guestbook via Istio-ingress.
 
     Result: The guestbook displays in your browser.  As you can see, as guest type messages in the guestbook, an emoji will be automatically generated based on the tone of the message, when the traffic goes to guestbook-v2.
 
     ![Guestbook-v2](guestbook-v2-page.png)
 
-### Step Five: Cleanup <a id="step-five"></a>
+### Step Six: Cleanup <a id="step-six"></a>
 
 After you're done playing with the guestbook, you can cleanup by deleting the guestbook service and removing the associated resources that were created, including load balancers, forwarding rules, target pools, and Kubernetes deployments and services.
 
@@ -149,18 +153,6 @@ Delete all the resources by running the following `kubectl delete -f` *`filename
 
 ```console
 $ kubectl delete -f examples/guestbook-go
-guestbook-controller
-guestbook
-redid-master-controller
-redis-master
-redis-slave-controller
-redis-slave
 ```
 
-Tip: To turn down your Kubernetes cluster, follow the corresponding instructions in the version of the
-[Getting Started Guides](https://kubernetes.io/docs/getting-started-guides/) that you previously used to create your cluster.
-
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/guestbook-go/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->
+Follow istio uninstall instruction to uninstall Istio.
