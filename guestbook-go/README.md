@@ -111,7 +111,7 @@ You can now play with the guestbook that you just created by opening it in a bro
       bx service key-show my-tone-analyzer-service myKey
     ```
 
-2. Find our the username and password from the prior step and update analyzer-deployment.yaml with the username and password.
+2. Find our the username and password from the prior step and update analyzer-deployment.yaml with the username and password in the env var section.  
 
 3. Deploy the analyzer service.  The analyzer service talks to Watson Tone analyzer to help analyze the tone of a message. 
 
