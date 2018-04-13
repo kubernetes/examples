@@ -2,7 +2,7 @@
 
 This example was forked from the official kubernetes [guestbook-go](https://github.com/kubernetes/examples/tree/master/guestbook-go) example.   It shows how to build a simple multi-tier web application using Kubernetes and Docker. The application consists of a web front end, Redis master for storage, and replicated set of Redis slaves, all for which we will create Kubernetes replication controllers, pods, and services.
 
-As part of the journey to move the application to Istio service mesh, the guestbook application and service is moved to run in Istio.  Also, the guestbook application has been modernized so it can generate a cute emoji upon every single guest comment, by leveraging machine learning capability from IBM Watson Tone Anazlyer.
+As part of the journey to move the application to Istio service mesh, the guestbook application and service is moved to run in Istio.  Also, the guestbook application has been modernized so it can generate a cute emoji upon every single guest comment, by leveraging machine learning capability from IBM [Watson Tone Anazlyer](https://www.ibm.com/watson/services/tone-analyzer/).
 
 ##### Table of Contents
 
