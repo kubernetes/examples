@@ -10,7 +10,7 @@ As part of the journey to move the application to Istio service mesh, the guestb
  * [Step One: Create the guestbook deployment and service](#step-one)
  * [Step Two: View the guestbook](#step-two)
  * [Step Three: Modernize the guestbook](#step-three)
- * [Step Four: Create the analyzer service] (#step-four)
+ * [Step Four: Create the analyzer service](#step-four)
  * [Step Five: View the modernized guestbook](#step-five)
  * [Step Six: Cleanup](#step-six)
 
