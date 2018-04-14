@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: azure-2
+spec:
+ containers:
+  - image: kubernetes/pause
+    name: azure-2
+    volumeMounts:
+      - name: azure
+        mountPath: /mnt/azure
+ volumes:
+  - name: azure
+    persistentVolumeClaim:
+      claimName: sample-storage-claim

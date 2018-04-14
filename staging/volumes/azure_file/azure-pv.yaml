@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sample-storage
+  # The label is used for matching the exact claim
+  labels:
+    usage: sample-storage
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  azureFile:
+    # Replace with your secret name
+    secretName: azure-secret
+    # Replace with correct storage share name
+    shareName: k8stest
+    # In case the secret is stored in a different namespace
+    #shareNamespace: default
+    readOnly: false
