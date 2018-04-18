@@ -140,6 +140,7 @@ parameters:
   volumetype: "replicate:3"
   volumeoptions: "client.ssl on, server.ssl on"
   volumenameprefix: "dept-dev"
+  snapfactor: "10"
 ```
 
 Example storageclass can be found in [glusterfs-storageclass.yaml](glusterfs/glusterfs-storageclass.yaml).
@@ -184,6 +185,8 @@ For available volume options and its administration refer: ([Administration Guid
 `volumenameprefix_Namespace_PVCname_randomUUID`
 
 Please note that, the value for this parameter cannot contain `_` in storageclass. This is an optional parameter.
+
+*`snapfactor`: Dynamically provisioned volume's thinpool size can be configured with this parameter. The value for the parameter should be in range of 1-100, this value will be taken into account while creating thinpool for the provisioned volume. This is an optional parameter with default value of 1.
 
 Reference : ([How to configure Gluster on Kubernetes](https://github.com/gluster/gluster-kubernetes/blob/master/docs/setup-guide.md))
 
