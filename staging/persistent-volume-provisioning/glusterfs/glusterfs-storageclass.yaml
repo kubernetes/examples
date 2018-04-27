@@ -14,3 +14,4 @@ parameters:
   volumetype: "replicate:3"
   volumeoptions: "client.ssl on, server.ssl on"
   volumenameprefix: "dept-dev"
+  snapfactor: "10"
