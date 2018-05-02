@@ -1,8 +1,8 @@
-## New Relic Infrastructure Server Monitoring Agent Example
+## New Relic Infrastructure agent Example
 
-This example shows how to run a New Relic Infrastructure server monitoring agent as a pod in a DaemonSet on an existing Kubernetes cluster.
+This example shows how to run a New Relic Infrastructure agent as a pod in a DaemonSet on an existing Kubernetes cluster.
 
-This example will create a DaemonSet which places the New Relic Infrastructure monitoring agent on every node in the cluster. It's also fairly trivial to exclude specific Kubernetes nodes from the DaemonSet to just monitor specific servers.  (The prior nrsysmond has been deprecated.)
+This example will create a DaemonSet which places the New Relic Infrastructure agent on every node in the cluster. It's also fairly trivial to exclude specific Kubernetes nodes from the DaemonSet to just monitor specific servers.  (The prior nrsysmond has been deprecated.)
 
 ### Step 0: Prerequisites
 
@@ -14,7 +14,7 @@ DaemonSets must be enabled on your cluster. Instructions for enabling DaemonSet 
 
 The New Relic Infrastructure agent is configured via environment variables. We will configure these environment variables in a sourced bash script, encode the environment file data, and store it in a secret which will be loaded at container runtime. (Reread this sentence a few times, it's *HOW* the entire container works.)
 
-The [New Relic Linux Infrastructure Server configuration page](https://docs.newrelic.com/docs/servers/new-relic-servers-linux/installation-configuration/configuring-servers-linux) lists all the other settings for the Infrastructure process.
+The [New Relic Infrastructure agent configuration page](https://docs.newrelic.com/docs/infrastructure/new-relic-infrastructure/configuration/configure-infrastructure-agent) lists all the other settings for the Infrastructure process.
 
 To create an environment variable for a setting, prepend NRIA_ to its name and capitalize all of the env variable.  For example,
 
@@ -134,7 +134,7 @@ The daemonset instructs Kubernetes to spawn pods on each node, mapping /dev/, /r
 
 #### DaemonSet customization
 
-- There are more environment variables for fine tuning the infrastructure agent's operation (or a yaml file that you'd have to construct).  See [Infrastructure Agent Environment Variables][(https://docs.newrelic.com/docs/infrastructure/new-relic-infrastructure/configuration/configure-infrastructure-agent) for the full list.
+- There are more environment variables for fine tuning the infrastructure agent's operation (or a yaml file that you'd have to construct).  See [Infrastructure Agent Environment Variables](https://docs.newrelic.com/docs/infrastructure/new-relic-infrastructure/configuration/configure-infrastructure-agent) for the full list.
 
 
 ### Known issues
