@@ -37,7 +37,23 @@ that RBAC will be enforced
 ## Creating the policies, roles, and bindings
 
 NOTE: If you are using `local-up-cluster.sh` you don't need to create these
-policies, roles, and bindings as they already have been created by the script.
+policies, roles, and bindings as they already have been created by the script,
+provided the Kubernetes repository contains `examples` symlink pointing to
+`staging` subdirectory of this repository checkout. For example, if you've
+checked out Kubernetes as
+
+```console
+$ git clone https://github.com/kubernetes/kubernetes
+```
+and this examples repository next to it as
+```console
+$ git clone https://github.com/kubernetes/examples
+```
+create symlink
+```console
+$ ( cd kubernetes && ln -s ../examples/staging examples )
+```
+
 
 ### Policies
 
