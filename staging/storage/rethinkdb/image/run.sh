@@ -25,7 +25,7 @@ if [[ -n "${KUBERNETES_SERVICE_HOST}" ]]; then
   echo My host: ${MYHOST}
 
   URL="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/namespaces/${POD_NAMESPACE}/endpoints/rethinkdb-driver"
-  echo "Endpont url: ${URL}"
+  echo "Endpoint url: ${URL}"
   echo "Looking for IPs..."
   token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)  
   # try to pick up first different ip from endpoints
