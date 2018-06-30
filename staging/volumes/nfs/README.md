@@ -1,6 +1,6 @@
 # Outline
 
-This example describes how to create Web frontend server, an auto-provisioned persistent volume on GCE, and an NFS-backed persistent claim.
+This example describes how to create Web frontend server, an auto-provisioned persistent volume on GCE or Azure, and an NFS-backed persistent claim.
 
 Demonstrated Kubernetes Concepts:
 
@@ -14,7 +14,7 @@ Demonstrated Kubernetes Concepts:
 As illustrated above, two persistent volumes are used in this example:
 
 - Web frontend Pod uses a persistent volume based on NFS server, and
-- NFS server uses an auto provisioned [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) from GCE PD or AWS EBS.
+- NFS server uses an auto provisioned [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) from GCE PD or AWS EBS or Azure Disk.
 
 Note, this example uses an NFS container that doesn't support NFSv4.
 
@@ -24,7 +24,11 @@ Note, this example uses an NFS container that doesn't support NFSv4.
 ## Quickstart
 
 ```console
+# On GCE (create GCE PD PVC):
 $ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-gce-pv.yaml
+# On Azure (create Azure Disk PVC):
+$ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-azure-pv.yaml
+# Common steps after creating either GCE PD or Azure Disk PVC:
 $ kubectl create -f examples/staging/volumes/nfs/nfs-server-rc.yaml
 $ kubectl create -f examples/staging/volumes/nfs/nfs-server-service.yaml
 # get the cluster IP of the server using the following command
@@ -57,11 +61,19 @@ controller and import it into two replication controllers.
 Define [the NFS Service and Replication Controller](nfs-server-rc.yaml) and
 [NFS service](nfs-server-service.yaml):
 
-The NFS server exports an an auto-provisioned persistent volume backed by GCE PD:
+The NFS server exports an auto-provisioned persistent volume backed by GCE PD or Azure Disk. If you are on GCE, create a GCE PD-based PVC:
 
 ```console
 $ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-gce-pv.yaml
 ```
+
+If you are on Azure, create an Azure Premium Disk-based PVC:
+
+```console
+$ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-azure-pv.yaml
+```
+
+Then using the created PVC, create an NFS server and service:
 
 ```console
 $ kubectl create -f examples/staging/volumes/nfs/nfs-server-rc.yaml
