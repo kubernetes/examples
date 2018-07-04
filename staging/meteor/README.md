@@ -121,15 +121,15 @@ gcloud compute disks create --size=200GB mongo-disk
 Now you can start Mongo using that disk:
 
 ```
-kubectl create -f examples/meteor/mongo-pod.json
-kubectl create -f examples/meteor/mongo-service.json
+kubectl create -f examples/staging/meteor/mongo-pod.json
+kubectl create -f examples/staging/meteor/mongo-service.json
 ```
 
 Wait until Mongo is started completely and then start up your Meteor app:
 
 ```
-kubectl create -f examples/meteor/meteor-service.json
-kubectl create -f examples/meteor/meteor-controller.json
+kubectl create -f examples/staging/meteor/meteor-service.json
+kubectl create -f examples/staging/meteor/meteor-controller.json
 ```
 
 Note that [`meteor-service.json`](meteor-service.json) creates a load balancer, so
