@@ -23,3 +23,7 @@ See [Example Guidelines](guidelines.md) for a description of what goes
 in this directory, and what examples should contain.
 
 [Kubernetes documentation]: https://kubernetes.io/docs/tutorials/
+
+### Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to contribute.
