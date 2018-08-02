@@ -72,7 +72,7 @@ endif
 
 push: .push-$(ARCH)
 .push-$(ARCH): .container-$(ARCH)
-	docker push $(IMAGE):$(TAG)
+	docker push $(MULTI_ARCH_IMG):$(TAG)
 
 clean: $(addprefix sub-clean-,$(ALL_ARCH))
 	docker rmi -f $(IMAGE):$(TAG) || true
