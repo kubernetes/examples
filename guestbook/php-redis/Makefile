@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TAG = v5
+TAG = v6
 REGISTRY = gcr.io/google-samples
 ARCH ?= $(shell go env GOARCH)
 ALL_ARCH = amd64 arm arm64 ppc64le
@@ -49,7 +49,9 @@ sub-push-%:
 all-container: $(addprefix sub-container-,$(ALL_ARCH))
 
 all-push: $(addprefix sub-push-,$(ALL_ARCH))
-
+	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(IMAGE)\-&:$(TAG)~g")
+	@for arch in $(ALL_ARCH); do echo docker manifest annotate --arch $${arch} ${IMAGE}:${TAG} ${IMAGE}-$${arch}:${TAG}; done
+	docker manifest push ${IMAGE}:${TAG}
 
 container: .container-$(ARCH)
 .container-$(ARCH):
@@ -70,10 +72,7 @@ endif
 
 push: .push-$(ARCH)
 .push-$(ARCH): .container-$(ARCH)
-	gcloud docker -- push $(MULTI_ARCH_IMG):$(TAG)
-ifeq ($(ARCH), amd64)
-	gcloud docker -- push $(IMAGE):$(TAG)
-endif
+	docker push $(IMAGE):$(TAG)
 
 clean: $(addprefix sub-clean-,$(ALL_ARCH))
 	docker rmi -f $(IMAGE):$(TAG) || true
