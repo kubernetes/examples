@@ -22,14 +22,14 @@ Create a secret and a configmap.
 $ kubectl create secret tls nginxsecret --key /tmp/nginx.key --cert /tmp/nginx.crt
 secret "nginxsecret" created
 
-$ kubectl create configmap nginxconfigmap --from-file=examples/https-nginx/default.conf
+$ kubectl create configmap nginxconfigmap --from-file=examples/staging/https-nginx/default.conf
 configmap "nginxconfigmap" created
 ```
 
 Create a service and a replication controller using the configuration in nginx-app.yaml.
 
 ```sh
-$ kubectl create -f examples/https-nginx/nginx-app.yaml
+$ kubectl create -f examples/staging/https-nginx/nginx-app.yaml
 You have exposed your service on an external port on all nodes in your
 cluster.  If you want to expose this service to the external internet, you may
 need to set up firewall rules for the service port(s) (tcp:32211,tcp:30028) to serve traffic.
@@ -106,7 +106,7 @@ $ curl https://104.198.1.26:30028 -k
 Then we will update the configmap by changing `index.html` to `index2.html`.
 
 ```sh
-kubectl create configmap nginxconfigmap --from-file=examples/https-nginx/default.conf -o yaml --dry-run\
+kubectl create configmap nginxconfigmap --from-file=examples/staging/https-nginx/default.conf -o yaml --dry-run\
 | sed 's/index.html/index2.html/g' | kubectl apply -f -
 configmap "nginxconfigmap" configured
 ```
@@ -125,5 +125,5 @@ $ curl https://104.198.1.26:30028 -k
 For more information on how to run this in a kubernetes cluster, please see the [user-guide](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/).
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/https-nginx/README.md?pixel)]()
+[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/https-nginx/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->
