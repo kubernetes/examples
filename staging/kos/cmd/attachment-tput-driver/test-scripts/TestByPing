@@ -1,0 +1,29 @@
+#!/bin/bash
+if (( $# < 3 || $# > 6 )); then
+    echo "Usage: $0 ifc_name netns_name ifc_ip [peer_ip [count [peer_name] ] ]"  >&2
+    exit 1
+fi
+
+ifc_name=$1
+netns_name=$2
+ifc_ip=$3
+peer_ip=$4
+count=${5:-5}
+peer_name=$6
+
+ip link show $ifc_name || exit 2
+ip netns add $netns_name
+ip link set $ifc_name netns $netns_name
+ip netns exec $netns_name ip link set $ifc_name up
+ip netns exec $netns_name ip addr add $ifc_ip dev $ifc_name
+ip netns exec $netns_name ip route add default dev $ifc_name
+echo " - "
+ip netns exec $netns_name ip addr
+ip netns exec $netns_name ip route
+if [ -n "$peer_ip" ]; then
+	for (( i=0; i < $count; i++ )) ; do
+		echo $i: $(date +%M:%S)
+		ip netns exec $netns_name ping -W 15 -c 1 $peer_ip && echo done: $(date +%M:%S) && exit 0
+	done
+	exit 3
+fi

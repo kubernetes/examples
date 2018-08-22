@@ -1,0 +1,17 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: network-apiserver
+  namespace: example-com
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: ipam-controller
+  namespace: example-com
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: connection-agent
+  namespace: example-com

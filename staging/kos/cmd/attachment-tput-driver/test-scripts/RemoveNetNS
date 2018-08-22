@@ -1,0 +1,9 @@
+#!/bin/bash
+if (( $# != 1 )); then
+    echo "Usage: $0 netns_name" >2
+    exit 1
+fi
+
+netns_name=$1
+
+ip netns del $netns_name

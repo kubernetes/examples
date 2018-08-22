@@ -1,0 +1,59 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      nodeSelector:
+        role.kos.example.com/base: "true"
+      serviceAccountName: prometheus
+      initContainers:
+      - name: dataprep
+        image: giantswarm/tiny-tools
+        command: ["/bin/sh", "-c"]
+        args:
+        - mkdir -p /var/lib/prometheus && chown nobody:nogroup /var/lib/prometheus && chmod 0755 /var/lib/prometheus
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: var-lib
+          mountPath: /var/lib
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.6.1
+        imagePullPolicy: IfNotPresent
+        args:
+          - '--storage.tsdb.retention=14d'
+          - '--storage.tsdb.path=/var/lib/prometheus'
+          - '--config.file=/etc/prometheus/config.yaml'
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+        - name: var-lib
+          mountPath: /var/lib
+        - name: main-etcd-client-tls
+          mountPath: /etc/main-etcd-client-tls
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus
+      - name: var-lib
+        hostPath:
+          path: /var/lib
+      - name: main-etcd-client-tls
+        secret:
+          secretName: main-etcd-client-tls
+          optional: true

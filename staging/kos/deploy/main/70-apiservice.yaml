@@ -1,0 +1,13 @@
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1alpha1.network.example.com
+spec:
+  insecureSkipTLSVerify: true
+  group: network.example.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: network-api
+    namespace: example-com
+  version: v1alpha1
