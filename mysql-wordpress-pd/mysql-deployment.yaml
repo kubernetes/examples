@@ -53,6 +53,9 @@ spec:
             secretKeyRef:
               name: mysql-pass
               key: password
+        livenessProbe:
+          tcpSocket:
+            port: 3306
         ports:
         - containerPort: 3306
           name: mysql
