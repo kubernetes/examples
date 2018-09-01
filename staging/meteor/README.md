@@ -68,9 +68,10 @@ packages/*/.build*
 You can see an example meteor project already set up at:
 [meteor-gke-example](https://github.com/Q42/meteor-gke-example). Feel
 free to use this app for this example.
-
-> Note: The next step will not work if you have added mobile platforms
-> to your meteor project. Check with `meteor list-platforms`
+{{< note >}}
+**Note:** The next step will not work if you have added mobile platforms
+to your meteor project. Check with `meteor list-platforms`
+{{< /note >}}
 
 Now you can build your container by running this in
 your Meteor project directory:
