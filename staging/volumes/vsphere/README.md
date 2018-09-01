@@ -208,8 +208,9 @@
 
 ### Storage Class
 
-  __Note: Here you don't need to create vmdk it is created for you.__
-  1. Create Storage Class.
+      {{< note >}}
+      **Note:** Here you don't need to create vmdk it is created for you.
+      {{< /note >}}
 
       Example 1:
 
@@ -379,7 +380,9 @@
 ### Storage Policy Management inside kubernetes
 #### Using existing vCenter SPBM policy
   Admins can use the existing vCenter Storage Policy Based Management (SPBM) policy to configure a persistent volume with the SPBM policy.
-  __Note: Here you don't need to create persistent volume it is created for you.__
+  {{< note >}}
+  **Note:** Here you don't need to create persistent volume it is created for you.
+  {{< /note >}}
 
   1. Create Storage Class.
 
@@ -430,8 +433,9 @@
   * *cacheReservation*: represents FlashReadCacheReservation
   * *iopsLimit*: represents IOPSLimitForObject
   * *forceProvisioning*: represents if volume must be Force Provisioned
-
-  __Note: Here you don't need to create persistent volume it is created for you.__
+  {{< note >}}
+  **Note:** Here you don't need to create persistent volume it is created for you.
+  {{< /note >}}
   1. Create Storage Class.
 
       Example 1:
@@ -472,8 +476,10 @@
 
       [Download example](vsphere-volume-sc-vsancapabilities-with-datastore.yaml?raw=true)
 
-      __Note: If you do not apply a storage policy during dynamic provisioning on a VSAN datastore, it will use a default Virtual SAN policy.__
-
+      {{< note >}}
+      **Note:** If you do not apply a storage policy during dynamic provisioning on a VSAN datastore, it will use a default Virtual SAN policy.
+      {{< /note >}}
+   
       Creating the storageclass:
 
       ``` bash
@@ -553,8 +559,10 @@
       No events.
       ```
 
-      __Note: VMDK is created inside ```kubevols``` folder in datastore which is mentioned in 'vsphere' cloudprovider configuration.
-      The cloudprovider config is created during setup of Kubernetes cluster on vSphere.__
+      {{< note >}}
+      **Note:**  VMDK is created inside ```kubevols``` folder in datastore which is mentioned in 'vsphere' cloudprovider configuration.
+      The cloudprovider config is created during setup of Kubernetes cluster on vSphere.
+      {{< /note >}}
 
   3. Create Pod which uses Persistent Volume Claim with storage class.
 
