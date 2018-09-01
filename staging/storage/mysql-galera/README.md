@@ -14,7 +14,7 @@ This example was tested on OS X with a Galera cluster running on VMWare using th
 
 The basic idea is this: three replication controllers with a single pod, corresponding services, and a single overall service to connect to all three nodes. One of the important design goals of MySQL replication and/or clustering is that you don't want a single-point-of-failure, hence the need to distribute each node or slave across hosts or even geographical locations. Kubernetes is well-suited for facilitating this design pattern using the service and replication controller configuration files in this example.
 
-By defaults, there are only three pods (hence replication controllers) for this cluster. This number can be increased using the variable NUM_NODES, specified in the replication controller configuration file. It's important to know the number of nodes must always be odd.
+By default, there are only three pods (hence replication controllers) for this cluster. This number can be increased using the variable NUM_NODES, specified in the replication controller configuration file. It's important to know the number of nodes must always be odd.
 
 When the replication controller is created, it results in the corresponding container to start, run an entrypoint script that installs the MySQL system tables, set up users, and build up a list of servers that is used with the galera parameter ```wsrep_cluster_address```.  This is a list of running nodes that galera uses for election of a node to obtain SST (Single State Transfer) from.
 
