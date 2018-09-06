@@ -1,6 +1,6 @@
-## Java Web Application with Tomcat and Sidecar Container
+## Java Web Application with Tomcat and Init Container
 
-The following document describes the deployment of a Java Web application using Tomcat. Instead of packaging `war` file inside the Tomcat image or mount the `war` as a volume, we use a sidecar container as `war` file provider.
+The following document describes the deployment of a Java Web application using Tomcat. Instead of packaging `war` file inside the Tomcat image or mount the `war` as a volume, we use an [init-container](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/) as `war` file provider.
 
 ### Prerequisites
 
@@ -12,7 +12,9 @@ This sidecar mode brings a new workflow for Java users:
 
 ![](workflow.png?raw=true "Workflow")
 
-As you can see, user can create a `sample:v2` container as sidecar to "provide" war file to Tomcat by copying it to the shared `emptyDir` volume. And Pod will make sure the two containers compose an "atomic" scheduling unit, which is perfect for this case. Thus, your application version management will be totally separated from web server management.
+As you can see, user can create a `sample:v2` container as an `initContainers` object to "provide" war file to Tomcat by copying it to the shared `emptyDir` volume. And Pod will make sure the two containers compose an "atomic" scheduling unit, which is perfect for this case. Thus, your application version management will be totally separated from web server management.
+
+By using an init-container the `tomcat` container is assured of the `war` file existing before start up as the pod will not start normal containers until all init-containers have completed successfully.
 
 For example, if you are going to change the configurations of your Tomcat:
 
@@ -38,7 +40,7 @@ In Kubernetes a [_Pod_](https://kubernetes.io/docs/user-guide/pods.md) is the sm
 
 Here is the config [javaweb.yaml](javaweb.yaml) for Java Web pod:
 
-NOTE: you should define `war` container **first** as it is the "provider".
+NOTE: you should define `war` init-container **first** as it is the "provider".
 
 <!-- BEGIN MUNGE: javaweb.yaml -->
 
@@ -48,24 +50,25 @@ kind: Pod
 metadata:
   name: javaweb
 spec:
+  initContainers:
+    - image: resouer/sample:v1
+      name: war
+      volumeMounts:
+        - mountPath: /app
+          name: app-volume
   containers:
-  - image: resouer/sample:v1
-    name: war
-    volumeMounts:
-    - mountPath: /app
-      name: app-volume
-  - image: resouer/mytomcat:7.0
-    name: tomcat
-    command: ["sh","-c","/root/apache-tomcat-7.0.42-v2/bin/start.sh"]
-    volumeMounts:
-    - mountPath: /root/apache-tomcat-7.0.42-v2/webapps
-      name: app-volume
-    ports:
-    - containerPort: 8080
-      hostPort: 8001
+    - image: resouer/mytomcat:7.0
+      name: tomcat
+      command: ["sh", "-c", "/root/apache-tomcat-7.0.42-v2/bin/start.sh"]
+      volumeMounts:
+        - mountPath: /root/apache-tomcat-7.0.42-v2/webapps
+          name: app-volume
+      ports:
+        - containerPort: 8080
+          hostPort: 8001
   volumes:
-  - name: app-volume
-    emptyDir: {}
+    - name: app-volume
+      emptyDir: {}
 ```
 
 <!-- END MUNGE: EXAMPLE -->
@@ -92,8 +95,7 @@ tail -f /dev/null
 3. The last line of `tail -f` is just used to hold the container, as Replication Controller does not support one-off task
 4. 'tomcat' container will load the `sample.war` from volume path
 
-What's more, if you don't want to enclose a build-in `mv.sh` script in the `war` container, you can use Pod lifecycle handler to do the copy work, here's a example [javaweb-2.yaml](javaweb-2.yaml):
-
+What's more, if you don't want to enclose a build-in `mv.sh` script in the `war` container, you can use Pod's `command` to do the copy work, here's a example [javaweb-2.yaml](javaweb-2.yaml):
 
 <!-- BEGIN MUNGE: javaweb-2.yaml -->
 
@@ -103,19 +105,17 @@ kind: Pod
 metadata:
   name: javaweb-2
 spec:
-  containers:
+  initContainers:
   - image: resouer/sample:v2
     name: war
-    lifecycle:
-      postStart:
-        exec:
-          command:
-            - "cp"
-            - "/sample.war"
-            - "/app"
+      command:
+        - "cp"
+        - "/sample.war"
+        - "/app"
     volumeMounts:
     - mountPath: /app
       name: app-volume
+  containers:
   - image: resouer/mytomcat:7.0
     name: tomcat
     command: ["sh","-c","/root/apache-tomcat-7.0.42-v2/bin/start.sh"]
@@ -124,7 +124,7 @@ spec:
       name: app-volume
     ports:
     - containerPort: 8080
-      hostPort: 8001 
+      hostPort: 8001
   volumes:
   - name: app-volume
     emptyDir: {}
@@ -144,7 +144,7 @@ CMD "tail" "-f" "/dev/null"
 
 1. 'war' container only contains the `war` file of your app
 2. 'war' container's CMD uses `tail -f` to hold the container, nothing more
-3. The `postStart` lifecycle handler will do `cp` after the `war` container is started
+3. The `command` will do `cp` after the `war` container is started
 4. Again 'tomcat' container will load the `sample.war` from volume path
 
 Done! Now your `war` container contains nothing except `sample.war`, clean enough.
@@ -165,7 +165,7 @@ NAME        READY     STATUS    RESTARTS   AGE
 javaweb-2   2/2       Running   0         7s
 ```
 
-Wait for the status to `2/2` and `Running`. Then you can visit "Hello, World" page on `http://localhost:8001/sample/index.html`
+Wait for the status to `0/1` and `Running`. Then you can visit "Hello, World" page on `http://localhost:8001/sample/index.html`
 
 You can also test `javaweb.yaml` in the same way.
 
@@ -177,9 +177,8 @@ All resources created in this application can be deleted:
 $ kubectl delete -f examples/javaweb-tomcat-sidecar/javaweb-2.yaml
 ```
 
-
-
-
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
+
 [![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/javaweb-tomcat-sidecar/README.md?pixel)]()
+
 <!-- END MUNGE: GENERATED_ANALYTICS -->
