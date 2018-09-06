@@ -3,19 +3,17 @@ kind: Pod
 metadata:
   name: javaweb-2
 spec:
-  containers:
+  initContainers:
   - image: resouer/sample:v2
     name: war
-    lifecycle:
-      postStart:
-        exec:
-          command:
-            - "cp"
-            - "/sample.war"
-            - "/app"
+      command:
+        - "cp"
+        - "/sample.war"
+        - "/app"
     volumeMounts:
     - mountPath: /app
       name: app-volume
+  containers:
   - image: resouer/mytomcat:7.0
     name: tomcat
     command: ["sh","-c","/root/apache-tomcat-7.0.42-v2/bin/start.sh"]
