@@ -6,6 +6,7 @@ spec:
   initContainers:
     - image: resouer/sample:v1
       name: war
+      command: ["cp", "/sample.war", "/app"]
       volumeMounts:
         - mountPath: /app
           name: app-volume
