@@ -8,13 +8,13 @@ to Kubernetes and running your first containers on the cluster.
 
 From this point onwards, it is assumed that `kubectl` is on your path from one of the getting started guides.
 
-The [`kubectl run`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#run) line below will create two [nginx](https://hub.docker.com/_/nginx/) [pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/) listening on port 80. It will also create a [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) named `my-nginx` to ensure that there are always two pods running.
+The [`kubectl create`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#create) line below will create a [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) named `my-nginx` to ensure that there are always a [nginx](https://hub.docker.com/_/nginx/) [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/) running.
 
 ```bash
-kubectl run my-nginx --image=nginx --replicas=2 --port=80
+kubectl create deployment --image nginx my-nginx
 ```
 
-Once the pods are created, you can list them to see what is up and running:
+You can list the pods to see what is up and running:
 
 ```bash
 kubectl get pods
@@ -26,7 +26,19 @@ You can also see the deployment that was created:
 kubectl get deployment
 ```
 
-### Exposing your pods to the internet.
+You can also scale the deployment to ensure there is two nginx pods running:
+
+```bash
+kubectl scale deployment --replicas 2 my-nginx
+```
+
+You can now list the pods to see there is two up and running:
+
+```bash
+kubectl get pods
+```
+
+### Exposing your pods to the internet
 
 On some platforms (for example Google Compute Engine) the kubectl command can integrate with your cloud provider to add a [public IP address](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types) for the pods,
 to do this run:
