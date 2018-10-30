@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: selenium-node-chrome
-        image: selenium/node-chrome-debug:3.11
+        image: selenium/node-chrome-debug:3.141
         ports:
           - containerPort: 5900
         env:
