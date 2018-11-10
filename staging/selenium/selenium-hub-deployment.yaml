@@ -25,13 +25,13 @@ spec:
             cpu: ".5"
         livenessProbe:
           httpGet:
-            path: /grid/console
+            path: /wd/hub/status
             port: 4444
           initialDelaySeconds: 30
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /grid/console
+            path: /wd/hub/status
             port: 4444
           initialDelaySeconds: 30
           timeoutSeconds: 5
