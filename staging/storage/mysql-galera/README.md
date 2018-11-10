@@ -37,7 +37,7 @@ When completed, you should be able to connect with a MySQL client to the IP addr
 
 ### An example of creating a cluster
 
-Shown below are examples of Using ```kubectl``` from within the ```./examples/storage/mysql-galera``` directory, the status of the lauched replication controllers and services can be confirmed:
+Shown below are examples of Using ```kubectl``` from within the ```./examples/storage/mysql-galera``` directory, the status of the launched replication controllers and services can be confirmed:
 
 ```
 $ kubectl create -f examples/storage/mysql-galera/pxc-cluster-service.yaml 
