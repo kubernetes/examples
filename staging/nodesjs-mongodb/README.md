@@ -6,7 +6,7 @@ For more a in-depth explanation of this example, please [read this post.](https:
 
 ### Prerequisites
 
-This example assumes that you have a basic understanding of Kubernetes conecepts (Pods, Services, Replication Controllers), a Kubernetes cluster up and running, and that you have installed the ```kubectl``` command line tool somewhere in your path.  Please see the [getting started](https://kubernetes.io/docs/getting-started-guides/) for installation instructions for your platform.
+This example assumes that you have a basic understanding of Kubernetes concepts (Pods, Services, Replication Controllers), a Kubernetes cluster up and running, and that you have installed the ```kubectl``` command line tool somewhere in your path.  Please see the [getting started](https://kubernetes.io/docs/getting-started-guides/) for installation instructions for your platform.
 
 Note: This example was tested on [Google Container Engine](https://cloud.google.com/container-engine/docs/). Some optional commands require the [Google Cloud SDK](https://cloud.google.com/sdk/).
 
