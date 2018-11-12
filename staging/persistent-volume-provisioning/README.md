@@ -141,6 +141,7 @@ parameters:
   volumeoptions: "client.ssl on, server.ssl on"
   volumenameprefix: "dept-dev"
   snapfactor: "10"
+  customepnameprefix: "dbstorage"
 ```
 
 Example storageclass can be found in [glusterfs-storageclass.yaml](glusterfs/glusterfs-storageclass.yaml).
@@ -187,6 +188,10 @@ For available volume options and its administration refer: ([Administration Guid
 Please note that, the value for this parameter cannot contain `_` in storageclass. This is an optional parameter.
 
 *`snapfactor`: Dynamically provisioned volume's thinpool size can be configured with this parameter. The value for the parameter should be in range of 1-100, this value will be taken into account while creating thinpool for the provisioned volume. This is an optional parameter with default value of 1.
+
+* `customepnameprefix` : By default dynamically provisioned volumes has an endpoint and service created with the naming schema of `glusterfs-dynamic-<PVC UUID` format. With this option present in storageclass, an admin can now prefix the desired endpoint from storageclass. If `customepnameprefix` storageclass parameter is set, the dynamically provisioned volumes will have an endpoint and service created in below format where `-` is the field separator/delimiter:
+
+`customepnameprefix-<PVC UUID>`
 
 Reference : ([How to configure Gluster on Kubernetes](https://github.com/gluster/gluster-kubernetes/blob/master/docs/setup-guide.md))
 
