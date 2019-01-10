@@ -49,7 +49,7 @@ public class KubernetesSeedProvider implements SeedProvider {
 
 	/**
 	 * Create new seed provider
-	 * 
+	 *
 	 * @param params
 	 */
 	public KubernetesSeedProvider(Map<String, String> params) {
@@ -57,7 +57,7 @@ public class KubernetesSeedProvider implements SeedProvider {
 
 	/**
 	 * Call Kubernetes API to collect a list of seed providers
-	 * 
+	 *
 	 * @return list of seed providers
 	 */
 	public List<InetAddress> getSeeds() {

@@ -13,10 +13,10 @@ This document shows how to configure Kubernetes resources to consume storage fro
 
 This document assumes you are familiar with ScaleIO and have a cluster ready to go.  If you are *not familiar* with ScaleIO, please review *Learn how to setup a 3-node* [ScaleIO cluster on Vagrant](https://github.com/codedellemc/labs/tree/master/setup-scaleio-vagrant) and see *General instructions on* [setting up ScaleIO](https://www.emc.com/products-solutions/trial-software-download/scaleio.htm)
 
-For this demonstration, ensure the following: 
+For this demonstration, ensure the following:
 
  - The ScaleIO `SDC` component is installed and properly configured on all Kubernetes nodes where deployed pods will consume ScaleIO-backed storage.
- - You have a configured ScaleIO gateway that is accessible from the Kubernetes nodes. 
+ - You have a configured ScaleIO gateway that is accessible from the Kubernetes nodes.
 
 ## Deploy Kubernetes Secret for ScaleIO
 
@@ -28,8 +28,8 @@ c2lvdXNlcg==
 $> echo -n "sc@l3I0" | base64
 c2NAbDNJMA==
 ```
-The previous will generate `base64-encoded` values for the username and password.  
-Remember to generate the credentials for your own environment and copy them in a secret file similar to the following.  
+The previous will generate `base64-encoded` values for the username and password.
+Remember to generate the credentials for your own environment and copy them in a secret file similar to the following.
 
 File: [secret.yaml](secret.yaml)
 
@@ -114,7 +114,7 @@ $> kubectl get pod
 NAME      READY     STATUS    RESTARTS   AGE
 pod-0     1/1       Running   0          33s
 ```
-Or for more detail, use 
+Or for more detail, use
 ```
 kubectl describe pod pod-0
 ```
@@ -128,8 +128,8 @@ scinia      252:0    0    8G  0 disk /var/lib/kubelet/pods/135986c7-dcb7-11e6-9f
 
 ## StorageClass and Dynamic Provisioning
 
-The ScaleIO volume plugin can also dynamically provision storage to a Kubernetes cluster. 
-The ScaleIO dynamic provisioner plugin can be used with a `StorageClass` and is identified as `kubernetes.io/scaleio`.  
+The ScaleIO volume plugin can also dynamically provision storage to a Kubernetes cluster.
+The ScaleIO dynamic provisioner plugin can be used with a `StorageClass` and is identified as `kubernetes.io/scaleio`.
 
 ### ScaleIO StorageClass
 The ScaleIO dynamic provisioning plugin supports the following StorageClass parameters:
@@ -197,7 +197,7 @@ spec:
 
 Note the `spec:storageClassName` entry which specifies the name of the previously defined StorageClass `sio-small` .
 
-Next, deploy the PVC file.  This step will cause the Kubernetes ScaleIO plugin to create the volume in the storage system.  
+Next, deploy the PVC file.  This step will cause the Kubernetes ScaleIO plugin to create the volume in the storage system.
 ```
 $> kubectl create -f examples/volumes/scaleio/sc-pvc.yaml
 ```
@@ -242,7 +242,7 @@ kubectl get pod
 NAME            READY     STATUS    RESTARTS   AGE
 pod-0           1/1       Running   0          23m
 pod-sio-small   1/1       Running   0          5s
-``` 
+```
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
 [![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/scaleio/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->

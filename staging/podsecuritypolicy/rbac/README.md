@@ -127,7 +127,7 @@ In order to create a pod, either the creating user or the service account
 specified by the pod must be authorized to use a `PodSecurityPolicy` object
 that allows the pod, within the pod's namespace.
 
-That authorization is determined by the ability to perform the `use` verb 
+That authorization is determined by the ability to perform the `use` verb
 on a particular `podsecuritypolicies` resource, at the scope of the pod's namespace.
 The `use` verb is a special verb that grants access to use a policy while not permitting any
 other access.

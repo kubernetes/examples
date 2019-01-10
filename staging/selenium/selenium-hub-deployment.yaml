@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: selenium-hub 
+  name: selenium-hub
   labels:
     app: selenium-hub
 spec:
@@ -18,7 +18,7 @@ spec:
       - name: selenium-hub
         image: selenium/hub:3.11
         ports:
-          - containerPort: 4444 
+          - containerPort: 4444
         resources:
           limits:
             memory: "1000Mi"
