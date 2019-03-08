@@ -27,9 +27,9 @@ spec:
           - mountPath: /dev/shm
             name: dshm
         env:
-          - name: HUB_PORT_4444_TCP_ADDR
+          - name: HUB_HOST
             value: "selenium-hub"
-          - name: HUB_PORT_4444_TCP_PORT
+          - name: HUB_PORT
             value: "4444"
         resources:
           limits:
