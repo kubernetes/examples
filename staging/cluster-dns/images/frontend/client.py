@@ -17,21 +17,25 @@
 import argparse
 import requests
 import socket
+import sys
 
-from urlparse import urlparse
+if sys.version_info[0] < 3:
+  from urlparse import urlparse
+else:
+  from urllib.parse import urlparse
 
 
 def CheckServiceAddress(address):
   hostname = urlparse(address).hostname
   service_address = socket.gethostbyname(hostname)
-  print service_address
+  print(service_address)
 
 
 def GetServerResponse(address):
-  print 'Send request to:', address
+  print('Send request to:', address)
   response = requests.get(address)
-  print response
-  print response.content
+  print(response)
+  print(response.content)
 
 
 def Main():

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler,HTTPServer
 
 PORT_NUMBER = 8000
 
@@ -30,8 +30,8 @@ class HTTPHandler(BaseHTTPRequestHandler):
 try:
   # Create a web server and define the handler to manage the incoming request.
   server = HTTPServer(('', PORT_NUMBER), HTTPHandler)
-  print 'Started httpserver on port ' , PORT_NUMBER
+  print('Started httpserver on port ', PORT_NUMBER)
   server.serve_forever()
 except KeyboardInterrupt:
-  print '^C received, shutting down the web server'
+  print('^C received, shutting down the web server')
   server.socket.close()
