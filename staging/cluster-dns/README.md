@@ -97,7 +97,7 @@ dns-backend  10.0.2.4         <none>            8000/TCP               name=dns-
 
 ### Step Four: Create client pod in one namespace
 
-Use the file [`examples/staging/cluster-dns/dns-frontend-pod.yaml`](dns-frontend-pod.yaml) to create a client [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod/) in dev namespace. The client pod will make a connection to backend and exit. Specifically, it tries to connect to address `http://dns-backend.development.cluster.local:8000`.
+Use the file [`examples/staging/cluster-dns/dns-frontend-pod.yaml`](dns-frontend-pod.yaml) to create a client [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod/) in dev namespace. The client pod will make a connection to backend and exit. Specifically, it tries to connect to address `http://dns-backend.development.svc.cluster.local:8000`.
 
 ```sh
 $ kubectl config use-context dev
@@ -117,7 +117,7 @@ Wait until the pod succeeds, then we can see the output from the client pod:
 ```sh
 $ kubectl logs dns-frontend
 2015-05-07T20:13:54.147664936Z 10.0.236.129
-2015-05-07T20:13:54.147721290Z Send request to: http://dns-backend.development.cluster.local:8000
+2015-05-07T20:13:54.147721290Z Send request to: http://dns-backend.development.svc.cluster.local:8000
 2015-05-07T20:13:54.147733438Z <Response [200]>
 2015-05-07T20:13:54.147738295Z Hello World!
 ```
@@ -131,7 +131,7 @@ $ kubectl config use-context prod
 $ kubectl create -f examples/staging/cluster-dns/dns-frontend-pod.yaml
 $ kubectl logs dns-frontend
 2015-05-07T20:13:54.147664936Z 10.0.236.129
-2015-05-07T20:13:54.147721290Z Send request to: http://dns-backend.development.cluster.local:8000
+2015-05-07T20:13:54.147721290Z Send request to: http://dns-backend.development.svc.cluster.local:8000
 2015-05-07T20:13:54.147733438Z <Response [200]>
 2015-05-07T20:13:54.147738295Z Hello World!
 ```
