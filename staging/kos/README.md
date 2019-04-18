@@ -341,6 +341,13 @@ by node labels.  The KOS control plane nodes are identified by the
 node label `role.kos.example.com/control=true`, and the workload nodes
 are identified by `role.kos.example.com/workload=true`.
 
+You can get a list of your cluster's nodes along with their relevant
+role labels with the following command.
+
+```
+kubectl get Node  -L role.kos.example.com/base,role.kos.example.com/control,role.kos.example.com/workload
+```
+
 
 ## Operations Guide
 
