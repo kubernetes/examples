@@ -177,10 +177,28 @@ type SubnetSpec struct {
 	VNI uint32
 }
 
+// SubnetValidationOutcome represents the outcome of a subnet validation.
+// Currently the only used value is 'usable', hence a boolean would be enough.
+// The reason an alias to string is used instead is to ease future expansion by
+// adding additional values if needed (as recommended by K8s API conventions).
+type SubnetValidationOutcome string
+
 type SubnetStatus struct {
 	// Errors are the complaints, if any, from the IPAM controller.
 	// +optional
 	Errors []string
+
+	// ValidationOutcome conveys whether the subnet can be used because it has
+	// passed validation or not. Can be used only if value is 'usable'. If it is
+	// not set, a controller processing it (with the exception of validators)
+	// should:
+	// (1) stop processing the subnet immediately if no hard state has been
+	// allocated to the subnet (e.g. IPs given to NetworkAttachments).
+	// or,
+	// (2) clear all the hard state which has been previously allocated.
+	// TODO: think whether to switch to a condition or actually use a boolean.
+	// +optional
+	ValidationOutcome SubnetValidationOutcome
 }
 
 // +genclient
