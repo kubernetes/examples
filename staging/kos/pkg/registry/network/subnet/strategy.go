@@ -91,47 +91,9 @@ func (*subnetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 }
 
-func (s *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
-	var errs field.ErrorList
-
-	thisSubnet := obj.(*network.Subnet)
-
-	vniRangeErrs := s.checkVNIRange(thisSubnet)
-	errs = append(errs, vniRangeErrs...)
-
-	cidrFormatErrs := s.checkCIDRFormat(thisSubnet)
-	errs = append(errs, cidrFormatErrs...)
-
-	if len(vniRangeErrs) > 0 {
-		// If we are here, the VNI range of the created subnet is invalid. All
-		// of the next validation steps make sense so long as the vni is valid,
-		// thus we return immediately.
-		return errs
-	}
-
-	// We need to check the under-validation subnet against subnets with the
-	// same VNI only. Other subnets can be ignored.
-	allSubnetsWithSameVNI, err := s.allSubnetsWithVNI(thisSubnet.Spec.VNI)
-	if err != nil {
-		// If we're here it was not possible to fetch the subnets with the same
-		// VNI as the one under creation, thus validation cannot proceed and we
-		// return immediately.
-		return append(errs, field.InternalError(nil, fmt.Errorf("could not fetch subnets with VNI %d, try again later", thisSubnet.Spec.VNI)))
-	}
-
-	// TODO find a better alternative, this check is not correct. Two subnets in
-	// different namespaces with the same VNI could be successfully created if
-	// their creation is concurrent.
-	errs = append(errs, s.checkSameVNISameNs(thisSubnet, allSubnetsWithSameVNI)...)
-
-	if len(cidrFormatErrs) == 0 {
-		// TODO find a better alternative, this check is not correct. Two
-		// subnets with overlapping CIDRs could be successfully created if their
-		// creation is concurrent.
-		errs = append(errs, s.checkCIDRDoesNotOverlap(thisSubnet, allSubnetsWithSameVNI)...)
-	}
-
-	return errs
+func (*subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+	s := obj.(*network.Subnet)
+	return validate(s)
 }
 
 func (*subnetStrategy) AllowCreateOnUpdate() bool {
@@ -145,8 +107,23 @@ func (*subnetStrategy) AllowUnconditionalUpdate() bool {
 func (*subnetStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (s *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return s.Validate(ctx, obj)
+func (*subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+	newSubnet := obj.(*network.Subnet)
+	if errs := validate(newSubnet); errs != nil {
+		return errs
+	}
+	oldSubnet := old.(*network.Subnet)
+	if oldSubnet.Spec.VNI != newSubnet.Spec.VNI || oldSubnet.Spec.IPv4 != newSubnet.Spec.IPv4 {
+		// The fields involved in subnet validation are VNI and CIDR. If one of
+		// those fields is updated, the subnet should undergo validation again,
+		// and its previous validation outcome is stale, hence it is reset.
+		newSubnet.Status.ValidationOutcome = ""
+	}
+	return field.ErrorList{}
+}
+
+func validate(s *network.Subnet) field.ErrorList {
+	return append(checkVNIRange(s), checkCIDRFormat(s)...)
 }
 
 const (
@@ -154,103 +131,24 @@ const (
 	maxVNI uint32 = 2097151
 )
 
-func (*subnetStrategy) checkVNIRange(subnet *network.Subnet) field.ErrorList {
-	vni := subnet.Spec.VNI
+func checkVNIRange(s *network.Subnet) field.ErrorList {
+	vni := s.Spec.VNI
 	if vni < minVNI || vni > maxVNI {
 		return field.ErrorList{
 			field.Invalid(field.NewPath("spec", "vni"), fmt.Sprintf("%d", vni), fmt.Sprintf("must be in the range [%d,%d]", minVNI, maxVNI)),
 		}
 	}
-	return nil
+	return field.ErrorList{}
 }
 
-func (*subnetStrategy) checkCIDRFormat(subnet *network.Subnet) field.ErrorList {
-	cidr := subnet.Spec.IPv4
+func checkCIDRFormat(s *network.Subnet) field.ErrorList {
+	cidr := s.Spec.IPv4
 	if _, _, err := net.ParseCIDR(cidr); err != nil {
 		return field.ErrorList{
 			field.Invalid(field.NewPath("spec", "ipv4"), cidr, err.Error()),
 		}
 	}
-	return nil
-}
-
-func (s *subnetStrategy) allSubnetsWithVNI(vni uint32) ([]*network.Subnet, error) {
-	allSubnets, err := s.subnetLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var allSubnetsWithSameVNI []*network.Subnet
-	for _, aSubnet := range allSubnets {
-		if aSubnet.Spec.VNI == vni {
-			allSubnetsWithSameVNI = append(allSubnetsWithSameVNI, aSubnet)
-		}
-	}
-	return allSubnetsWithSameVNI, nil
-}
-
-func (s *subnetStrategy) checkSameVNISameNs(thisSubnet *network.Subnet, allSubnetsWithSameVNI []*network.Subnet) field.ErrorList {
-	errs := field.ErrorList{}
-
-	// TODO currently thisSubnet is checked against all the subnets with the
-	// same VNI. This is a sloppy attempt to deal with the fact that two subnets
-	// with same VNI but different namespaces created concurrently could both be
-	// created successfully. By checking all the subnets with the same VNI
-	// everytime a new subnet is created, we detect such anomalies. This is
-	// sloppy because if no new subnet with the given VNI is created anomalies
-	// are not detected. Also, the way the cluster is notified of the anomaly is
-	// through failure of the new subnet creation. But the anomaly is a general
-	// one concerning all the subnets with the given VNI. Creating an event
-	// could be more appropriate. When (if) we'll switch to a correct
-	// enforcement of the same VNI/same Namespace rule, checking thisSubnet
-	// against any of the already existing subnets with the same VNI, if there
-	// are any, will be enough (and more efficient).
-	for _, aSubnet := range allSubnetsWithSameVNI {
-		if aSubnet.Namespace != thisSubnet.Namespace {
-			errMsg := fmt.Sprintf("subnet %s/%s has the same VNI but different namespace with respect to subnet %s/%s. "+
-				"Subnets with the same VNI MUST reside in the same namespace",
-				thisSubnet.Namespace,
-				thisSubnet.Name,
-				aSubnet.Namespace,
-				aSubnet.Name)
-			errs = append(errs, field.Forbidden(field.NewPath("metadata", "namespace"), errMsg))
-		}
-	}
-
-	return errs
-}
-
-func (s *subnetStrategy) checkCIDRDoesNotOverlap(thisSubnet *network.Subnet, allSubnetsWithSameVNI []*network.Subnet) field.ErrorList {
-	errs := field.ErrorList{}
-
-	// No need to check if parse was successful, as the check has been already
-	// preformed in method checkCIDRFormat.
-	thisSubnetParsed := parseSubnet(thisSubnet)
-
-	for _, aSubnet := range allSubnetsWithSameVNI {
-		if thisSubnet.UID == aSubnet.UID {
-			// Do not compare the subnet under validation against itself (needed
-			// in case of updates).
-			continue
-		}
-		// No need to check if parse was successuful, as aSubnet has already
-		// been created. If it couldn't be parsed its creation would have
-		// failed.
-		aSubnetParsed := parseSubnet(aSubnet)
-		if thisSubnetParsed.overlaps(aSubnetParsed) {
-			errMsg := fmt.Sprintf("subnet %s/%s IPv4 range (%s) overlaps with that of subnet %s/%s (%s). IPv4 ranges "+
-				"for subnets with the same VNI MUST be disjoint",
-				thisSubnet.Namespace,
-				thisSubnet.Name,
-				thisSubnet.Spec.IPv4,
-				aSubnet.Namespace,
-				aSubnet.Name,
-				aSubnet.Spec.IPv4)
-			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), errMsg))
-		}
-	}
-
-	return errs
+	return field.ErrorList{}
 }
 
 type parsedSubnet struct {
