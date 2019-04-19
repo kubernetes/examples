@@ -41,6 +41,7 @@ import (
 	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
 	netfactory "k8s.io/examples/staging/kos/pkg/networkfabric/factory"
 
+	_ "k8s.io/examples/staging/kos/pkg/networkfabric/logger"
 	_ "k8s.io/examples/staging/kos/pkg/networkfabric/ovs"
 )
 
