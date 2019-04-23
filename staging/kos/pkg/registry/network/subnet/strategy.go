@@ -89,6 +89,13 @@ func (*subnetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 }
 
 func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	newSubnet, oldSubnet := obj.(*network.Subnet), old.(*network.Subnet)
+	if oldSubnet.Spec.VNI != newSubnet.Spec.VNI || oldSubnet.Spec.IPv4 != newSubnet.Spec.IPv4 {
+		// The fields involved in subnet validation are VNI and CIDR. If one of
+		// those fields is updated, the subnet should undergo validation again,
+		// and its previous validation outcome is stale, hence it is reset.
+		newSubnet.Status.ValidationOutcome = ""
+	}
 }
 
 func (*subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
@@ -111,13 +118,6 @@ func (*subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Obje
 	newSubnet := obj.(*network.Subnet)
 	if errs := validate(newSubnet); errs != nil {
 		return errs
-	}
-	oldSubnet := old.(*network.Subnet)
-	if oldSubnet.Spec.VNI != newSubnet.Spec.VNI || oldSubnet.Spec.IPv4 != newSubnet.Spec.IPv4 {
-		// The fields involved in subnet validation are VNI and CIDR. If one of
-		// those fields is updated, the subnet should undergo validation again,
-		// and its previous validation outcome is stale, hence it is reset.
-		newSubnet.Status.ValidationOutcome = ""
 	}
 	return field.ErrorList{}
 }
