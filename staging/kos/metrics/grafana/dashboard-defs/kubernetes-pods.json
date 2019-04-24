@@ -16,8 +16,7 @@
   "editable": true,
   "gnetId": 737,
   "graphTooltip": 0,
-  "id": 6,
-  "iteration": 1548567982172,
+  "iteration": 1556065606612,
   "links": [],
   "panels": [
     {
@@ -859,7 +858,7 @@
         "rightSide": true,
         "show": true,
         "sideWidth": 200,
-        "sort": "current",
+        "sort": "avg",
         "sortDesc": true,
         "total": false,
         "values": true
@@ -888,6 +887,16 @@
           "step": 240
         },
         {
+          "expr": "sum(rate(container_network_receive_bytes_total{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "receive",
+          "metric": "network",
+          "refId": "C",
+          "step": 240
+        },
+        {
           "expr": "- sum(rate(container_network_transmit_bytes_total{image!=\"\",name=~\"^k8s_.*\",instance=~\"^$instance$\",namespace=~\"^$namespace$\"}[1m]))",
           "format": "time_series",
           "interval": "",
@@ -895,6 +904,16 @@
           "legendFormat": "transmit",
           "metric": "network",
           "refId": "B",
+          "step": 240
+        },
+        {
+          "expr": "- sum(rate(container_network_transmit_bytes_total{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "transmit",
+          "metric": "network",
+          "refId": "D",
           "step": 240
         }
       ],
@@ -985,7 +1004,7 @@
         "rightSide": true,
         "show": true,
         "sideWidth": null,
-        "sort": "current",
+        "sort": "avg",
         "sortDesc": true,
         "total": false,
         "values": true
@@ -1011,6 +1030,16 @@
           "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }}",
           "metric": "container_cpu",
           "refId": "A",
+          "step": 240
+        },
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}[1m])) by (container_label_io_kubernetes_pod_name,instance)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{ container_label_io_kubernetes_pod_name }} {{ instance }}",
+          "metric": "container_cpu",
+          "refId": "B",
           "step": 240
         }
       ],
@@ -1087,7 +1116,7 @@
         "rightSide": true,
         "show": true,
         "sideWidth": null,
-        "sort": "current",
+        "sort": "avg",
         "sortDesc": true,
         "total": false,
         "values": true
@@ -1113,6 +1142,16 @@
           "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }}",
           "metric": "",
           "refId": "A",
+          "step": 240
+        },
+        {
+          "expr": "sum (container_memory_working_set_bytes{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}) by (container_label_io_kubernetes_pod_name,instance)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{ container_label_io_kubernetes_pod_name }} {{ instance }}",
+          "metric": "",
+          "refId": "B",
           "step": 240
         }
       ],
@@ -1207,23 +1246,43 @@
       "steppedLine": false,
       "targets": [
         {
+          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",name=~\"^k8s_.*\",instance=~\"^$instance$\",namespace=~\"^$namespace$\"}[1m])) by (pod_name,container_label_io_kubernetes_pod_name)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }} < out",
+          "metric": "network",
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}[1m])) by (container_label_io_kubernetes_pod_name)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{ container_label_io_kubernetes_pod_name }} > out",
+          "metric": "network",
+          "refId": "B",
+          "step": 240
+        },
+        {
           "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",name=~\"^k8s_.*\",instance=~\"^$instance$\",namespace=~\"^$namespace$\"}[1m])) by (pod_name,container_label_io_kubernetes_pod_name)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }} < in",
           "metric": "network",
-          "refId": "A",
+          "refId": "C",
           "step": 240
         },
         {
-          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",name=~\"^k8s_.*\",instance=~\"^$instance$\",namespace=~\"^$namespace$\"}[1m])) by (pod_name,container_label_io_kubernetes_pod_name)",
+          "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}[1m])) by (container_label_io_kubernetes_pod_name)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }} > out",
+          "legendFormat": "{{ container_label_io_kubernetes_pod_name }} < in",
           "metric": "network",
-          "refId": "B",
+          "refId": "D",
           "step": 240
         }
       ],
@@ -1299,7 +1358,7 @@
         "rightSide": true,
         "show": true,
         "sideWidth": null,
-        "sort": "current",
+        "sort": "avg",
         "sortDesc": true,
         "total": false,
         "values": true
@@ -1318,11 +1377,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_fs_usage_bytes{image!=\"\",name=~\"^k8s_.*\",instance=~\"^$instance$\",namespace=~\"^$namespace$\"}) by (pod_name,container_label_io_kubernetes_pod_name)",
+          "expr": "sum(container_fs_usage_bytes{image!=\"\",instance=~\"^$instance$\",container_label_io_kubernetes_pod_namespace=~\"^$namespace$\"}) by (container_label_io_kubernetes_pod_name,instance)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }}",
+          "legendFormat": "{{ container_label_io_kubernetes_pod_name }} {{ instance }}",
           "metric": "network",
           "refId": "A",
           "step": 240
@@ -1407,18 +1466,21 @@
       {
         "allValue": null,
         "current": {
+          "tags": [],
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
-        "definition": "",
+        "definition": "label_values(container_label_io_kubernetes_pod_namespace)",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
         "multi": true,
         "name": "namespace",
         "options": [],
-        "query": "label_values(namespace)",
+        "query": "label_values(container_label_io_kubernetes_pod_namespace)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

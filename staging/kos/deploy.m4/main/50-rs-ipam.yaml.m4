@@ -26,3 +26,4 @@ spec:
         command:
         - /ipam-controller
         - -v=5
+        - --qps=200

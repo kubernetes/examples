@@ -30,6 +30,7 @@ spec:
         - --etcd-certfile=/etcd-certs/etcd-client.crt
         - --etcd-keyfile=/etcd-certs/etcd-client.key
         - --etcd-cafile=/etcd-certs/etcd-client-ca.crt
+        - --default-watch-cache-size=1000
         - -v=5
       volumes:
       - name: etcd-certs

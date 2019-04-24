@@ -16,7 +16,6 @@
   "editable": true,
   "gnetId": 3070,
   "graphTooltip": 0,
-  "id": 2,
   "links": [],
   "panels": [
     {
@@ -1531,7 +1530,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\".*etcd.*\",name!~\".*etcd-operator.*\"}[1m])) by (pod_name,container_label_io_kubernetes_pod_name)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container_label_io_kubernetes_pod_name=~\".*etcd.*\",container_label_io_kubernetes_pod_name!~\".*etcd-operator.*\"}[1m])) by (pod_name,container_label_io_kubernetes_pod_name)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{ pod_name }} {{ container_label_io_kubernetes_pod_name }}",
@@ -1618,14 +1617,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes{name=~\".*etcd.*\",name!~\".*etcd-operator.*\"}",
+          "expr": "container_memory_working_set_bytes{container_label_io_kubernetes_pod_name=~\".*etcd.*\",container_label_io_kubernetes_pod_name!~\".*etcd-operator.*\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Working set @ {{ instance }}",
           "refId": "A"
         },
         {
-          "expr": "container_memory_usage_bytes{name=~\".*etcd.*\",name!~\".*etcd-operator.*\"}",
+          "expr": "container_memory_usage_bytes{container_label_io_kubernetes_pod_name=~\".*etcd.*\",container_label_io_kubernetes_pod_name!~\".*etcd-operator.*\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Usage @ {{ instance }}",
@@ -1914,14 +1913,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(container_fs_writes_bytes_total{name=~\".*etcd.*\",name!~\".*etcd-operator.*\"}[1m])",
+          "expr": "rate(container_fs_writes_bytes_total{container_label_io_kubernetes_pod_name=~\".*etcd.*\",container_label_io_kubernetes_pod_name!~\".*etcd-operator.*\"}[1m])",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Writes @ {{ instance }}",
           "refId": "A"
         },
         {
-          "expr": "rate(container_fs_reads_bytes_total{name=~\".*etcd.*\",name!~\".*etcd-operator.*\"}[1m])",
+          "expr": "rate(container_fs_reads_bytes_total{container_label_io_kubernetes_pod_name=~\".*etcd.*\",container_label_io_kubernetes_pod_name!~\".*etcd-operator.*\"}[1m])",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Reads @ {{ instance }}",
