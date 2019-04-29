@@ -26,8 +26,11 @@ import (
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
+	"k8s.io/apiserver/pkg/features"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"k8s.io/apiserver/pkg/util/feature"
+
 	"k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	"k8s.io/examples/staging/kos/pkg/apiserver"
 	networkclientset "k8s.io/examples/staging/kos/pkg/client/clientset/internalversion"
@@ -102,6 +105,7 @@ func (o *NetworkAPIServerOptions) Complete() error {
 }
 
 func (o *NetworkAPIServerOptions) Config() (*apiserver.Config, error) {
+	o.RecommendedOptions.Etcd.StorageConfig.Paging = feature.DefaultFeatureGate.Enabled(features.APIListChunking)
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 	serverConfig.EnableMetrics = true
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
