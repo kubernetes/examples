@@ -91,7 +91,7 @@ type conflictsCache struct {
 // Validator uses an informer on Subnets to be notified of creation or updates,
 // but does a live list against the API server to retrieve the conflicting
 // subnets when validating a subnet, to avoid race conditions caused by multiple
-// validators runnign at the same time.
+// validators running at the same time.
 type Validator struct {
 	netIfc         kosclientv1a1.NetworkV1alpha1Interface
 	subnetInformer k8scache.SharedInformer
