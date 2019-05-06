@@ -18,7 +18,6 @@ TAG = 1.0
 PREFIX = bprashanth/nginxhttps
 KEY = /tmp/nginx.key
 CERT = /tmp/nginx.crt
-SECRET = /tmp/secret.json
 
 keys:
 	# The CName used here is specific to the service specified in nginx-app.yaml.
