@@ -59,9 +59,9 @@ type conflictsCache struct {
 
 	// rivals is the list of namespaced names of the subnets that were observed
 	// to conflict with the subnet owning the conflicts cache. If subnet X is
-	// the owner of the conflicts cache and a subnet Y is in rivals, Y was
-	// processed and found to be in conflict with X when X's VNI and CIDR had
-	// the values in ownerData.
+	// the owner of the conflicts cache and a subnet Y is in rivals this means
+	// that while a queue worker was working on Y it found a conflict with X and
+	// at that time X had the VNI and CIDR values in ownerData.
 	rivals []k8stypes.NamespacedName
 }
 
