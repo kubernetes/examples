@@ -89,12 +89,18 @@ func (*subnetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 }
 
 func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newSubnet, oldSubnet := obj.(*network.Subnet), old.(*network.Subnet)
-	if oldSubnet.Spec.VNI != newSubnet.Spec.VNI || oldSubnet.Spec.IPv4 != newSubnet.Spec.IPv4 {
-		// The fields involved in subnet validation are VNI and CIDR. If one of
-		// those fields is updated, the subnet should undergo validation again,
-		// and its previous validation outcome is stale, hence it is reset.
-		newSubnet.Status.ValidationOutcome = ""
+	newS, oldS := obj.(*network.Subnet), old.(*network.Subnet)
+	if oldS.Spec.VNI != newS.Spec.VNI || oldS.Spec.IPv4 != newS.Spec.IPv4 {
+		// The fields that affect a subnet usability are VNI and CIDR. If one of
+		// these fields is updated, the subnet usability should be assessed
+		// again, hence we update accordingly all the subnet's status fields
+		// related to usability.
+		newS.Status.Usable = false
+		for i, c := range newS.Status.Conditions {
+			if c.Type == network.SubnetConflict {
+				newS.Status.Conditions = append(newS.Status.Conditions[0:i], newS.Status.Conditions[i+1:]...)
+			}
+		}
 	}
 }
 
@@ -115,11 +121,8 @@ func (*subnetStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (*subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	newSubnet := obj.(*network.Subnet)
-	if errs := validate(newSubnet); errs != nil {
-		return errs
-	}
-	return field.ErrorList{}
+	newS := obj.(*network.Subnet)
+	return validate(newS)
 }
 
 func validate(s *network.Subnet) field.ErrorList {

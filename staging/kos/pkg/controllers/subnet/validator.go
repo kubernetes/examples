@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,12 +41,14 @@ import (
 	kosctlrutils "k8s.io/examples/staging/kos/pkg/controllers/utils"
 )
 
-// TODO: something which makes the validation failure visible to the client
-// (event, Prometheus, status field, all of them, etc...).
+// TODO: Add Prometheus metrics.
 
-// usable is the value the validator sets a subnet's status.ValidationOutcome to
-// if there are no conflicts with other subnets.
-const usable = "usable"
+const (
+	// These fields are the reasons written to subnet's conflict conditions.
+	cidrAndNSReason = "cidrAndNamespaceConflict"
+	cidrReason      = "cidrConflict"
+	nsReason        = "namespaceConflict"
+)
 
 // conflictsCache holds information for one subnet regarding conflicts with
 // other subnets. There's no guarantee that the cache is up-to-date: a subnet Y
@@ -65,15 +68,13 @@ type conflictsCache struct {
 	rivals []k8stypes.NamespacedName
 }
 
-// Validator performs validation for newly-created or updated subnets, and sets
-// their status.ValidationOutcome to the outcome of the validation. Validation
-// consists of two checks:
+// Validator performs validation for newly-created or updated subnets, and
+// writes in their status the outcome of the validation. Validation consists of
+// two checks:
 //
 // 		(1) CIDRs for subnets with the same VNI are disjoint.
 // 		(2) all subnets with the same VNI are within the same K8s namespace.
 //
-// If a subnet does not pass validation, no status field is set and no action is
-// taken.
 // If a subnet S1 does not pass validation because of a conflict with another
 // subnet S2, upon deletion of S2 S1 is validated again.
 // Validator uses an informer on Subnets to be notified of creation or updates,
@@ -91,6 +92,16 @@ type Validator struct {
 	// Always access while holding conflictsMutex.
 	conflicts      map[k8stypes.NamespacedName]*conflictsCache
 	conflictsMutex sync.Mutex
+
+	// staleRVs associates a subnet X's namespaced name for which there was a
+	// successful status update to X's resource version prior to the update.
+	// When a worker begins processing a subnet X, it checks whether X's
+	// resource version matches the resource version in staleRVs[X]. If that's
+	// the case X is stale, i.e. it does not reflect the latest update yet,
+	// hence processing is immediately stopped.
+	// Only access while holding staleRVsMutex.
+	staleRVs      map[k8stypes.NamespacedName]string
+	staleRVsMutex sync.Mutex
 }
 
 func NewValidator(netIfc kosclientv1a1.NetworkV1alpha1Interface,
@@ -106,6 +117,7 @@ func NewValidator(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 		queue:          queue,
 		workers:        workers,
 		conflicts:      make(map[k8stypes.NamespacedName]*conflictsCache),
+		staleRVs:       make(map[k8stypes.NamespacedName]string),
 	}
 }
 
@@ -212,7 +224,10 @@ func (v *Validator) processSubnet(subnetNSN k8stypes.NamespacedName) error {
 }
 
 func (v *Validator) processDeletedSubnet(s k8stypes.NamespacedName) {
+	v.clearStaleRV(s)
+
 	rivals := v.clearConflictsCache(s)
+
 	// enqueue old rivals so that they can be re-validated: they might no longer
 	// have conflicts as this subnet has been deleted.
 	for _, r := range rivals {
@@ -226,6 +241,10 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		return err
 	}
 
+	if v.subnetIsStale(sd.namespacedName, s.ResourceVersion) {
+		return nil
+	}
+
 	// If we're here s might have been created or updated in a way that affects
 	// validation. We need to update its conflicts cache accordingly and
 	// reconsider old rivals because they might no longer be in conflict with
@@ -235,14 +254,18 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		v.queue.Add(r)
 	}
 
-	if s.Status.ValidationOutcome == usable {
-		// When a subnet is validated, in case of conflicts it is added to the
-		// conflicts caches of its rival subnets, so that when such rivals are
-		// deleted it can be revalidated. This is useless in the case of an
-		// already usable subnet, so we stop processing here.
+	// When a subnet is validated, in case of conflicts it is added to the
+	// conflicts caches of its rival subnets, so that when such rivals are
+	// deleted it can be revalidated. This is useless in the case of an already
+	// usable subnet, so we check whether the subnet is already usable and stop
+	// processing here if that's the case.
+	if s.Status.Usable {
 		return nil
 	}
 
+	// Retrieve all the other subnets. Doing a live list as opposed to a
+	// cache-based one (through the informer) prevents race conditions that can
+	// arise in case of multiple validators running.
 	allSubnets, err := v.netIfc.Subnets(k8scorev1api.NamespaceAll).List(k8smetav1.ListOptions{})
 	if err != nil && doNotRetryList(err) {
 		glog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", sd.namespacedName, err.Error())
@@ -255,22 +278,36 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 
 	// Look for conflicts with all the other subnets and record them in the
 	// rivals conflicts caches.
-	conflictsFound, err := v.recordConflicts(sd, allSubnets.Items)
+	cidrConflict, nsConflict, conflictMsg, err := v.recordConflicts(sd, allSubnets.Items)
 	if err != nil {
 		return err
 	}
-	if conflictsFound {
+	if cidrConflict || nsConflict {
+		// If we're here the subnet is in conflict with at least one other
+		// subnet, and its status must be updated to reflect that.
+		if err = v.rejectSubnet(s, cidrConflict, nsConflict, conflictMsg); err != nil {
+			return err
+		}
+		glog.V(2).Infof("Subnet %#+v's conflicts information recorded in its status.", s)
+
 		return nil
 	}
 
 	// If we're here no conflict was found and the subnet status can be updated
-	// to mark it as usable by other components.
+	// to mark it as usable by consumers.
 	if err = v.approveSubnet(s); err != nil {
 		return err
 	}
 	glog.V(2).Infof("Subnet %#+v has no conflicts and was marked as usable.", s)
 
 	return nil
+}
+
+func (v *Validator) clearStaleRV(s k8stypes.NamespacedName) {
+	v.staleRVsMutex.Lock()
+	defer v.staleRVsMutex.Unlock()
+
+	delete(v.staleRVs, s)
 }
 
 func (v *Validator) clearConflictsCache(s k8stypes.NamespacedName) []k8stypes.NamespacedName {
@@ -283,6 +320,37 @@ func (v *Validator) clearConflictsCache(s k8stypes.NamespacedName) []k8stypes.Na
 	}
 
 	return nil
+}
+
+func parseSubnet(s *netv1a1.Subnet) (*subnetData, error) {
+	_, ipNet, err := net.ParseCIDR(s.Spec.IPv4)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %#+v: %s", s, err.Error())
+	}
+	sd := &subnetData{
+		namespacedName: k8stypes.NamespacedName{
+			Namespace: s.Namespace,
+			Name:      s.Name,
+		},
+		vni:   s.Spec.VNI,
+		baseU: ipv4ToUint32(ipNet.IP),
+	}
+	ones, bits := ipNet.Mask.Size()
+	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
+	sd.lastU = sd.baseU + delta
+	return sd, nil
+}
+
+func (v *Validator) subnetIsStale(s k8stypes.NamespacedName, rv string) bool {
+	v.staleRVsMutex.Lock()
+	defer v.staleRVsMutex.Unlock()
+
+	if v.staleRVs[s] == rv {
+		return true
+	}
+
+	delete(v.staleRVs, s)
+	return false
 }
 
 func (v *Validator) updateConflictsCache(s *subnetData) []k8stypes.NamespacedName {
@@ -320,44 +388,68 @@ func doNotRetryList(e error) bool {
 		k8serrors.IsMethodNotSupported(e)
 }
 
-func (v *Validator) recordConflicts(candidate *subnetData, potentialRivals []netv1a1.Subnet) (bool, error) {
-	var conflictsFound bool
+func (v *Validator) recordConflicts(candidate *subnetData, potentialRivals []netv1a1.Subnet) (bool, bool, string, error) {
+	var cidrConflict, nsConflict bool
+	var conflictMsgs []string
+
 	for _, pr := range potentialRivals {
 		potentialRival, err := parseSubnet(&pr)
 		if err != nil {
 			glog.Errorf("parsing %s failed while validating %s: %s", potentialRival.namespacedName, candidate.namespacedName, err.Error())
 		}
-		if !potentialRival.conflicts(candidate) || potentialRival.sameSubnetAs(candidate) {
-			// If the two subnets are not in conflict or they are the same
-			// subnet we continue.
+
+		if !potentialRival.conflict(candidate) || potentialRival.sameSubnetAs(candidate) {
+			// potentialRival is not a rival to candidate or it is the same
+			// subnet as candidate, hence we skip it.
 			continue
 		}
 
 		// If we're here the two subnets represented by potentialRival and
-		// candidate are in conflict.
-		conflictsFound = true
-		glog.V(2).Infof("Conflict found between %#+v and %#+v.", candidate, potentialRival)
+		// candidate are in conflict, that is, they are rivals.
+		if potentialRival.cidrConflict(candidate) {
+			cidrConflict = true
+			glog.V(2).Infof("CIDR conflict found between %s (%d, %d) and %s (%d, %d).", candidate.namespacedName, candidate.baseU, candidate.lastU, potentialRival.namespacedName, potentialRival.baseU, potentialRival.lastU)
+			conflictMsgs = append(conflictMsgs, fmt.Sprintf("CIDR overlaps with %s's (%s)", potentialRival.namespacedName, pr.Spec.IPv4))
+		}
+		if potentialRival.nsConflict(candidate) {
+			nsConflict = true
+			glog.V(2).Infof("Namespace conflict found between %s and %s.", candidate.namespacedName, potentialRival.namespacedName)
+			conflictMsgs = append(conflictMsgs, fmt.Sprintf("same VNI but different namespace wrt %s", potentialRival.namespacedName))
+		}
 
 		// Record the conflict in the conflicts cache.
 		if err = v.recordConflict(potentialRival, candidate); err != nil {
-			return conflictsFound, err
+			return cidrConflict, nsConflict, strings.Join(conflictMsgs, ","), err
 		}
 	}
 
-	return conflictsFound, nil
+	return cidrConflict, nsConflict, strings.Join(conflictMsgs, ", "), nil
+}
+
+func (v *Validator) rejectSubnet(s *netv1a1.Subnet, cidrConflict, nsConflict bool, conflictMsg string) error {
+	// Create new conflict condition to reflect the fact that the subnet is in
+	// conflict with other subnets.
+	var reason string
+	switch {
+	case cidrConflict && nsConflict:
+		reason = cidrAndNSReason
+	case cidrConflict:
+		reason = cidrReason
+	case nsConflict:
+		reason = nsReason
+	}
+	conflictCondition := netv1a1.SubnetCondition{
+		Type:    netv1a1.SubnetConflict,
+		Status:  netv1a1.ConditionTrue,
+		Reason:  reason,
+		Message: conflictMsg,
+	}
+
+	return v.updateSubnetUsability(s, false, conflictCondition)
 }
 
 func (v *Validator) approveSubnet(s *netv1a1.Subnet) error {
-	sCopy := s.DeepCopy()
-	sCopy.Status.ValidationOutcome = usable
-	_, err := v.netIfc.Subnets(sCopy.Namespace).Update(sCopy)
-	if err != nil && !doNotRetryUpdate(err) {
-		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
-	}
-	if doNotRetryUpdate(err) {
-		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
-	}
-	return nil
+	return v.updateSubnetUsability(s, true)
 }
 
 func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
@@ -383,6 +475,45 @@ func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
 	return nil
 }
 
+func (v *Validator) updateSubnetUsability(s *netv1a1.Subnet, usable bool, scs ...netv1a1.SubnetCondition) error {
+	sCopy := s.DeepCopy()
+
+	sCopy.Status.Usable = usable
+
+	// Remove old conflict condition.
+	for i, c := range sCopy.Status.Conditions {
+		if c.Type == netv1a1.SubnetConflict {
+			sCopy.Status.Conditions = append(sCopy.Status.Conditions[0:i], sCopy.Status.Conditions[i+1:]...)
+		}
+	}
+
+	// Add new conflict condition.
+	sCopy.Status.Conditions = append(sCopy.Status.Conditions, scs...)
+
+	_, err := v.netIfc.Subnets(sCopy.Namespace).Update(sCopy)
+	switch {
+	case err == nil:
+		nsn := k8stypes.NamespacedName{
+			Namespace: s.Namespace,
+			Name:      s.Name,
+		}
+		v.updateStaleRV(nsn, s.ResourceVersion)
+	case doNotRetryUpdate(err):
+		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
+	case !doNotRetryUpdate(err):
+		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
+	}
+
+	return nil
+}
+
+func (v *Validator) updateStaleRV(s k8stypes.NamespacedName, rv string) {
+	v.staleRVsMutex.Lock()
+	defer v.staleRVsMutex.Unlock()
+
+	v.staleRVs[s] = rv
+}
+
 func doNotRetryUpdate(e error) bool {
 	return k8serrors.IsUnauthorized(e) ||
 		k8serrors.IsBadRequest(e) ||
@@ -399,25 +530,6 @@ func doNotRetryUpdate(e error) bool {
 type subnetData struct {
 	namespacedName    k8stypes.NamespacedName
 	vni, baseU, lastU uint32
-}
-
-func parseSubnet(s *netv1a1.Subnet) (*subnetData, error) {
-	_, ipNet, err := net.ParseCIDR(s.Spec.IPv4)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %#+v: %s", s, err.Error())
-	}
-	sd := &subnetData{
-		namespacedName: k8stypes.NamespacedName{
-			Namespace: s.Namespace,
-			Name:      s.Name,
-		},
-		vni:   s.Spec.VNI,
-		baseU: ipv4ToUint32(ipNet.IP),
-	}
-	ones, bits := ipNet.Mask.Size()
-	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
-	sd.lastU = sd.baseU + delta
-	return sd, nil
 }
 
 func ipv4ToUint32(ip net.IP) uint32 {
@@ -437,6 +549,14 @@ func (s1 *subnetData) sameSubnetAs(s2 *subnetData) bool {
 	return s1.namespacedName == s2.namespacedName
 }
 
-func (s1 *subnetData) conflicts(s2 *subnetData) bool {
+func (s1 *subnetData) conflict(s2 *subnetData) bool {
 	return s1.vni == s2.vni && (s1.namespacedName.Namespace != s2.namespacedName.Namespace || (s1.baseU <= s2.lastU && s1.lastU >= s2.baseU))
+}
+
+func (s1 *subnetData) cidrConflict(s2 *subnetData) bool {
+	return s1.vni == s2.vni && s1.baseU <= s2.lastU && s1.lastU >= s2.baseU
+}
+
+func (s1 *subnetData) nsConflict(s2 *subnetData) bool {
+	return s1.vni == s2.vni && s1.namespacedName.Namespace != s2.namespacedName.Namespace
 }

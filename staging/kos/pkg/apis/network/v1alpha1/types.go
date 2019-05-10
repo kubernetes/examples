@@ -183,29 +183,57 @@ type SubnetSpec struct {
 	VNI uint32 `json:"vni" protobuf:"bytes,2,name=vni"`
 }
 
-// SubnetValidationOutcome represents the outcome of a subnet validation.
-// Currently the only used value is 'usable', hence a boolean would be enough.
-// The reason an alias to string is used instead is to ease future expansion by
-// adding additional values if needed (as recommended by K8s API conventions).
-type SubnetValidationOutcome string
+type SubnetConditionType string
+
+type ConditionStatus string
+
+const (
+	// ConditionTrue is the condition status which means a resource is in the
+	// condition.
+	ConditionTrue ConditionStatus = "True"
+
+	// ConditionFalse is the condition status which means a resource is not in
+	// the condition.
+	ConditionFalse ConditionStatus = "False"
+
+	// SubnetConflict is the condition that represents whether a subnet is in
+	// conflict with other subnets.
+	SubnetConflict SubnetConditionType = "Conflict"
+)
+
+type SubnetCondition struct {
+	// Type of the Subnet condition.
+	Type SubnetConditionType `json:"type" protobuf:"bytes,1,opt,name=type"`
+
+	// Status of the condition, one of True, False.
+	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status"`
+
+	// The reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty" protobuf:"bytes,3,opt,name=reason"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty" protobuf:"bytes,4,opt,name=message"`
+}
 
 type SubnetStatus struct {
+	// Usable tells consumers whether it is safe to use the subnet or not. Once
+	// it becomes true, it is guaranteed to stay true unless an update to the
+	// subnet VNI or CIDR takes place.
+	// +optional
+	Usable bool `json:"usable,omitempty" protobuf:"bytes,1,opt,name=usable"`
+
+	// Conditions represents the latest available observations of a subnet
+	// current state.
+	// +optional
+	// +patchStrategy=replace
+	Conditions []SubnetCondition `json:"conditions,omitempty" protobuf:"bytes,2,opt,name=conditions" patchStrategy:"replace"`
+
 	// Errors are the complaints, if any, from the IPAM controller.
 	// +optional
 	// +patchStrategy=replace
-	Errors []string `json:"errors,omitempty" protobuf:"bytes,1,opt,name=errors" patchStrategy:"replace"`
-
-	// ValidationOutcome conveys whether the subnet can be used because it has
-	// passed validation or not. Can be used only if value is 'usable'. If it is
-	// not set, a controller processing it (with the exception of validators)
-	// should:
-	// (1) stop processing the subnet immediately if no hard state has been
-	// allocated to the subnet (e.g. IPs given to NetworkAttachments).
-	// or,
-	// (2) clear all the hard state which has been previously allocated.
-	// TODO: think whether to switch to a condition or to a boolean.
-	// +optional
-	ValidationOutcome SubnetValidationOutcome `json:"validationOutcome,omitempty" protobuf:"bytes,2,opt,name=validationOutcome"`
+	Errors []string `json:"errors,omitempty" protobuf:"bytes,3,opt,name=errors" patchStrategy:"replace"`
 }
 
 // +genclient
