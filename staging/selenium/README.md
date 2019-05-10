@@ -136,7 +136,7 @@ def check_browser(browser):
   )
   driver.get("http://google.com")
   assert "google" in driver.page_source
-  driver.close()
+  driver.quit()
   print("Browser %s checks out!" % browser)
 
 
