@@ -886,12 +886,6 @@ func NewParsedLock(ipl *netv1a1.IPLock) (ans ParsedLock, err error) {
 	return
 }
 
-var _ fmt.Stringer = ParsedLock{}
-
-func (x ParsedLock) String() string {
-	return fmt.Sprintf("%d/%x=%s@%s", x.VNI, x.addrU, string(x.UID), x.CreationTime)
-}
-
 func (x ParsedLock) GetIP() gonet.IP {
 	return Uint32ToIPv4(x.addrU)
 }
@@ -910,19 +904,6 @@ func (x ParsedLock) IsBetterThan(y ParsedLock) bool {
 
 type ParsedLockList []ParsedLock
 
-func (list ParsedLockList) String() string {
-	var b strings.Builder
-	b.WriteString("[")
-	for idx, parsed := range list {
-		if idx > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(parsed.String())
-	}
-	b.WriteString("]")
-	return b.String()
-}
-
 func (list ParsedLockList) Best() ParsedLock {
 	if len(list) == 0 {
 		return ParsedLock{}
@@ -934,18 +915,6 @@ func (list ParsedLockList) Best() ParsedLock {
 		}
 	}
 	return ans
-}
-
-func (list ParsedLockList) Has(elt ParsedLock) bool {
-	if len(list) == 0 {
-		return false
-	}
-	for _, x := range list {
-		if x.Equal(elt) {
-			return true
-		}
-	}
-	return false
 }
 
 func (list ParsedLockList) Append(elt ...ParsedLock) ParsedLockList {
@@ -985,9 +954,8 @@ func (list ParsedLockList) RemFunc(elt ParsedLock) (sans ParsedLockList, diff bo
 	if l == 1 {
 		if elt.Equal(list[0]) {
 			return nil, true
-		} else {
-			return list, false
 		}
+		return list, false
 	}
 	for i, x := range list {
 		if x.Equal(elt) {
