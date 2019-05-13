@@ -14,6 +14,9 @@
 
 FROM php:5-apache
 
+COPY fixup-apt-list.sh /
+RUN ["/fixup-apt-list.sh"]
+
 RUN apt-get update
 RUN pear channel-discover pear.nrk.io
 RUN pear install nrk/Predis
