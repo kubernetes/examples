@@ -903,7 +903,7 @@ func (x ParsedLock) Equal(y ParsedLock) bool {
 
 func (x ParsedLock) IsBetterThan(y ParsedLock) bool {
 	if x.CreationTime != y.CreationTime {
-		return x.CreationTime.Before(y.CreationTime)
+		return x.CreationTime.After(y.CreationTime)
 	}
 	return strings.Compare(string(x.UID), string(y.UID)) > 0
 }
