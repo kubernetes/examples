@@ -17,7 +17,7 @@ REGISTRY = gcr.io/google-samples
 ARCH ?= $(shell go env GOARCH)
 ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
-QEMUVERSION=v2.7.0
+QEMUVERSION=v2.9.1
 
 IMAGE = $(REGISTRY)/gb-frontend
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
