@@ -859,8 +859,6 @@ func parseIPLockName(lockName string) (VNI uint32, addrU uint32, err error) {
 
 // ParsedLock characterizes an IPLock object and
 // optionally including a pointer to the object.
-// The subnet's address block is included so that if that
-// ever changes the old locks will be deemed undesired.
 type ParsedLock struct {
 	ns   string
 	name string
