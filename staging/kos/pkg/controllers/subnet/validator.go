@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -228,7 +227,7 @@ func (v *Validator) processDeletedSubnet(s k8stypes.NamespacedName) {
 
 	rivals := v.clearConflictsCache(s)
 
-	// enqueue old rivals so that they can be re-validated: they might no longer
+	// Enqueue old rivals so that they can be re-validated: they might no longer
 	// have conflicts as this subnet has been deleted.
 	for _, r := range rivals {
 		v.queue.Add(r)
@@ -285,27 +284,14 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 
 	// Look for conflicts with all the other subnets and record them in the
 	// rivals conflicts caches.
-	cidrConflict, nsConflict, conflictMsg, err := v.recordConflicts(sd, allSubnets.Items)
+	conflictsMsgs, conflictFound, err := v.recordConflicts(sd, allSubnets.Items)
 	if err != nil {
 		return err
 	}
-	if cidrConflict || nsConflict {
-		// If we're here the subnet is in conflict with at least one other
-		// subnet, and its status must be updated to reflect that.
-		if err = v.rejectSubnet(s, cidrConflict, nsConflict, conflictMsg); err != nil {
-			return err
-		}
-		glog.V(2).Infof("Subnet %#+v's conflicts information recorded in its status.", s)
 
-		return nil
+	if err := v.updateSubnetValidity(s, !conflictFound, conflictsMsgs); err != nil {
+		return fmt.Errorf("failed to write validation outcome into %s's status: %s", sd.namespacedName, err.Error())
 	}
-
-	// If we're here no conflict was found and the subnet status can be updated
-	// to mark it as usable by consumers.
-	if err = v.approveSubnet(s); err != nil {
-		return err
-	}
-	glog.V(2).Infof("Subnet %#+v has no conflicts and was marked as usable.", s)
 
 	return nil
 }
@@ -395,9 +381,9 @@ func doNotRetryList(e error) bool {
 		k8serrors.IsMethodNotSupported(e)
 }
 
-func (v *Validator) recordConflicts(candidate *subnetData, potentialRivals []netv1a1.Subnet) (bool, bool, string, error) {
-	var cidrConflict, nsConflict bool
-	var conflictMsgs []string
+func (v *Validator) recordConflicts(candidate *subnetData, potentialRivals []netv1a1.Subnet) ([]string, bool, error) {
+	var conflictsMsgs []string
+	var conflictFound bool
 
 	for _, pr := range potentialRivals {
 		potentialRival, err := parseSubnet(&pr)
@@ -413,50 +399,46 @@ func (v *Validator) recordConflicts(candidate *subnetData, potentialRivals []net
 
 		// If we're here the two subnets represented by potentialRival and
 		// candidate are in conflict, that is, they are rivals.
+		conflictFound = true
 		if potentialRival.cidrConflict(candidate) {
-			cidrConflict = true
 			glog.V(2).Infof("CIDR conflict found between %s (%d, %d) and %s (%d, %d).", candidate.namespacedName, candidate.baseU, candidate.lastU, potentialRival.namespacedName, potentialRival.baseU, potentialRival.lastU)
-			conflictMsgs = append(conflictMsgs, fmt.Sprintf("CIDR overlaps with %s's (%s)", potentialRival.namespacedName, pr.Spec.IPv4))
+			conflictsMsgs = append(conflictsMsgs, fmt.Sprintf("CIDR overlaps with %s's (%s)", potentialRival.namespacedName, pr.Spec.IPv4))
 		}
 		if potentialRival.nsConflict(candidate) {
-			nsConflict = true
 			glog.V(2).Infof("Namespace conflict found between %s and %s.", candidate.namespacedName, potentialRival.namespacedName)
-			conflictMsgs = append(conflictMsgs, fmt.Sprintf("same VNI but different namespace wrt %s", potentialRival.namespacedName))
+			conflictsMsgs = append(conflictsMsgs, fmt.Sprintf("same VNI but different namespace wrt %s", potentialRival.namespacedName))
 		}
 
 		// Record the conflict in the conflicts cache.
 		if err = v.recordConflict(potentialRival, candidate); err != nil {
-			return cidrConflict, nsConflict, strings.Join(conflictMsgs, ","), err
+			return conflictsMsgs, conflictFound, err
 		}
 	}
 
-	return cidrConflict, nsConflict, strings.Join(conflictMsgs, ", "), nil
+	return conflictsMsgs, conflictFound, nil
 }
 
-func (v *Validator) rejectSubnet(s *netv1a1.Subnet, cidrConflict, nsConflict bool, conflictMsg string) error {
-	// Create new conflict condition to reflect the fact that the subnet is in
-	// conflict with other subnets.
-	var reason string
+func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, validationErrors []string) error {
+	sCopy := s.DeepCopy()
+
+	sCopy.Status.Validated = validated
+	sCopy.Status.Errors.Validation = validationErrors
+
+	_, err := v.netIfc.Subnets(sCopy.Namespace).Update(sCopy)
 	switch {
-	case cidrConflict && nsConflict:
-		reason = cidrAndNSReason
-	case cidrConflict:
-		reason = cidrReason
-	case nsConflict:
-		reason = nsReason
-	}
-	conflictCondition := netv1a1.SubnetCondition{
-		Type:    netv1a1.SubnetConflict,
-		Status:  netv1a1.ConditionTrue,
-		Reason:  reason,
-		Message: conflictMsg,
+	case err == nil:
+		nsn := k8stypes.NamespacedName{
+			Namespace: s.Namespace,
+			Name:      s.Name,
+		}
+		v.updateStaleRV(nsn, s.ResourceVersion)
+	case doNotRetryUpdate(err):
+		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
+	case !doNotRetryUpdate(err):
+		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
 	}
 
-	return v.updateSubnetValidity(s, false, conflictCondition)
-}
-
-func (v *Validator) approveSubnet(s *netv1a1.Subnet) error {
-	return v.updateSubnetValidity(s, true)
+	return nil
 }
 
 func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
@@ -479,38 +461,6 @@ func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
 	}
 
 	c.rivals = append(c.rivals, enrollee.namespacedName)
-	return nil
-}
-
-func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, scs ...netv1a1.SubnetCondition) error {
-	sCopy := s.DeepCopy()
-
-	sCopy.Status.Validated = validated
-
-	// Remove old conflict condition.
-	for i, c := range sCopy.Status.Conditions {
-		if c.Type == netv1a1.SubnetConflict {
-			sCopy.Status.Conditions = append(sCopy.Status.Conditions[0:i], sCopy.Status.Conditions[i+1:]...)
-		}
-	}
-
-	// Add new conflict condition.
-	sCopy.Status.Conditions = append(sCopy.Status.Conditions, scs...)
-
-	_, err := v.netIfc.Subnets(sCopy.Namespace).Update(sCopy)
-	switch {
-	case err == nil:
-		nsn := k8stypes.NamespacedName{
-			Namespace: s.Namespace,
-			Name:      s.Name,
-		}
-		v.updateStaleRV(nsn, s.ResourceVersion)
-	case doNotRetryUpdate(err):
-		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
-	case !doNotRetryUpdate(err):
-		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
-	}
-
 	return nil
 }
 

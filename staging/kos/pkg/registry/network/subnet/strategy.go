@@ -96,11 +96,7 @@ func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Ob
 		// again, hence we update accordingly all the subnet's status fields
 		// related to validation.
 		newS.Status.Validated = false
-		for i, c := range newS.Status.Conditions {
-			if c.Type == network.SubnetConflict {
-				newS.Status.Conditions = append(newS.Status.Conditions[0:i], newS.Status.Conditions[i+1:]...)
-			}
-		}
+		newS.Status.Errors.Validation = make([]string, 0)
 	}
 }
 

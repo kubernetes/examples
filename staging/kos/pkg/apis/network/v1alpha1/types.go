@@ -183,40 +183,6 @@ type SubnetSpec struct {
 	VNI uint32 `json:"vni" protobuf:"bytes,2,name=vni"`
 }
 
-type SubnetConditionType string
-
-type ConditionStatus string
-
-const (
-	// ConditionTrue is the condition status which means a resource is in the
-	// condition.
-	ConditionTrue ConditionStatus = "True"
-
-	// ConditionFalse is the condition status which means a resource is not in
-	// the condition.
-	ConditionFalse ConditionStatus = "False"
-
-	// SubnetConflict is the condition that represents whether a subnet is in
-	// conflict with other subnets.
-	SubnetConflict SubnetConditionType = "Conflict"
-)
-
-type SubnetCondition struct {
-	// Type of the Subnet condition.
-	Type SubnetConditionType `json:"type" protobuf:"bytes,1,opt,name=type"`
-
-	// Status of the condition, one of True, False.
-	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status"`
-
-	// The reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty" protobuf:"bytes,3,opt,name=reason"`
-
-	// A human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty" protobuf:"bytes,4,opt,name=message"`
-}
-
 type SubnetStatus struct {
 	// Validated tells users and consumers whether the subnet spec has passed
 	// validation or not. The fields that undergo validation are VNI and CIDR.
@@ -231,16 +197,21 @@ type SubnetStatus struct {
 	// +optional
 	Validated bool `json:"validated,omitempty" protobuf:"bytes,1,opt,name=validated"`
 
-	// Conditions represents the latest available observations of a subnet
-	// current state.
 	// +optional
-	// +patchStrategy=replace
-	Conditions []SubnetCondition `json:"conditions,omitempty" protobuf:"bytes,2,opt,name=conditions" patchStrategy:"replace"`
+	Errors SubnetErrors `json:"errors,omitempty" protobuf:"bytes,2,opt,name=errors"`
+}
 
-	// Errors are the complaints, if any, from the IPAM controller.
+type SubnetErrors struct {
+	// IPAM holds the complaints, if any, from the IPAM controller.
 	// +optional
 	// +patchStrategy=replace
-	Errors []string `json:"errors,omitempty" protobuf:"bytes,3,opt,name=errors" patchStrategy:"replace"`
+	IPAM []string `json:"ipam,omitempty" protobuf:"bytes,1,opt,name=ipam" patchStrategy:"replace"`
+
+	// Validation holds the complaints, if any, from the subnets validator. It
+	// might contain an explanation on why SubnetStatus.Validated is false.
+	// +optional
+	// +patchStrategy=replace
+	Validation []string `json:"validation,omitempty" protobuf:"bytes,2,opt,name=validation" patchStrategy:"replace"`
 }
 
 // +genclient

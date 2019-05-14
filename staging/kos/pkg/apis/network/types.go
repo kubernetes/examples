@@ -177,41 +177,6 @@ type SubnetSpec struct {
 	VNI uint32
 }
 
-type SubnetConditionType string
-
-type ConditionStatus string
-
-const (
-	// ConditionTrue is the condition status which means a resource is in the
-	// condition.
-	ConditionTrue ConditionStatus = "True"
-
-	// ConditionFalse is the condition status which means a resource is not in
-	// the condition.
-	ConditionFalse ConditionStatus = "False"
-
-	// SubnetConflict is the condition that represents whether a subnet is in
-	// conflict with other subnets.
-	SubnetConflict SubnetConditionType = "Conflict"
-)
-
-type SubnetCondition struct {
-	// Type of the Subnet condition.
-	Type SubnetConditionType
-
-	// Status of the condition, one of True, False. In the future it might be
-	// extended with additional values, e.g. "Unknown".
-	Status ConditionStatus
-
-	// The reason for the condition's last transition.
-	// +optional
-	Reason string
-
-	// A human readable message indicating details about the transition.
-	// +optional
-	Message string
-}
-
 type SubnetStatus struct {
 	// Validated tells users and consumers whether the subnet spec has passed
 	// validation or not. The fields that undergo validation are VNI and CIDR.
@@ -226,16 +191,21 @@ type SubnetStatus struct {
 	// +optional
 	Validated bool
 
-	// Conditions represents the latest available observations of a subnet
-	// current state.
 	// +optional
-	// +patchStrategy=replace
-	Conditions []SubnetCondition
+	Errors SubnetErrors
+}
 
-	// Errors are the complaints, if any, from the IPAM controller.
+type SubnetErrors struct {
+	// IPAM holds the complaints, if any, from the IPAM controller.
 	// +optional
 	// +patchStrategy=replace
-	Errors []string
+	IPAM []string
+
+	// Validation holds the complaints, if any, from the subnets validator. It
+	// might contain an explanation on why SubnetStatus.Validated is false.
+	// +optional
+	// +patchStrategy=replace
+	Validation []string
 }
 
 // +genclient
