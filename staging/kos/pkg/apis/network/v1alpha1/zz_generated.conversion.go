@@ -517,7 +517,7 @@ func Convert_network_SubnetSpec_To_v1alpha1_SubnetSpec(in *network.SubnetSpec, o
 }
 
 func autoConvert_v1alpha1_SubnetStatus_To_network_SubnetStatus(in *SubnetStatus, out *network.SubnetStatus, s conversion.Scope) error {
-	out.Usable = in.Usable
+	out.Validated = in.Validated
 	out.Conditions = *(*[]network.SubnetCondition)(unsafe.Pointer(&in.Conditions))
 	out.Errors = *(*[]string)(unsafe.Pointer(&in.Errors))
 	return nil
@@ -529,7 +529,7 @@ func Convert_v1alpha1_SubnetStatus_To_network_SubnetStatus(in *SubnetStatus, out
 }
 
 func autoConvert_network_SubnetStatus_To_v1alpha1_SubnetStatus(in *network.SubnetStatus, out *SubnetStatus, s conversion.Scope) error {
-	out.Usable = in.Usable
+	out.Validated = in.Validated
 	out.Conditions = *(*[]SubnetCondition)(unsafe.Pointer(&in.Conditions))
 	out.Errors = *(*[]string)(unsafe.Pointer(&in.Errors))
 	return nil

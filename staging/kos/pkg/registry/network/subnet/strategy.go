@@ -91,11 +91,11 @@ func (*subnetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newS, oldS := obj.(*network.Subnet), old.(*network.Subnet)
 	if oldS.Spec.VNI != newS.Spec.VNI || oldS.Spec.IPv4 != newS.Spec.IPv4 {
-		// The fields that affect a subnet usability are VNI and CIDR. If one of
-		// these fields is updated, the subnet usability should be assessed
+		// The fields that affect a subnet validation are VNI and CIDR. If one
+		// of these fields is updated, the subnet validity should be assessed
 		// again, hence we update accordingly all the subnet's status fields
-		// related to usability.
-		newS.Status.Usable = false
+		// related to validation.
+		newS.Status.Validated = false
 		for i, c := range newS.Status.Conditions {
 			if c.Type == network.SubnetConflict {
 				newS.Status.Conditions = append(newS.Status.Conditions[0:i], newS.Status.Conditions[i+1:]...)

@@ -256,10 +256,17 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 
 	// When a subnet is validated, in case of conflicts it is added to the
 	// conflicts caches of its rival subnets, so that when such rivals are
-	// deleted it can be revalidated. This is useless in the case of an already
-	// usable subnet, so we check whether the subnet is already usable and stop
-	// processing here if that's the case.
-	if s.Status.Usable {
+	// deleted it can be revalidated. This is useless for a subnet that has
+	// already passed validation. Also, if this controllers sees
+	// s.Status.Validated to be true, there's no way that such value can refer
+	// to a previous, stale version of the subnet, because the API server clears
+	// s.Status.Validated when a subnet spec is updated in a way that requires
+	// revalidation. Hence, we can simply stop processing here if
+	// s.Status.Validated is true.
+	// ? Maybe we should make it clearer somewhere (e.g. API types comments and
+	// doc) that the API server clears s.Status.Validated when a subnet spec is
+	// updated in a way that requires revalidation.
+	if s.Status.Validated {
 		return nil
 	}
 
@@ -445,11 +452,11 @@ func (v *Validator) rejectSubnet(s *netv1a1.Subnet, cidrConflict, nsConflict boo
 		Message: conflictMsg,
 	}
 
-	return v.updateSubnetUsability(s, false, conflictCondition)
+	return v.updateSubnetValidity(s, false, conflictCondition)
 }
 
 func (v *Validator) approveSubnet(s *netv1a1.Subnet) error {
-	return v.updateSubnetUsability(s, true)
+	return v.updateSubnetValidity(s, true)
 }
 
 func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
@@ -475,10 +482,10 @@ func (v *Validator) recordConflict(enroller, enrollee *subnetData) error {
 	return nil
 }
 
-func (v *Validator) updateSubnetUsability(s *netv1a1.Subnet, usable bool, scs ...netv1a1.SubnetCondition) error {
+func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, scs ...netv1a1.SubnetCondition) error {
 	sCopy := s.DeepCopy()
 
-	sCopy.Status.Usable = usable
+	sCopy.Status.Validated = validated
 
 	// Remove old conflict condition.
 	for i, c := range sCopy.Status.Conditions {
