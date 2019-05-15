@@ -15,7 +15,7 @@
 TAG = v3
 REGISTRY = gcr.io/google-samples
 ARCH ?= $(shell go env GOARCH)
-ALL_ARCH = amd64 arm arm64 ppc64le
+ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
 IMAGE = $(REGISTRY)/gb-redisslave
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
@@ -32,6 +32,10 @@ endif
 ifeq ($(ARCH),ppc64le)
 	QEMUARCH=ppc64le
 	BASEIMAGE=ppc64le/redis:3.2.9
+endif
+ifeq ($(ARCH),s390x)
+        QEMUARCH=s390x
+        BASEIMAGE=s390x/redis:3.2.9
 endif
 
 TEMP_DIR := $(shell mktemp -d)

@@ -15,9 +15,9 @@
 TAG = v6
 REGISTRY = gcr.io/google-samples
 ARCH ?= $(shell go env GOARCH)
-ALL_ARCH = amd64 arm arm64 ppc64le
+ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
-QEMUVERSION=v2.7.0
+QEMUVERSION=v2.9.1
 
 IMAGE = $(REGISTRY)/gb-frontend
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
@@ -35,7 +35,10 @@ ifeq ($(ARCH),ppc64le)
 	QEMUARCH=ppc64le
 	BASEIMAGE=ppc64le/php:5-apache
 endif
-
+ifeq ($(ARCH),s390x)
+        QEMUARCH=s390x
+        BASEIMAGE=s390x/php:5-apache
+endif
 TEMP_DIR := $(shell mktemp -d)
 
 all: all-container
