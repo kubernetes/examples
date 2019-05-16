@@ -581,7 +581,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 	} else if len(usableLocks) > 0 {
 		// Make a deterministic choice, so that if there are multiple
 		// controllers they have a fighting chance of making the same decision.
-		// Pick the newest, in case it is from an operator trying to fix something.
+		// Pick the oldest for stability's sake.
 		lockForStatus = usableLocks.Best()
 		usableToRelease, _ = usableLocks.RemFunc(lockForStatus)
 	}
@@ -903,7 +903,7 @@ func (x ParsedLock) Equal(y ParsedLock) bool {
 
 func (x ParsedLock) IsBetterThan(y ParsedLock) bool {
 	if x.CreationTime != y.CreationTime {
-		return x.CreationTime.After(y.CreationTime)
+		return x.CreationTime.Before(y.CreationTime)
 	}
 	return strings.Compare(string(x.UID), string(y.UID)) > 0
 }
