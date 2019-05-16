@@ -415,7 +415,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		return nil
 	}
 	nadat := ctlr.getNetworkAttachmentData(ns, name, att != nil)
-	subnetName, subnetRV, desiredVNI, desiredBaseU, desiredPrefixLen, lockInStatus, lockForStatus, statusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
+	subnetName, subnetRV, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, naStatusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
 	if err != nil || !ok {
 		return err
 	}
@@ -443,7 +443,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 			ctlr.anticipationUsedHistogram.Observe(0)
 		}
 	}()
-	if len(statusErrs) > 0 {
+	if len(naStatusErrs) > 0 {
 	} else if lockForStatus.Obj != nil {
 		ipForStatus = lockForStatus.GetIP()
 		if ipForStatus.Equal(nadat.anticipatedIPv4) {
@@ -455,12 +455,12 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		anticipationUsed = true
 		return nil
 	} else {
-		lockForStatus, ipForStatus, err = ctlr.pickAndLockAddress(ns, name, att, subnetName, desiredVNI, desiredBaseU, desiredPrefixLen)
+		lockForStatus, ipForStatus, err = ctlr.pickAndLockAddress(ns, name, att, subnetName, desiredVNI, desiredBaseU, desiredLastU)
 		if err != nil {
 			return err
 		}
 	}
-	return ctlr.updateNAStatus(ns, name, att, nadat, statusErrs, subnetRV, lockForStatus, ipForStatus)
+	return ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetRV, lockForStatus, ipForStatus)
 }
 
 func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData) (subnetName, subnetRV string, desiredVNI, desiredBaseU, desiredLastU uint32, lockInStatus, lockForStatus ParsedLock, statusErrs []string, err error, ok bool) {
@@ -686,7 +686,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 				glog.Warningf("IPLock %s disappeared before our eyes\n", lockName)
 				continue
 			} else {
-				err = fmt.Errorf("Failed to fetch allegedly existing IPLock %s for %s/%s: %s\n", lockName, ns, name, err2.Error())
+				err = fmt.Errorf("failed to fetch allegedly existing IPLock %s for %s/%s: %s", lockName, ns, name, err2.Error())
 				return
 			}
 			if ownerName == name && ownerUID == att.UID {
