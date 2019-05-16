@@ -886,6 +886,12 @@ func NewParsedLock(ipl *netv1a1.IPLock) (ans ParsedLock, err error) {
 	return
 }
 
+var _ fmt.Stringer = ParsedLock{}
+
+func (x ParsedLock) String() string {
+	return fmt.Sprintf("%d/%x=%s@%s", x.VNI, x.addrU, string(x.UID), x.CreationTime)
+}
+
 func (x ParsedLock) GetIP() gonet.IP {
 	return Uint32ToIPv4(x.addrU)
 }
