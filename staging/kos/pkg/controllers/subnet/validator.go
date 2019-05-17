@@ -320,18 +320,18 @@ func parseSubnet(s *netv1a1.Subnet) (*subnetData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse %#+v: %s", s, err.Error())
 	}
-	sd := &subnetData{
+	ones, bits := ipNet.Mask.Size()
+	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
+	baseU := ipv4ToUint32(ipNet.IP)
+	return &subnetData{
 		namespacedName: k8stypes.NamespacedName{
 			Namespace: s.Namespace,
 			Name:      s.Name,
 		},
 		vni:   s.Spec.VNI,
-		baseU: ipv4ToUint32(ipNet.IP),
-	}
-	ones, bits := ipNet.Mask.Size()
-	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
-	sd.lastU = sd.baseU + delta
-	return sd, nil
+		baseU: baseU,
+		lastU: baseU + delta,
+	}, nil
 }
 
 func (v *Validator) subnetIsStale(s k8stypes.NamespacedName, rv string) bool {

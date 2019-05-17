@@ -876,8 +876,6 @@ type ParsedLock struct {
 	Obj          *netv1a1.IPLock
 }
 
-var zeroParsedLock ParsedLock
-
 func NewParsedLock(ipl *netv1a1.IPLock) (ans ParsedLock, err error) {
 	vni, addrU, err := parseIPLockName(ipl.Name)
 	if err == nil {
