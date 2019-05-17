@@ -53,6 +53,10 @@ const (
 	owningAttachmentIdxName = "owningAttachment"
 	attachmentSubnetIdxName = "subnet"
 
+	creation = "creation"
+	update   = "update"
+	deletion = "deletion"
+
 	// The HTTP port under which the scraping endpoint ("/metrics") is served.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
 	MetricsAddr = ":9295"
@@ -260,20 +264,24 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 
 func (ctlr *IPAMController) OnSubnetCreate(obj interface{}) {
 	subnet := obj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, "creation")
+	ctlr.OnSubnetNotify(subnet, creation)
 }
 
 func (ctlr *IPAMController) OnSubnetUpdate(oldObj, newObj interface{}) {
 	subnet := newObj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, "update")
+	ctlr.OnSubnetNotify(subnet, update)
 }
 
 func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
 	subnet := obj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, "deletion")
+	ctlr.OnSubnetNotify(subnet, deletion)
 }
 
 func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
+	if op != deletion && !subnet.Status.Validated && len(subnet.Status.Errors.Validation) == 0 {
+		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because subnet has not been validated yet.", op, subnet.Namespace, subnet.Name)
+		return
+	}
 	indexer := ctlr.netattInformer.GetIndexer()
 	subnetAttachments, err := indexer.ByIndex(attachmentSubnetIdxName, subnet.Name)
 	if err != nil {
@@ -482,7 +490,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			err = nil
 			return
 		}
-		if subnet != nil {
+		if subnet != nil && subnet.Status.Validated {
 			desiredVNI = subnet.Spec.VNI
 			subnetRV = subnet.ResourceVersion
 			var ipNet *gonet.IPNet
@@ -497,9 +505,16 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			}
 			desiredBaseU, desiredLastU = IPNetToBoundsU(ipNet)
 		} else {
-			glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which does not exist now\n", ns, name, subnetName)
-			// This attachment will be requeued upon notification of subnet creation
-			statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
+			if subnet == nil {
+				glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
+				// This attachment will be requeued upon notification of subnet creation
+				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
+			} else {
+				glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation", ns, name, subnetName)
+				// If the subnet passes validation in the future the attachment
+				// will be requeued upon notification of subnet validation
+				statusErrs = []string{fmt.Sprintf("Subnet %s has not passed validation", subnetName)}
+			}
 			err = nil
 			ok = true
 			return
