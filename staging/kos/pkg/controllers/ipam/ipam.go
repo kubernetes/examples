@@ -44,7 +44,8 @@ import (
 	kosscheme "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/scheme"
 	kosclientv1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
 	netlistv1a1 "k8s.io/examples/staging/kos/pkg/client/listers/network/v1alpha1"
-	kosctlrutils "k8s.io/examples/staging/kos/pkg/controllers/utils"
+	"k8s.io/examples/staging/kos/pkg/util/convert"
+	"k8s.io/examples/staging/kos/pkg/util/parse"
 
 	"k8s.io/examples/staging/kos/pkg/uint32set"
 )
@@ -291,7 +292,7 @@ func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
 	glog.V(4).Infof("Notified of %s of Subnet %s/%s, queuing %d attachments\n", op, subnet.Namespace, subnet.Name, len(subnetAttachments))
 	for _, attObj := range subnetAttachments {
 		att := attObj.(*netv1a1.NetworkAttachment)
-		ctlr.queue.Add(kosctlrutils.AttNSN(att))
+		ctlr.queue.Add(parse.AttNSN(att))
 		glog.V(5).Infof("Queuing %s/%s due to notification of %s of Subnet %s/%s\n", att.Namespace, att.Name, op, subnet.Namespace, subnet.Name)
 	}
 }
@@ -299,20 +300,20 @@ func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
 func (ctlr *IPAMController) OnAttachmentCreate(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Notified of creation of NetworkAttachment %#+v\n", att)
-	ctlr.queue.Add(kosctlrutils.AttNSN(att))
+	ctlr.queue.Add(parse.AttNSN(att))
 }
 
 func (ctlr *IPAMController) OnAttachmentUpdate(oldObj, newObj interface{}) {
 	oldAtt := oldObj.(*netv1a1.NetworkAttachment)
 	newAtt := newObj.(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Notified of update of NetworkAttachment from %#+v to %#+v\n", oldAtt, newAtt)
-	ctlr.queue.Add(kosctlrutils.AttNSN(newAtt))
+	ctlr.queue.Add(parse.AttNSN(newAtt))
 }
 
 func (ctlr *IPAMController) OnAttachmentDelete(obj interface{}) {
-	att := kosctlrutils.Peel(obj).(*netv1a1.NetworkAttachment)
+	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Notified of deletion of NetworkAttachment %#+v\n", att)
-	ctlr.queue.Add(kosctlrutils.AttNSN(att))
+	ctlr.queue.Add(parse.AttNSN(att))
 }
 
 func (ctlr *IPAMController) OnLockCreate(obj interface{}) {
@@ -347,7 +348,7 @@ func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists 
 		changed = ctlr.ReleaseAddress(vni, addrU)
 	}
 	ownerNames, _ := OwningAttachments(ipl)
-	glog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d\n", op, ipl.Namespace, ipl.Name, addrOp, Uint32ToIPv4(addrU), changed, len(ownerNames))
+	glog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d\n", op, ipl.Namespace, ipl.Name, addrOp, convert.Uint32ToIPv4(addrU), changed, len(ownerNames))
 	for _, ownerName := range ownerNames {
 		glog.V(5).Infof("Queuing NetworkAttachment %s/%s due to notification about IPLock %s\n", ipl.Namespace, ownerName, ipl.Name)
 		ctlr.queue.Add(k8stypes.NamespacedName{ipl.Namespace, ownerName})
@@ -503,7 +504,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 				ok = true
 				return
 			}
-			desiredBaseU, desiredLastU = IPNetToBoundsU(ipNet)
+			desiredBaseU, desiredLastU = convert.IPNetToBoundsU(ipNet)
 		} else {
 			if subnet == nil {
 				glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
@@ -564,7 +565,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 		// yet been notified about it.
 		statusIP := gonet.ParseIP(att.Status.IPv4)
 		if statusIP != nil {
-			statusIPU := IPv4ToUint32(statusIP)
+			statusIPU := convert.IPv4ToUint32(statusIP)
 			statusUsed := float64(0)
 			defer func() { ctlr.statusUsedHistogram.Observe(statusUsed) }()
 			if _, found := considered[statusIPU]; !found {
@@ -616,14 +617,6 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 	return
 }
 
-func IPNetToBoundsU(ipNet *gonet.IPNet) (min, max uint32) {
-	min = IPv4ToUint32(ipNet.IP)
-	ones, bits := ipNet.Mask.Size()
-	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
-	max = min + delta
-	return
-}
-
 func (ctlr *IPAMController) deleteIPLockObject(parsed ParsedLock) error {
 	lockOps := ctlr.netIfc.IPLocks(parsed.ns)
 	delOpts := k8smetav1.DeleteOptions{
@@ -653,7 +646,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 		err = fmt.Errorf("No IP address available in %x/%x--%x for %s/%s", vni, subnetBaseU, subnetLastU, ns, name)
 		return
 	}
-	ipForStatus = Uint32ToIPv4(ipForStatusU)
+	ipForStatus = convert.Uint32ToIPv4(ipForStatusU)
 	glog.V(4).Infof("Picked address %s from %x/%x--%x for %s/%s\n", ipForStatus, vni, subnetBaseU, subnetLastU, ns, name)
 
 	// Now, try to lock that address
@@ -838,15 +831,6 @@ func GetOwner(obj k8smetav1.Object, ownerKind string) (name string, uid k8stypes
 	return
 }
 
-func IPv4ToUint32(ip gonet.IP) uint32 {
-	v4 := ip.To4()
-	return uint32(v4[0])<<24 + uint32(v4[1])<<16 + uint32(v4[2])<<8 + uint32(v4[3])
-}
-
-func Uint32ToIPv4(i uint32) gonet.IP {
-	return gonet.IPv4(uint8(i>>24), uint8(i>>16), uint8(i>>8), uint8(i))
-}
-
 func makeIPLockName2(VNI uint32, ip gonet.IP) string {
 	ipv4 := ip.To4()
 	return fmt.Sprintf("v1-%d-%d-%d-%d-%d", VNI, ipv4[0], ipv4[1], ipv4[2], ipv4[3])
@@ -906,7 +890,7 @@ func (x ParsedLock) String() string {
 }
 
 func (x ParsedLock) GetIP() gonet.IP {
-	return Uint32ToIPv4(x.addrU)
+	return convert.Uint32ToIPv4(x.addrU)
 }
 
 func (x ParsedLock) Equal(y ParsedLock) bool {

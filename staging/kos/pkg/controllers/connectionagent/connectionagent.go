@@ -51,9 +51,8 @@ import (
 	kosinternalifcs "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/internalinterfaces"
 	kosinformersv1a1 "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/network/v1alpha1"
 	koslisterv1a1 "k8s.io/examples/staging/kos/pkg/client/listers/network/v1alpha1"
-	kosctlrutils "k8s.io/examples/staging/kos/pkg/controllers/utils"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
-	kosutil "k8s.io/examples/staging/kos/pkg/util"
+	"k8s.io/examples/staging/kos/pkg/util/parse"
 )
 
 const (
@@ -430,7 +429,7 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 func (ca *ConnectionAgent) onLocalAttAdded(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
-	ca.queue.Add(kosctlrutils.AttNSN(att))
+	ca.queue.Add(parse.AttNSN(att))
 }
 
 func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, newObj interface{}) {
@@ -439,14 +438,14 @@ func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, newObj interface{}) {
 	glog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v",
 		oldAtt,
 		newAtt)
-	ca.queue.Add(kosctlrutils.AttNSN(newAtt))
+	ca.queue.Add(parse.AttNSN(newAtt))
 }
 
 func (ca *ConnectionAgent) onLocalAttRemoved(obj interface{}) {
-	peeledObj := kosctlrutils.Peel(obj)
+	peeledObj := parse.Peel(obj)
 	att := peeledObj.(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
-	ca.queue.Add(kosctlrutils.AttNSN(att))
+	ca.queue.Add(parse.AttNSN(att))
 }
 
 func (ca *ConnectionAgent) waitForLocalAttsCacheSync(stopCh <-chan struct{}) error {
@@ -484,7 +483,7 @@ func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
 			// interface because their MAC addresses match. Hence we add the
 			// interface to the attachment state.
 			ifcOwnerAtt := ifcOwnerAtts[0].(*netv1a1.NetworkAttachment)
-			nsn := kosctlrutils.AttNSN(ifcOwnerAtt)
+			nsn := parse.AttNSN(ifcOwnerAtt)
 			oldLocalState, oldIfcExists := ca.getLocalAttState(nsn)
 			ca.setLocalAttMainState(nsn, LocalAttachmentMainState{aPreExistingLocalIfc, ifcOwnerAtt.Spec.PostDeleteExec})
 			ca.setExecReport(nsn, ifcOwnerAtt.Status.PostCreateExecReport)
@@ -528,7 +527,7 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 		return fmt.Errorf("failed initial local attachments list: %s", err.Error())
 	}
 	for _, aLocalAtt := range allLocalAtts {
-		nsn, attVNI := kosctlrutils.AttNSN(aLocalAtt), aLocalAtt.Status.AddressVNI
+		nsn, attVNI := parse.AttNSN(aLocalAtt), aLocalAtt.Status.AddressVNI
 		ca.updateVNStateForExistingAtt(nsn, true, attVNI)
 	}
 
@@ -555,7 +554,7 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 		if len(ifcOwnerAtts) == 1 {
 			// If we're here a remote attachment owning the interface has been found
 			ifcOwnerAtt := ifcOwnerAtts[0].(*netv1a1.NetworkAttachment)
-			nsn := kosctlrutils.AttNSN(ifcOwnerAtt)
+			nsn := parse.AttNSN(ifcOwnerAtt)
 			oldRemoteIfc, oldRemoteIfcExists := ca.getRemoteIfc(nsn)
 			ca.assignRemoteIfc(nsn, aPreExistingRemoteIfc)
 			glog.V(3).Infof("Matched interface %#+v with remote attachment %#+v",
@@ -727,7 +726,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 }
 
 func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) error {
-	attNSN, attVNI := kosctlrutils.AttNSN(att), att.Status.AddressVNI
+	attNSN, attVNI := parse.AttNSN(att), att.Status.AddressVNI
 	attNode := att.Spec.Node
 	glog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s\n", attNSN, attNode, att.ResourceVersion)
 
@@ -781,7 +780,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 		ifcName != att.Status.IfcName ||
 		macAddrS != att.Status.MACAddress ||
 		!pcer.Equiv(att.Status.PostCreateExecReport) ||
-		!statusErrs.Equal(kosutil.SliceOfString(att.Status.Errors.Host)) {
+		!statusErrs.Equal(SliceOfString(att.Status.Errors.Host)) {
 
 		glog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v\n", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
 		updatedAtt, err := ca.setAttStatus(att, macAddrS, ifcName, statusErrs, pcer)
@@ -950,8 +949,8 @@ func (ca *ConnectionAgent) updateVNStateAfterAttDeparture(attName string, vni ui
 
 // createOrUpdateIfc returns the MAC address, Linux interface name,
 // post-create exec report, and possibly an error
-func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, attVNI uint32, att *netv1a1.NetworkAttachment) (attMACStr, ifcName string, statusErrs kosutil.SliceOfString, pcer *netv1a1.ExecReport, err error) {
-	attNSN := kosctlrutils.AttNSN(att)
+func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, attVNI uint32, att *netv1a1.NetworkAttachment) (attMACStr, ifcName string, statusErrs SliceOfString, pcer *netv1a1.ExecReport, err error) {
+	attNSN := parse.AttNSN(att)
 	attMAC := generateMACAddr(attVNI, attGuestIP)
 	attMACStr = attMAC.String()
 	ifcName = generateIfcName(attMAC)
@@ -1033,7 +1032,7 @@ func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, att
 	return
 }
 
-func (ca *ConnectionAgent) setAttStatus(att *netv1a1.NetworkAttachment, macAddrS, ifcName string, statusErrs kosutil.SliceOfString, pcer *netv1a1.ExecReport) (*netv1a1.NetworkAttachment, error) {
+func (ca *ConnectionAgent) setAttStatus(att *netv1a1.NetworkAttachment, macAddrS, ifcName string, statusErrs SliceOfString, pcer *netv1a1.ExecReport) (*netv1a1.NetworkAttachment, error) {
 
 	att2 := att.DeepCopy()
 	att2.Status.Errors.Host = statusErrs
@@ -1122,7 +1121,7 @@ func (ca *ConnectionAgent) onRemoteAttAdded(obj interface{}) {
 	glog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v",
 		att.Status.AddressVNI,
 		att)
-	attNSN := kosctlrutils.AttNSN(att)
+	attNSN := parse.AttNSN(att)
 	ca.addVNI(attNSN, att.Status.AddressVNI)
 	ca.queue.Add(attNSN)
 }
@@ -1134,16 +1133,16 @@ func (ca *ConnectionAgent) onRemoteAttUpdated(oldObj, newObj interface{}) {
 		newAtt.Status.AddressVNI,
 		oldAtt,
 		newAtt)
-	ca.queue.Add(kosctlrutils.AttNSN(newAtt))
+	ca.queue.Add(parse.AttNSN(newAtt))
 }
 
 func (ca *ConnectionAgent) onRemoteAttRemoved(obj interface{}) {
-	peeledObj := kosctlrutils.Peel(obj)
+	peeledObj := parse.Peel(obj)
 	att := peeledObj.(*netv1a1.NetworkAttachment)
 	glog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v",
 		att.Status.AddressVNI,
 		att)
-	attNSN := kosctlrutils.AttNSN(att)
+	attNSN := parse.AttNSN(att)
 	ca.removeSeenInVNI(attNSN, att.Status.AddressVNI)
 	ca.queue.Add(attNSN)
 }

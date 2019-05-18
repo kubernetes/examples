@@ -14,14 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package connectionagent
 
-const (
-	// The name of the annotation holding the client-side creation timestamp.
-	CreateTimestampAnnotationKey = "precise/createTimestamp"
+type SliceOfString []string
 
-	// The layout of the annotation holding the client-side creation timestamp.
-	TimestampLayout = "2006-01-02 15:04:05.000 -0700"
-
-	RFC3339Milli = "2006-01-02T15:04:05.999Z07:00"
-)
+func (x SliceOfString) Equal(y SliceOfString) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for i, xi := range x {
+		if xi != y[i] {
+			return false
+		}
+	}
+	return true
+}

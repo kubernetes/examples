@@ -32,7 +32,6 @@ import (
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
-	kosutil "k8s.io/examples/staging/kos/pkg/util"
 )
 
 const (
@@ -51,13 +50,13 @@ const (
 // attachment's status iff it still should be.  If `!saveReport` then
 // the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, cmd []string, what string, doit, saveReport bool) (statusErrs kosutil.SliceOfString) {
+func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, cmd []string, what string, doit, saveReport bool) (statusErrs SliceOfString) {
 	if len(cmd) == 0 {
 		return nil
 	}
 	if _, allowed := c.allowedPrograms[cmd[0]]; !allowed {
 		glog.V(4).Infof("Non-allowed attachment command spec: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v\n", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
-		return kosutil.SliceOfString{fmt.Sprintf("%s specifies non-allowed path %s", what, cmd[0])}
+		return SliceOfString{fmt.Sprintf("%s specifies non-allowed path %s", what, cmd[0])}
 	}
 	if !doit {
 		return nil
