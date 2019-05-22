@@ -16,6 +16,11 @@ limitations under the License.
 
 package subnet
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Parser is the interface for types that know how to make a Summary out of
 // subnets of one or more KOS API versions.
 type Parser interface {
@@ -25,7 +30,7 @@ type Parser interface {
 
 	// NewSummary returns the Summary of subnet if .KnowsVersion(subnet) returns
 	// true, an error otherwise or if the subnet is malformed.
-	NewSummary(subnet interface{}) (*Summary, *Error)
+	NewSummary(subnet interface{}) (*Summary, Errors)
 }
 
 // parsers is the list of registered parsers.
@@ -35,22 +40,34 @@ func RegisterParser(p Parser) {
 	parsers = append(parsers, p)
 }
 
-type ErrType string
+type ErrReason string
 
 // Types of errors that can occur when parsing a subnet into a Summary.
 const (
-	UnknownType   ErrType = "UnkownType"
-	VNIOutOfRange ErrType = "VNIOutOfRange"
-	MalformedCIDR ErrType = "MalformedCIDR"
+	UnknownType   ErrReason = "UnkownType"
+	VNIOutOfRange ErrReason = "VNIOutOfRange"
+	MalformedCIDR ErrReason = "MalformedCIDR"
 )
 
 type Error struct {
-	Message   string
-	ErrorType ErrType
+	Message string
+	Reason  ErrReason
 }
 
 var _ error = &Error{}
 
 func (e *Error) Error() string {
 	return e.Message
+}
+
+type Errors []*Error
+
+var _ error = Errors{}
+
+func (errs Errors) Error() string {
+	msg := ""
+	for _, e := range errs {
+		msg = fmt.Sprintf("%s, %s%", msg, e.Error())
+	}
+	return strings.Trim(msg, ", ")
 }

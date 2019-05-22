@@ -41,16 +41,17 @@ type Summary struct {
 	LastU uint32
 }
 
-func NewSummary(subnet interface{}) (*Summary, *Error) {
+func NewSummary(subnet interface{}) (*Summary, Errors) {
 	for _, p := range parsers {
 		if p.KnowsVersion(subnet) {
 			return p.NewSummary(subnet)
 		}
 	}
-	return nil, &Error{
-		Message:   fmt.Sprintf("type %T of object %#+v is unkown", subnet, subnet),
-		ErrorType: UnknownType,
+	e := &Error{
+		Message: fmt.Sprintf("type %T of object %#+v is unkown", subnet, subnet),
+		Reason:  UnknownType,
 	}
+	return nil, []*Error{e}
 }
 
 // Contains returns true if s2's CIDR is a subset of s1's (regardless of s1 and

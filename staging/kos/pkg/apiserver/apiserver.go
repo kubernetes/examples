@@ -59,6 +59,12 @@ func init() {
 
 // ExtraConfig is where you should place your custom config.
 type ExtraConfig struct {
+	// CheckSubnetsConflicts determines whether subnet creation or update fails
+	// when conflicts with other subnets are detected. Should be false when
+	// testing the subnets validation controller, otherwise most conflicts will
+	// be caught by the server, making testing complicated.
+	CheckSubnetsConflicts bool
+
 	NetworkSharedInformerFactory networkinformers.SharedInformerFactory
 }
 
@@ -113,7 +119,7 @@ func (c completedConfig) New() (*NetworkAPIServer, error) {
 
 	v1alpha1storage := map[string]rest.Storage{}
 	v1alpha1storage["networkattachments"] = networkregistry.RESTInPeace(networkattachmentstorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter))
-	v1alpha1storage["subnets"] = networkregistry.RESTInPeace(subnetstorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter, c.ExtraConfig.NetworkSharedInformerFactory))
+	v1alpha1storage["subnets"] = networkregistry.RESTInPeace(subnetstorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter, c.ExtraConfig.CheckSubnetsConflicts, c.ExtraConfig.NetworkSharedInformerFactory))
 	v1alpha1storage["iplocks"] = networkregistry.RESTInPeace(iplockstorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter))
 
 	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage

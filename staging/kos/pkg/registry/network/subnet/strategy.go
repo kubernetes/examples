@@ -19,7 +19,6 @@ package subnet
 import (
 	"context"
 	"fmt"
-	"net"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -33,13 +32,15 @@ import (
 	"k8s.io/examples/staging/kos/pkg/apis/network"
 	informers "k8s.io/examples/staging/kos/pkg/client/informers/internalversion"
 	listers "k8s.io/examples/staging/kos/pkg/client/listers/network/internalversion"
+	"k8s.io/examples/staging/kos/pkg/util/parse/network/subnet"
 )
 
 // NewStrategy creates a subnetStrategy instance and returns a pointer to it.
-func NewStrategy(typer runtime.ObjectTyper, listerFactory informers.SharedInformerFactory) *subnetStrategy {
+func NewStrategy(typer runtime.ObjectTyper, checkConflicts bool, listerFactory informers.SharedInformerFactory) *subnetStrategy {
 	subnetLister := listerFactory.Network().InternalVersion().Subnets().Lister()
 	return &subnetStrategy{typer,
 		names.SimpleNameGenerator,
+		checkConflicts,
 		subnetLister}
 }
 
@@ -72,7 +73,8 @@ func SelectableFields(obj *network.Subnet) fields.Set {
 type subnetStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
-	subnetLister listers.SubnetLister
+	checkConflicts bool
+	subnetLister   listers.SubnetLister
 }
 
 var _ rest.RESTCreateStrategy = &subnetStrategy{}
@@ -100,9 +102,9 @@ func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Ob
 	}
 }
 
-func (*subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (ss *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	s := obj.(*network.Subnet)
-	return validate(s)
+	return ss.validate(s)
 }
 
 func (*subnetStrategy) AllowCreateOnUpdate() bool {
@@ -116,61 +118,72 @@ func (*subnetStrategy) AllowUnconditionalUpdate() bool {
 func (*subnetStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (*subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	newS := obj.(*network.Subnet)
-	return validate(newS)
+	return ss.validate(newS)
 }
 
-func validate(s *network.Subnet) field.ErrorList {
-	return append(checkVNIRange(s), checkCIDRFormat(s)...)
-}
+func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
+	subnetSummary, parsingErrs := subnet.NewSummary(s)
 
-const (
-	minVNI uint32 = 1
-	maxVNI uint32 = 2097151
-)
-
-func checkVNIRange(s *network.Subnet) field.ErrorList {
-	vni := s.Spec.VNI
-	if vni < minVNI || vni > maxVNI {
-		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "vni"), fmt.Sprintf("%d", vni), fmt.Sprintf("must be in the range [%d,%d]", minVNI, maxVNI)),
+	var errs field.ErrorList
+	var vniOutOfRange, malformedCIDR bool
+	for _, e := range parsingErrs {
+		if e.Reason == subnet.VNIOutOfRange {
+			vniOutOfRange = true
+			errs = append(errs, field.Invalid(field.NewPath("spec", "vni"), fmt.Sprintf("%d", s.Spec.VNI), e.Error()))
+		}
+		if e.Reason == subnet.MalformedCIDR {
+			malformedCIDR = true
+			errs = append(errs, field.Invalid(field.NewPath("spec", "ipv4"), s.Spec.IPv4, e.Error()))
 		}
 	}
-	return field.ErrorList{}
-}
 
-func checkCIDRFormat(s *network.Subnet) field.ErrorList {
-	cidr := s.Spec.IPv4
-	if _, _, err := net.ParseCIDR(cidr); err != nil {
-		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "ipv4"), cidr, err.Error()),
-		}
+	if !ss.checkConflicts || vniOutOfRange {
+		// The only checks left are those for conflicts with other subnets. If
+		// we're here either such checks are disabled or the VNI of the subnet
+		// under validation is out of range (and the checks on conflicts make
+		// sense so long as the VNI is in range). Hence we return immediately.
+		return errs
 	}
-	return field.ErrorList{}
-}
 
-type parsedSubnet struct {
-	baseU, lastU uint32
-}
-
-func parseSubnet(subnet *network.Subnet) (ps parsedSubnet) {
-	_, ipNet, err := net.ParseCIDR(subnet.Spec.IPv4)
+	// Retrieve the summaries of all the other existing subnets so that we can
+	// check for conflicts.
+	allSubnets, err := ss.allSubnets()
 	if err != nil {
-		return
+		return append(errs, field.InternalError(nil, err))
 	}
-	ps.baseU = ipv4ToUint32(ipNet.IP)
-	ones, bits := ipNet.Mask.Size()
-	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
-	ps.lastU = ps.baseU + delta
-	return
+
+	// Check whether there are Namespace and CIDR conflicts with other subnets.
+	for _, potentialRival := range allSubnets {
+		if subnetSummary.SameSubnetAs(potentialRival) {
+			// Do not compare this subnet against itself.
+			continue
+		}
+		if subnetSummary.NSConflict(potentialRival) {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", potentialRival.NamespacedName)))
+		}
+		if !malformedCIDR && subnetSummary.CIDRConflict(potentialRival) {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), fmt.Sprintf("subnets with same VNI must have disjoint CIDRs, but CIDR overlaps with %s's", potentialRival.NamespacedName)))
+		}
+	}
+
+	return errs
 }
 
-func ipv4ToUint32(ip net.IP) uint32 {
-	v4 := ip.To4()
-	return uint32(v4[0])<<24 + uint32(v4[1])<<16 + uint32(v4[2])<<8 + uint32(v4[3])
-}
+func (ss *subnetStrategy) allSubnets() ([]*subnet.Summary, error) {
+	allSubnets, err := ss.subnetLister.List(labels.Everything())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list subnets: %s", err.Error())
+	}
 
-func (ps1 parsedSubnet) overlaps(ps2 parsedSubnet) bool {
-	return ps1.baseU <= ps2.lastU && ps1.lastU >= ps2.baseU
+	allSummaries := make([]*subnet.Summary, 0, len(allSubnets))
+	for _, s := range allSubnets {
+		// No need to check the error, because s already exists: if creating the
+		// summary returned an error s's creation would have failed.
+		summary, _ := subnet.NewSummary(s)
+		allSummaries = append(allSummaries, summary)
+	}
+
+	return allSummaries, nil
 }

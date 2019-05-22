@@ -229,9 +229,9 @@ func (v *Validator) processDeletedSubnet(s k8stypes.NamespacedName) {
 }
 
 func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
-	ss, err := subnet.NewSummary(s)
-	if err != nil {
-		return err
+	ss, parsingErrs := subnet.NewSummary(s)
+	if len(parsingErrs) > 0 {
+		return parsingErrs
 	}
 
 	if v.subnetIsStale(ss.NamespacedName, s.ResourceVersion) {
@@ -361,9 +361,9 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 	var conflictFound bool
 
 	for _, pr := range potentialRivals {
-		potentialRival, err := subnet.NewSummary(&pr)
-		if err != nil {
-			glog.Errorf("parsing %s failed while validating %s: %s", potentialRival.NamespacedName, candidate.NamespacedName, err.Error())
+		potentialRival, parsingErrs := subnet.NewSummary(&pr)
+		if len(parsingErrs) > 0 {
+			glog.Errorf("parsing %s failed while validating %s: %s", potentialRival.NamespacedName, candidate.NamespacedName, parsingErrs.Error())
 		}
 
 		if !potentialRival.Conflict(candidate) || potentialRival.SameSubnetAs(candidate) {
@@ -385,7 +385,7 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 		}
 
 		// Record the conflict in the conflicts cache.
-		if err = v.recordConflict(potentialRival, candidate); err != nil {
+		if err := v.recordConflict(potentialRival, candidate); err != nil {
 			return conflictsMsgs, conflictFound, err
 		}
 	}

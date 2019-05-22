@@ -41,35 +41,43 @@ func (p *parser) KnowsVersion(allegedV1alpha1Subnet interface{}) bool {
 	return isV1alpha1Subnet
 }
 
-func (p *parser) NewSummary(allegedV1alpha1Subnet interface{}) (*subnet.Summary, *subnet.Error) {
+func (p *parser) NewSummary(allegedV1alpha1Subnet interface{}) (*subnet.Summary, subnet.Errors) {
 	s, isV1alpha1Subnet := allegedV1alpha1Subnet.(*v1alpha1.Subnet)
 	if !isV1alpha1Subnet {
-		return nil, &subnet.Error{
-			Message:   fmt.Sprintf("parser can only parse type %T, object %#+v has type %T", &v1alpha1.Subnet{}, s, s),
-			ErrorType: subnet.UnknownType,
+		err := &subnet.Error{
+			Message: fmt.Sprintf("parser can only parse type %T, object %#+v has type %T", &v1alpha1.Subnet{}, s, s),
+			Reason:  subnet.UnknownType,
 		}
+		return nil, []*subnet.Error{err}
 	}
 
 	return newSummary(s)
 }
 
-func newSummary(s *v1alpha1.Subnet) (*subnet.Summary, *subnet.Error) {
+func newSummary(s *v1alpha1.Subnet) (*subnet.Summary, subnet.Errors) {
+	var errs []*subnet.Error
+
+	// Check VNI is within allowed range.
 	if s.Spec.VNI < subnet.MinVNI || s.Spec.VNI > subnet.MaxVNI {
-		return nil, &subnet.Error{
-			Message:   fmt.Sprintf("VNI (%d) must be in [%d,%d]", s.Spec.VNI, subnet.MinVNI, subnet.MaxVNI),
-			ErrorType: subnet.VNIOutOfRange,
+		e := &subnet.Error{
+			Message: fmt.Sprintf("vni (%d) must be in [%d,%d]", s.Spec.VNI, subnet.MinVNI, subnet.MaxVNI),
+			Reason:  subnet.VNIOutOfRange,
 		}
+		errs = append(errs, e)
 	}
 
+	// Check CIDR is well-formed and extract lowest and highest addresses.
+	var baseU, lastU uint32
 	_, ipNet, err := net.ParseCIDR(s.Spec.IPv4)
-	if err != nil {
-		return nil, &subnet.Error{
-			Message:   fmt.Sprintf("invalid CIDR: %s", err.Error()),
-			ErrorType: subnet.MalformedCIDR,
+	if err == nil {
+		baseU, lastU = convert.IPNetToBoundsU(ipNet)
+	} else {
+		e := &subnet.Error{
+			Message: err.Error(),
+			Reason:  subnet.MalformedCIDR,
 		}
+		errs = append(errs, e)
 	}
-
-	baseU, lastU := convert.IPNetToBoundsU(ipNet)
 
 	return &subnet.Summary{
 		NamespacedName: types.NamespacedName{
@@ -79,5 +87,5 @@ func newSummary(s *v1alpha1.Subnet) (*subnet.Summary, *subnet.Error) {
 		VNI:   s.Spec.VNI,
 		BaseU: baseU,
 		LastU: lastU,
-	}, nil
+	}, errs
 }

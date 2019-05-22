@@ -28,9 +28,10 @@ import (
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(scheme *runtime.Scheme,
 	optsGetter generic.RESTOptionsGetter,
+	checkConflicts bool,
 	informersFactory informers.SharedInformerFactory) (*registry.REST, error) {
 
-	strategy := NewStrategy(scheme, informersFactory)
+	strategy := NewStrategy(scheme, checkConflicts, informersFactory)
 
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &network.Subnet{} },

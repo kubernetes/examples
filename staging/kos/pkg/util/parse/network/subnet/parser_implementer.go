@@ -40,35 +40,43 @@ func (p *parser) KnowsVersion(allegedInternalVersionSubnet interface{}) bool {
 	return isInternalVersionSubnet
 }
 
-func (p *parser) NewSummary(allegedInternalVersionSubnet interface{}) (*Summary, *Error) {
+func (p *parser) NewSummary(allegedInternalVersionSubnet interface{}) (*Summary, Errors) {
 	s, isInternalVersionSubnet := allegedInternalVersionSubnet.(*network.Subnet)
 	if !isInternalVersionSubnet {
-		return nil, &Error{
-			Message:   fmt.Sprintf("parser can only parse type %T, object %#+v has type %T", &network.Subnet{}, s, s),
-			ErrorType: UnknownType,
+		err := &Error{
+			Message: fmt.Sprintf("parser can only parse type %T, object %#+v has type %T", &network.Subnet{}, s, s),
+			Reason:  UnknownType,
 		}
+		return nil, []*Error{err}
 	}
 
 	return newSummary(s)
 }
 
-func newSummary(s *network.Subnet) (*Summary, *Error) {
+func newSummary(s *network.Subnet) (*Summary, Errors) {
+	var errs []*Error
+
+	// Check VNI is within allowed range.
 	if s.Spec.VNI < MinVNI || s.Spec.VNI > MaxVNI {
-		return nil, &Error{
-			Message:   fmt.Sprintf("VNI (%d) must be in [%d,%d]", s.Spec.VNI, MinVNI, MaxVNI),
-			ErrorType: VNIOutOfRange,
+		e := &Error{
+			Message: fmt.Sprintf("vni (%d) must be in [%d,%d]", s.Spec.VNI, MinVNI, MaxVNI),
+			Reason:  VNIOutOfRange,
 		}
+		errs = append(errs, e)
 	}
 
+	// Check CIDR is well-formed and extract lowest and highest addresses.
+	var baseU, lastU uint32
 	_, ipNet, err := net.ParseCIDR(s.Spec.IPv4)
-	if err != nil {
-		return nil, &Error{
-			Message:   fmt.Sprintf("invalid CIDR: %s", err.Error()),
-			ErrorType: MalformedCIDR,
+	if err == nil {
+		baseU, lastU = convert.IPNetToBoundsU(ipNet)
+	} else {
+		e := &Error{
+			Message: err.Error(),
+			Reason:  MalformedCIDR,
 		}
+		errs = append(errs, e)
 	}
-
-	baseU, lastU := convert.IPNetToBoundsU(ipNet)
 
 	return &Summary{
 		NamespacedName: types.NamespacedName{
@@ -78,5 +86,5 @@ func newSummary(s *network.Subnet) (*Summary, *Error) {
 		VNI:   s.Spec.VNI,
 		BaseU: baseU,
 		LastU: lastU,
-	}, nil
+	}, errs
 }
