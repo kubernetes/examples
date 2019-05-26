@@ -324,7 +324,7 @@ kubectl get svc -o wide # Get the Loadbalancer endpoints for spark-ui-proxy and 
 At which point the Master UI and Zeppelin will be available at the URLs under the `EXTERNAL-IP` field.
 
 You can also interact with the Spark cluster using the traditional `spark-shell` /
-`spark-subsubmit` / `pyspark` commands by using `kubectl exec` against the
+`spark-submit` / `pyspark` commands by using `kubectl exec` against the
 `zeppelin-controller` pod.
 
 If your Kubernetes cluster does not have a Loadbalancer integration, use `kubectl proxy` and `kubectl port-forward` to access the Spark UI and Zeppelin.
