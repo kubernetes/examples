@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -132,7 +133,6 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 
 func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
-
 	var errs field.ErrorList
 	var vniOutOfRange, malformedCIDR bool
 	for _, e := range parsingErrs {
@@ -167,6 +167,7 @@ func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 			// Do not compare this subnet against itself.
 			continue
 		}
+		glog.V(2).Infof("Validating %s against %s", subnetSummary.NamespacedName, pr.NamespacedName)
 		if subnetSummary.NSConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}
@@ -183,11 +184,15 @@ func (ss *subnetStrategy) subnetsWithVNI(vni string) ([]*subnet.Summary, error) 
 	if err != nil {
 		return nil, fmt.Errorf(".ByIndex failed for index %s and vni %s: %s", subnetVNIIndex, vni, err.Error())
 	}
+	glog.V(3).Infof("Found %d subnets with vni %s", len(subnets), vni)
 
 	summaries := make([]*subnet.Summary, 0, len(subnets))
 	for _, s := range subnets {
 		if summary, err := subnet.NewSummary(s); err == nil {
 			summaries = append(summaries, summary)
+			glog.V(3).Infof("Parsed subnet %s with vni %s", summary.NamespacedName, vni)
+		} else {
+			glog.Errorf("failed to parse subnet %s with vni %s: %s", summary.NamespacedName, vni, err.Error())
 		}
 	}
 

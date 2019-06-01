@@ -18,13 +18,18 @@ package subnet
 
 import (
 	"fmt"
+	gonet "net"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
+	internal "k8s.io/examples/staging/kos/pkg/apis/network"
+	"k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
+	"k8s.io/examples/staging/kos/pkg/util/convert"
 )
 
 const (
-	MinVNI uint32 = 1
-	MaxVNI uint32 = 2097151
+	minVNI uint32 = 1
+	maxVNI uint32 = 2097151
 )
 
 // Summary is a simplified representation of a KOS API Subnet object. It stores
@@ -41,17 +46,85 @@ type Summary struct {
 	LastU uint32
 }
 
+type ErrReason string
+
+// Types of errors that can occur when parsing a subnet into a Summary.
+const (
+	UnknownType   ErrReason = "UnkownType"
+	VNIOutOfRange ErrReason = "VNIOutOfRange"
+	MalformedCIDR ErrReason = "MalformedCIDR"
+)
+
+type Error struct {
+	Message string
+	Reason  ErrReason
+}
+
+var _ error = &Error{}
+
+func (e *Error) Error() string {
+	return e.Message
+}
+
+type Errors []*Error
+
+var _ error = Errors{}
+
+func (errs Errors) Error() string {
+	msg := ""
+	for _, e := range errs {
+		msg = fmt.Sprintf("%s, %s", msg, e.Error())
+	}
+	return strings.Trim(msg, ", ")
+}
+
 func NewSummary(subnet interface{}) (*Summary, Errors) {
-	for _, p := range parsers {
-		if p.KnowsVersion(subnet) {
-			return p.NewSummary(subnet)
+	switch sn := subnet.(type) {
+	case *internal.Subnet:
+		return makeSummary(sn.Namespace, sn.Name, sn.Spec.VNI, sn.Spec.IPv4)
+	case *v1alpha1.Subnet:
+		return makeSummary(sn.Namespace, sn.Name, sn.Spec.VNI, sn.Spec.IPv4)
+	default:
+		return nil, []*Error{&Error{
+			Message: fmt.Sprintf("type %T of object %#+v is unknown", subnet, subnet),
+			Reason:  UnknownType},
 		}
 	}
-	e := &Error{
-		Message: fmt.Sprintf("type %T of object %#+v is unkown", subnet, subnet),
-		Reason:  UnknownType,
+}
+
+func makeSummary(ns, name string, vni uint32, ipv4 string) (summary *Summary, errs Errors) {
+	// Check VNI is within allowed range.
+	if vni < minVNI || vni > maxVNI {
+		e := &Error{
+			Message: fmt.Sprintf("vni (%d) must be in [%d,%d]", vni, minVNI, maxVNI),
+			Reason:  VNIOutOfRange,
+		}
+		errs = append(errs, e)
 	}
-	return nil, []*Error{e}
+
+	// Check CIDR is well-formed and extract lowest and highest addresses.
+	var baseU, lastU uint32
+	_, ipNet, err := gonet.ParseCIDR(ipv4)
+	if err == nil {
+		baseU, lastU = convert.IPNetToBoundsU(ipNet)
+	} else {
+		e := &Error{
+			Message: err.Error(),
+			Reason:  MalformedCIDR,
+		}
+		errs = append(errs, e)
+	}
+
+	summary = &Summary{
+		NamespacedName: types.NamespacedName{
+			Namespace: ns,
+			Name:      name,
+		},
+		VNI:   vni,
+		BaseU: baseU,
+		LastU: lastU,
+	}
+	return
 }
 
 // Contains returns true if s2's CIDR is a subset of s1's (regardless of s1 and

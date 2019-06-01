@@ -26,7 +26,6 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/examples/staging/kos/pkg/cmd/server"
-	_ "k8s.io/examples/staging/kos/pkg/util/parse/network/subnet"
 )
 
 func main() {

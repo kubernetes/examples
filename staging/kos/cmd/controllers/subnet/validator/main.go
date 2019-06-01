@@ -35,7 +35,6 @@ import (
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 	"k8s.io/examples/staging/kos/pkg/controllers/subnet"
 	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
-	_ "k8s.io/examples/staging/kos/pkg/util/parse/network/subnet/v1alpha1"
 )
 
 func main() {
