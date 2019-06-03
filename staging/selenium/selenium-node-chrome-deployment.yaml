@@ -14,11 +14,18 @@ spec:
       labels:
         app: selenium-node-chrome
     spec:
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
       containers:
       - name: selenium-node-chrome
         image: selenium/node-chrome-debug:3.141
         ports:
           - containerPort: 5900
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
         env:
           - name: HUB_HOST
             value: "selenium-hub"
