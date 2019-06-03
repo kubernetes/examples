@@ -52,11 +52,11 @@ type conflictsCache struct {
 	// the conflicts cache.
 	ownerSummary *subnet.Summary
 
-	// rivals is the list of namespaced names of the subnets that were observed
-	// to conflict with the subnet owning the conflicts cache. If subnet X is
-	// the owner of the conflicts cache and a subnet Y is in rivals this means
-	// that while a queue worker was working on Y it found a conflict with X and
-	// at that time X had the VNI and CIDR values in ownerData.
+	// rivals identifies the subnets that have a conflict with the subnet owning
+	// the cache. If subnet X is the owner of the conflicts cache and a subnet Y
+	// is in rivals this means that when Y was last processed by a queue worker
+	// a conflict with X was found and at that time X had the VNI and CIDR
+	// values in ownerData.
 	rivals []k8stypes.NamespacedName
 }
 
@@ -68,7 +68,7 @@ type conflictsCache struct {
 // 		(2) all subnets with the same VNI are within the same K8s namespace.
 //
 // If a subnet S1 does not pass validation because of a conflict with another
-// subnet S2, upon deletion of S2 S1 is validated again.
+// subnet S2, upon deletion or modification of S2 S1 is validated again.
 // Validator uses an informer on Subnets to be notified of creation or updates,
 // but does a live list against the API server to retrieve the conflicting
 // subnets when validating a subnet, to avoid race conditions caused by multiple
@@ -119,11 +119,7 @@ func (v *Validator) Run(stop <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer v.queue.ShutDown()
 
-	v.subnetInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
-		AddFunc:    v.OnSubnetCreate,
-		UpdateFunc: v.OnSubnetUpdate,
-		DeleteFunc: v.OnSubnetDelete},
-	)
+	v.subnetInformer.AddEventHandler(v)
 
 	go v.subnetInformer.Run(stop)
 	glog.V(2).Infof("Informer run forked.")
@@ -143,38 +139,35 @@ func (v *Validator) Run(stop <-chan struct{}) error {
 	return nil
 }
 
-func (v *Validator) OnSubnetCreate(obj interface{}) {
+func (v *Validator) OnAdd(obj interface{}) {
 	s := obj.(*netv1a1.Subnet)
 	glog.V(5).Infof("Notified of creation of %#+v.", s)
-	subnetRef := k8stypes.NamespacedName{
+	v.queue.Add(k8stypes.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.Name,
-	}
-	v.queue.Add(subnetRef)
+	})
 }
 
-func (v *Validator) OnSubnetUpdate(oldObj, newObj interface{}) {
+func (v *Validator) OnUpdate(oldObj, newObj interface{}) {
 	oldS, newS := oldObj.(*netv1a1.Subnet), newObj.(*netv1a1.Subnet)
 	glog.V(5).Infof("Notified of update from %#+v to %#+v.", oldS, newS)
-	subnetRef := k8stypes.NamespacedName{
-		Namespace: newS.Namespace,
-		Name:      newS.Name,
-	}
 
 	// Process a subnet only if the fields that affect validation have changed.
 	if oldS.Spec.IPv4 != newS.Spec.IPv4 || oldS.Spec.VNI != newS.Spec.VNI {
-		v.queue.Add(subnetRef)
+		v.queue.Add(k8stypes.NamespacedName{
+			Namespace: newS.Namespace,
+			Name:      newS.Name,
+		})
 	}
 }
 
-func (v *Validator) OnSubnetDelete(obj interface{}) {
+func (v *Validator) OnDelete(obj interface{}) {
 	s := parse.Peel(obj).(*netv1a1.Subnet)
 	glog.V(5).Infof("Notified of deletion of %#+v.", s)
-	subnetRef := k8stypes.NamespacedName{
+	v.queue.Add(k8stypes.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.Name,
-	}
-	v.queue.Add(subnetRef)
+	})
 }
 
 func (v *Validator) processQueue() {
@@ -247,18 +240,8 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		v.queue.Add(r)
 	}
 
-	// When a subnet is validated, in case of conflicts it is added to the
-	// conflicts caches of its rival subnets, so that when such rivals are
-	// deleted it can be revalidated. This is useless for a subnet that has
-	// already passed validation. Also, if this controllers sees
-	// s.Status.Validated to be true, there's no way that such value can refer
-	// to a previous, stale version of the subnet, because the API server clears
-	// s.Status.Validated when a subnet spec is updated in a way that requires
-	// revalidation. Hence, we can simply stop processing here if
-	// s.Status.Validated is true.
-	// ? Maybe we should make it clearer somewhere (e.g. API types comments and
-	// doc) that the API server clears s.Status.Validated when a subnet spec is
-	// updated in a way that requires revalidation.
+	// Keep the promise that a Subnet stays validated once it becomes validated
+	// (unless and until its VNI or CIDR block changes).
 	if s.Status.Validated {
 		return nil
 	}
@@ -267,12 +250,12 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	// cache-based one (through the informer) prevents race conditions that can
 	// arise in case of multiple validators running.
 	allSubnets, err := v.netIfc.Subnets(k8scorev1api.NamespaceAll).List(k8smetav1.ListOptions{})
-	if err != nil && doNotRetryList(err) {
-		glog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", ss.NamespacedName, err.Error())
-		// This should never happen, no point in retrying.
-		return nil
-	}
 	if err != nil {
+		if malformedRequest(err) {
+			glog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", ss.NamespacedName, err.Error())
+			// This should never happen, no point in retrying.
+			return nil
+		}
 		return fmt.Errorf("live list of all subnets against API server failed: %s", err.Error())
 	}
 
@@ -347,19 +330,17 @@ func (v *Validator) updateConflictsCache(s *subnet.Summary) []k8stypes.Namespace
 	return oldRivals
 }
 
-func doNotRetryList(e error) bool {
+func malformedRequest(e error) bool {
 	return k8serrors.IsUnauthorized(e) ||
 		k8serrors.IsBadRequest(e) ||
 		k8serrors.IsForbidden(e) ||
 		k8serrors.IsNotAcceptable(e) ||
 		k8serrors.IsUnsupportedMediaType(e) ||
-		k8serrors.IsMethodNotSupported(e)
+		k8serrors.IsMethodNotSupported(e) ||
+		k8serrors.IsInvalid(e)
 }
 
-func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals []netv1a1.Subnet) ([]string, bool, error) {
-	var conflictsMsgs []string
-	var conflictFound bool
-
+func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals []netv1a1.Subnet) (conflictsMsgs []string, conflictFound bool, err error) {
 	for _, pr := range potentialRivals {
 		potentialRival, parsingErrs := subnet.NewSummary(&pr)
 		if len(parsingErrs) > 0 {
@@ -385,12 +366,12 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 		}
 
 		// Record the conflict in the conflicts cache.
-		if err := v.recordConflict(potentialRival, candidate); err != nil {
-			return conflictsMsgs, conflictFound, err
+		if err = v.recordConflict(potentialRival, candidate); err != nil {
+			return
 		}
 	}
 
-	return conflictsMsgs, conflictFound, nil
+	return
 }
 
 func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, validationErrors []string) error {
@@ -407,9 +388,9 @@ func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, vali
 			Name:      s.Name,
 		}
 		v.updateStaleRV(nsn, s.ResourceVersion)
-	case doNotRetryUpdate(err):
+	case malformedRequest(err):
 		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
-	case !doNotRetryUpdate(err):
+	default:
 		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
 	}
 
@@ -432,7 +413,7 @@ func (v *Validator) recordConflict(enroller, enrollee *subnet.Summary) error {
 		// list to the API server: one of the two is stale. Return an error so
 		// that the caller can wait a little bit and retry (hopefully the
 		// version skew has resolved by then).
-		return fmt.Errorf("registration of %s as a rival of %s failed: mismatch between %s's live data (%#+v) and conflicts cache data (%#+v)", enrollee.NamespacedName, enroller.NamespacedName, enroller.NamespacedName, enroller, c.ownerSummary)
+		return fmt.Errorf("registration of %s as a rival of %s failed: mismatch between live data and conflicts cache data", enrollee.NamespacedName, enroller.NamespacedName)
 	}
 
 	c.rivals = append(c.rivals, enrollee.NamespacedName)
@@ -444,15 +425,4 @@ func (v *Validator) updateStaleRV(s k8stypes.NamespacedName, rv string) {
 	defer v.staleRVsMutex.Unlock()
 
 	v.staleRVs[s] = rv
-}
-
-func doNotRetryUpdate(e error) bool {
-	return k8serrors.IsUnauthorized(e) ||
-		k8serrors.IsBadRequest(e) ||
-		k8serrors.IsForbidden(e) ||
-		k8serrors.IsNotAcceptable(e) ||
-		k8serrors.IsUnsupportedMediaType(e) ||
-		k8serrors.IsMethodNotSupported(e) ||
-		k8serrors.IsInvalid(e) ||
-		k8serrors.IsGone(e)
 }

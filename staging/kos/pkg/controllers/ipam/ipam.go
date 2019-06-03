@@ -54,9 +54,9 @@ const (
 	owningAttachmentIdxName = "owningAttachment"
 	attachmentSubnetIdxName = "subnet"
 
-	creation = "creation"
-	update   = "update"
-	deletion = "deletion"
+	opCreation = "creation"
+	opUpdate   = "update"
+	opDeletion = "deletion"
 
 	// The HTTP port under which the scraping endpoint ("/metrics") is served.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
@@ -265,21 +265,21 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 
 func (ctlr *IPAMController) OnSubnetCreate(obj interface{}) {
 	subnet := obj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, creation)
+	ctlr.OnSubnetNotify(subnet, opCreation)
 }
 
 func (ctlr *IPAMController) OnSubnetUpdate(oldObj, newObj interface{}) {
 	subnet := newObj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, update)
+	ctlr.OnSubnetNotify(subnet, opUpdate)
 }
 
 func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
 	subnet := obj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, deletion)
+	ctlr.OnSubnetNotify(subnet, opDeletion)
 }
 
 func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
-	if op != deletion && !subnet.Status.Validated && len(subnet.Status.Errors.Validation) == 0 {
+	if op != opDeletion && !subnet.Status.Validated && len(subnet.Status.Errors.Validation) == 0 {
 		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because subnet has not been validated yet.", op, subnet.Namespace, subnet.Name)
 		return
 	}

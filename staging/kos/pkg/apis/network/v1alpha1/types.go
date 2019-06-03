@@ -186,8 +186,8 @@ type SubnetSpec struct {
 type SubnetStatus struct {
 	// Validated tells users and consumers whether the subnet spec has passed
 	// validation or not. The fields that undergo validation are VNI and CIDR.
-	// As a consequence, if Validated is true it is guaranteed to stay true
-	// until either one of VNI or CIDR is updated.
+	// If Validated is true it is guaranteed to stay true until either one of
+	// SubnetSpec.IPv4 or SubnetSpec.VNI is updated.
 	// If Validated is false or unset, there are three possible reasons:
 	// 	(1) Validation has not been performed yet.
 	// 	(2) The subnet CIDR overlaps with the CIDR of another subnet with the

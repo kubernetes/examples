@@ -67,11 +67,6 @@ func main() {
 	clientCfg.QPS = float32(clientQPS)
 	clientCfg.Burst = clientBurst
 
-	{
-		cccopy := *clientCfg
-		clientCfg = &cccopy
-	}
-
 	// TODO: give our apiservers verifiable identities
 	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
 

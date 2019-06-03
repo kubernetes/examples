@@ -53,10 +53,11 @@ type NetworkAPIServerOptions struct {
 
 func NewNetworkAPIServerOptions(out, errOut io.Writer) *NetworkAPIServerOptions {
 	o := &NetworkAPIServerOptions{
-		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
-		ServerRunOptions:   genericoptions.NewServerRunOptions(),
-		StdOut:             out,
-		StdErr:             errOut,
+		RecommendedOptions:    genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
+		ServerRunOptions:      genericoptions.NewServerRunOptions(),
+		CheckSubnetsConflicts: true,
+		StdOut:                out,
+		StdErr:                errOut,
 	}
 
 	return o

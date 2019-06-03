@@ -77,11 +77,6 @@ func main() {
 	}
 	eventIfc := kubeClientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 
-	{
-		cccopy := *clientCfg
-		clientCfg = &cccopy
-	}
-
 	if !indirectRequests {
 		clientCfg.Host = "network-api:443"
 	}
