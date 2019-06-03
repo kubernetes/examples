@@ -234,15 +234,15 @@ To solve the problem also in the cases where two conflicting subnets
 are created, we replaced the hard-to-enforce constraint that two subnets
 violating the invariants cannot exist with the easier-to-enforce constraint
 that if two subnets violating the invariants exist, subnet consumers use
-only one and ignore the other. To achieve this, each subnet has a `bool`
-field called `SubnetStatus.Validated`. Upon creation it is set to false by
-the extension API server, which also sets it to false after updates to
-`SubnetSpec.IPv4` (the CIDR) and `SubnetSpec.VNI`. Consumers of subnets
-(currently only the [IPAM controller](#the-ipam-controller)) can use a
-subnet only when `SubnetStatus.Validated` is `true`.
+at most one. To achieve this, each subnet has a `bool` field called
+`SubnetStatus.Validated`. Upon creation it is set to false by the extension
+API server, which also sets it to false after updates to `SubnetSpec.IPv4`
+(the CIDR) and `SubnetSpec.VNI`. Consumers of subnets (currently only the
+[IPAM controller](#the-ipam-controller)) can use a subnet only when
+`SubnetStatus.Validated` is `true`.
 
-The subnets validator task is setting `SubnetStatus.Validated` as appropriate
-for every subnet. It uses an Informer to remain apprised of all the subnets
+The subnets validator's task is setting `SubnetStatus.Validated` as appropriate
+for every subnet. It uses an Informer to remain appraised of all the subnets
 and follows the usual Kubernetes controller design pattern based on a rate
 limiting queue and worker goroutines. When a worker processes an existing
 subnet *X*, it does a live list of all the existing subnets against the
@@ -263,20 +263,14 @@ conflicting subnets namespaced names is reset. All the namespaced names in the
 old list are enqueued so that their subnets can be re-validated: they did not
 pass validation because of a conflict with *Y*, but *Y* no longer exists or has
 changed (potentially making the conflict disappear), so they might be
-successfully validated now. If *X* was added unconditionally to *Y*'s conflicts
-cache, an update to *Y*'s *VNI* and *CIDR* which makes the conflict disappear
-might take place and be processed by the validator in between the live list
-against the API server and the addition of *X* to *Y*'s *conflicts cache*.
-This would mean *X* is added to *Y*'s conflicts cache so that it can be
-re-validated in case an update to *Y* makes the conflict disappear after such
-an update has actually happend and has already been processed. This means
-*X* will not be re-validated even if it is perfectly safe to use because it
-has no conflicts with other subnets. This problem is caused by a skew between
-*Y*'s version when its *conflicts cache* was last updated and the one returned
-by the extension API server. Thus, comparing the two versions (recorded in the
-form of *VNI* and *CIDR*) when adding *X* to *Y*'s *conflicts cache* allows
-to detect version skews and re-validate *X* after a delay, so that the skew
-has disappeared by the time *X* is processed again.
+successfully validated now. Making the addition of X to the conflicts cache
+of Y fail on mistach with the VNI or CIDR in that conflict cache correctly
+handles the possible concurrent execution where one goroutine processing X
+finds a conflict with Y, then a different goroutine processes an update to
+the VNI or CIDR of Y, then the first goroutine gets around to trying to add
+X to the conflict cache of Y; doing that addition in this situation would
+falsely indicate that X does not need to be reconsidered until a further
+change is made to Y.
 
 One apparently odd design choice is having the validator retrieve all the
 subnets with a live list against the API server rather than a cache-based
@@ -300,13 +294,13 @@ which returns all the API objects matching certain parameters, while a
 notifications for API objects starting at a given *resource version*
 (typically representing the state of `etcd` corresponding to a previous
 *LIST* result). Notifications delivered through a *WATCH* are applied to
-Informers caches in order, while the results of a *LIST* are not. Thus, if
-while validating *X* and *Y* *V2*'s Informer cache is being populated through
-a *LIST*, *Y* might appear in its Informer cache before *X* even if it's the
-newest. On the other hand, results for live lists against the API server are
-populated from `etcd`: if *Y* already exists, there's the guarantee that *X*
-is also in the results. Hence, using live lists instead of cache-based ones
-prevents the race condition described above.
+Informers caches in resource version order, while the results of a *LIST* are
+not. Thus, if while validating *X* and *Y* *V2*'s Informer cache is being
+populated through a *LIST*, *Y* might appear in its Informer cache before *X*
+even if it's the newest. On the other hand, results for live lists against the
+API server are populated from `etcd`: if *Y* already exists, there's the
+guarantee that *X* is also in the results. Hence, using live lists instead of
+cache-based ones prevents the race condition described above.
 
 
 ## The IPAM Controller
