@@ -18,6 +18,7 @@ package subnet
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -29,19 +30,21 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/examples/staging/kos/pkg/apis/network"
-	informers "k8s.io/examples/staging/kos/pkg/client/informers/internalversion"
-	listers "k8s.io/examples/staging/kos/pkg/client/listers/network/internalversion"
 	"k8s.io/examples/staging/kos/pkg/util/parse/network/subnet"
 )
 
+const subnetVNIIndex = "subnetVNI"
+
 // NewStrategy creates a subnetStrategy instance and returns a pointer to it.
-func NewStrategy(typer runtime.ObjectTyper, checkConflicts bool, listerFactory informers.SharedInformerFactory) *subnetStrategy {
-	subnetLister := listerFactory.Network().InternalVersion().Subnets().Lister()
+func NewStrategy(typer runtime.ObjectTyper, checkConflicts bool, subnetInformer cache.SharedIndexInformer) *subnetStrategy {
+	subnetInformer.AddIndexers(map[string]cache.IndexFunc{subnetVNIIndex: SubnetVNI})
+	subnetIndexer := subnetInformer.GetIndexer()
 	return &subnetStrategy{typer,
 		names.SimpleNameGenerator,
 		checkConflicts,
-		subnetLister}
+		subnetIndexer}
 }
 
 // GetAttrs returns labels.Set, fields.Set, the presence of Initializers if any
@@ -67,14 +70,18 @@ func MatchSubnet(label labels.Selector, field fields.Selector) storage.Selection
 
 // SelectableFields returns a field set that represents the object.
 func SelectableFields(obj *network.Subnet) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return generic.AddObjectMetaFieldsSet(
+		fields.Set{
+			"spec.vni": fmt.Sprint(obj.Spec.VNI),
+		},
+		&obj.ObjectMeta, true)
 }
 
 type subnetStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
 	checkConflicts bool
-	subnetLister   listers.SubnetLister
+	subnetIndexer  cache.Indexer
 }
 
 var _ rest.RESTCreateStrategy = &subnetStrategy{}
@@ -147,43 +154,50 @@ func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 		return errs
 	}
 
-	// Retrieve the summaries of all the other existing subnets so that we can
-	// check for conflicts.
-	allSubnets, err := ss.allSubnets()
+	// Retrieve the summaries of all the other existing subnets with the same
+	// VNI so that we can check for conflicts.
+	potentialRivals, err := ss.subnetsWithVNI(fmt.Sprint(subnetSummary.VNI))
 	if err != nil {
 		return append(errs, field.InternalError(nil, err))
 	}
 
 	// Check whether there are Namespace and CIDR conflicts with other subnets.
-	for _, potentialRival := range allSubnets {
-		if subnetSummary.SameSubnetAs(potentialRival) {
+	for _, pr := range potentialRivals {
+		if subnetSummary.SameSubnetAs(pr) {
 			// Do not compare this subnet against itself.
 			continue
 		}
-		if subnetSummary.NSConflict(potentialRival) {
-			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", potentialRival.NamespacedName)))
+		if subnetSummary.NSConflict(pr) {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}
-		if !malformedCIDR && subnetSummary.CIDRConflict(potentialRival) {
-			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), fmt.Sprintf("subnets with same VNI must have disjoint CIDRs, but CIDR overlaps with %s's", potentialRival.NamespacedName)))
+		if !malformedCIDR && subnetSummary.CIDRConflict(pr) {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), fmt.Sprintf("subnets with same VNI must have disjoint CIDRs, but CIDR overlaps with %s's", pr.NamespacedName)))
 		}
 	}
 
 	return errs
 }
 
-func (ss *subnetStrategy) allSubnets() ([]*subnet.Summary, error) {
-	allSubnets, err := ss.subnetLister.List(labels.Everything())
+func (ss *subnetStrategy) subnetsWithVNI(vni string) ([]*subnet.Summary, error) {
+	subnets, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, vni)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list subnets: %s", err.Error())
+		return nil, fmt.Errorf(".ByIndex failed for index %s and vni %s: %s", subnetVNIIndex, vni, err.Error())
 	}
 
-	allSummaries := make([]*subnet.Summary, 0, len(allSubnets))
-	for _, s := range allSubnets {
-		// No need to check the error, because s already exists: if creating the
-		// summary returned an error s's creation would have failed.
-		summary, _ := subnet.NewSummary(s)
-		allSummaries = append(allSummaries, summary)
+	summaries := make([]*subnet.Summary, 0, len(subnets))
+	for _, s := range subnets {
+		if summary, err := subnet.NewSummary(s); err == nil {
+			summaries = append(summaries, summary)
+		}
 	}
 
-	return allSummaries, nil
+	return summaries, nil
+}
+
+func SubnetVNI(obj interface{}) ([]string, error) {
+	s, isInternalVersionSubnet := obj.(*network.Subnet)
+	if isInternalVersionSubnet {
+		return []string{fmt.Sprint(s.Spec.VNI)}, nil
+	}
+	return nil, errors.New("received object which is not an internal version subnet")
 }

@@ -21,7 +21,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/examples/staging/kos/pkg/apis/network"
-	informers "k8s.io/examples/staging/kos/pkg/client/informers/internalversion"
+	informers "k8s.io/examples/staging/kos/pkg/client/informers/internalversion/network/internalversion"
 	"k8s.io/examples/staging/kos/pkg/registry"
 )
 
@@ -29,9 +29,9 @@ import (
 func NewREST(scheme *runtime.Scheme,
 	optsGetter generic.RESTOptionsGetter,
 	checkConflicts bool,
-	informersFactory informers.SharedInformerFactory) (*registry.REST, error) {
+	subnetInformer informers.SubnetInformer) (*registry.REST, error) {
 
-	strategy := NewStrategy(scheme, checkConflicts, informersFactory)
+	strategy := NewStrategy(scheme, checkConflicts, subnetInformer.Informer())
 
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &network.Subnet{} },

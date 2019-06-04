@@ -63,6 +63,10 @@ func addFieldConversions(scheme *runtime.Scheme) error {
 	if err != nil {
 		return err
 	}
+	err = scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Subnet"), convertSubnetFields)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -72,6 +76,15 @@ func convertNetworkAttachmentFields(label, value string) (internalLabel, interna
 		return label, value, nil
 	default:
 		return "", "", fmt.Errorf("NetworkAttachment does not have field with label %q", label)
+	}
+}
+
+func convertSubnetFields(label, value string) (internalLabel, internalValue string, err error) {
+	switch label {
+	case "metadata.name", "metadata.namespace", "spec.vni":
+		return label, value, nil
+	default:
+		return "", "", fmt.Errorf("Subnet does not have field with label %q", label)
 	}
 }
 

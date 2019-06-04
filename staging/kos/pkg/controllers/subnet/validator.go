@@ -27,6 +27,7 @@ import (
 	k8scorev1api "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sfields "k8s.io/apimachinery/pkg/fields"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
@@ -41,6 +42,8 @@ import (
 )
 
 // TODO: Add Prometheus metrics.
+
+const subnetVNIField = "spec.vni"
 
 // conflictsCache holds information for one subnet regarding conflicts with
 // other subnets. There's no guarantee that the cache is up-to-date: a subnet Y
@@ -246,10 +249,12 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		return nil
 	}
 
-	// Retrieve all the other subnets. Doing a live list as opposed to a
-	// cache-based one (through the informer) prevents race conditions that can
-	// arise in case of multiple validators running.
-	allSubnets, err := v.netIfc.Subnets(k8scorev1api.NamespaceAll).List(k8smetav1.ListOptions{})
+	// Retrieve all the other subnets with the same VNI. Doing a live list as
+	// opposed to a cache-based one (through the informer) prevents race
+	// conditions that can arise in case of multiple validators running.
+	potentialRivals, err := v.netIfc.Subnets(k8scorev1api.NamespaceAll).List(k8smetav1.ListOptions{
+		FieldSelector: k8sfields.OneTermEqualSelector(subnetVNIField, fmt.Sprint(ss.VNI)).String(),
+	})
 	if err != nil {
 		if malformedRequest(err) {
 			glog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", ss.NamespacedName, err.Error())
@@ -259,9 +264,9 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		return fmt.Errorf("live list of all subnets against API server failed: %s", err.Error())
 	}
 
-	// Look for conflicts with all the other subnets and record them in the
-	// rivals conflicts caches.
-	conflictsMsgs, conflictFound, err := v.recordConflicts(ss, allSubnets.Items)
+	// Look for conflicts with all the other subnets with the same VNI and
+	// record them in the rivals conflicts caches.
+	conflictsMsgs, conflictFound, err := v.recordConflicts(ss, potentialRivals.Items)
 	if err != nil {
 		return err
 	}
