@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/fields"
@@ -73,7 +74,7 @@ func MatchSubnet(label labels.Selector, field fields.Selector) storage.Selection
 func SelectableFields(obj *network.Subnet) fields.Set {
 	return generic.AddObjectMetaFieldsSet(
 		fields.Set{
-			"spec.vni": fmt.Sprint(obj.Spec.VNI),
+			"spec.vni": strconv.FormatUint(uint64(obj.Spec.VNI), 10),
 		},
 		&obj.ObjectMeta, true)
 }
@@ -132,13 +133,14 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 }
 
 func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
+	glog.V(2).Infof("Validating subnet %s/%s", s.Namespace, s.Name)
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
 	var errs field.ErrorList
 	var vniOutOfRange, malformedCIDR bool
 	for _, e := range parsingErrs {
 		if e.Reason == subnet.VNIOutOfRange {
 			vniOutOfRange = true
-			errs = append(errs, field.Invalid(field.NewPath("spec", "vni"), fmt.Sprintf("%d", s.Spec.VNI), e.Error()))
+			errs = append(errs, field.Invalid(field.NewPath("spec", "vni"), strconv.FormatUint(uint64(s.Spec.VNI), 10), e.Error()))
 		}
 		if e.Reason == subnet.MalformedCIDR {
 			malformedCIDR = true
@@ -154,49 +156,34 @@ func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 		return errs
 	}
 
-	// Retrieve the summaries of all the other existing subnets with the same
-	// VNI so that we can check for conflicts.
-	potentialRivals, err := ss.subnetsWithVNI(fmt.Sprint(subnetSummary.VNI))
-	if err != nil {
-		return append(errs, field.InternalError(nil, err))
-	}
+	return append(errs, ss.checkNSAndCIDRConflicts(subnetSummary, malformedCIDR)...)
+}
 
-	// Check whether there are Namespace and CIDR conflicts with other subnets.
-	for _, pr := range potentialRivals {
-		if subnetSummary.SameSubnetAs(pr) {
-			// Do not compare this subnet against itself.
+func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, malformedCIDR bool) (errs field.ErrorList) {
+	potentialRivals, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, strconv.FormatUint(uint64(candidate.VNI), 10))
+	if err != nil {
+		glog.Errorf(".ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
+		errs = field.ErrorList{field.InternalError(field.NewPath("spec", "vni"), errors.New("failed to retrieve other subnets with same vni"))}
+		return
+	}
+	glog.V(5).Infof("Found %d subnets with vni %d", len(potentialRivals), candidate.VNI)
+	for _, potentialRival := range potentialRivals {
+		pr, err := subnet.NewSummary(potentialRival)
+		if err != nil || candidate.SameSubnetAs(pr) {
+			if err != nil {
+				glog.Errorf("failed to parse subnet %s with vni %d: %s", pr.NamespacedName, candidate.VNI, err.Error())
+			}
 			continue
 		}
-		glog.V(2).Infof("Validating %s against %s", subnetSummary.NamespacedName, pr.NamespacedName)
-		if subnetSummary.NSConflict(pr) {
+		glog.V(6).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
+		if candidate.NSConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}
-		if !malformedCIDR && subnetSummary.CIDRConflict(pr) {
+		if !malformedCIDR && candidate.CIDRConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), fmt.Sprintf("subnets with same VNI must have disjoint CIDRs, but CIDR overlaps with %s's", pr.NamespacedName)))
 		}
 	}
-
 	return errs
-}
-
-func (ss *subnetStrategy) subnetsWithVNI(vni string) ([]*subnet.Summary, error) {
-	subnets, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, vni)
-	if err != nil {
-		return nil, fmt.Errorf(".ByIndex failed for index %s and vni %s: %s", subnetVNIIndex, vni, err.Error())
-	}
-	glog.V(3).Infof("Found %d subnets with vni %s", len(subnets), vni)
-
-	summaries := make([]*subnet.Summary, 0, len(subnets))
-	for _, s := range subnets {
-		if summary, err := subnet.NewSummary(s); err == nil {
-			summaries = append(summaries, summary)
-			glog.V(3).Infof("Parsed subnet %s with vni %s", summary.NamespacedName, vni)
-		} else {
-			glog.Errorf("failed to parse subnet %s with vni %s: %s", summary.NamespacedName, vni, err.Error())
-		}
-	}
-
-	return summaries, nil
 }
 
 func SubnetVNI(obj interface{}) ([]string, error) {
