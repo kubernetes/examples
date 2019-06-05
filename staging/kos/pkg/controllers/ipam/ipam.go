@@ -68,6 +68,9 @@ const (
 	// The namespace and subsystem of the Prometheus metrics produced here
 	MetricsNamespace = "kos"
 	MetricsSubsystem = "ipam"
+
+	fullSubnetErrMsgPrefix = "no IP address available in subnet"
+	fullSubnetStatusMsg    = "Referenced subnet has run out of IPs"
 )
 
 type IPAMController struct {
@@ -452,6 +455,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 			ctlr.anticipationUsedHistogram.Observe(0)
 		}
 	}()
+	var fullSubnetErr error
 	if len(naStatusErrs) > 0 {
 	} else if lockForStatus.Obj != nil {
 		ipForStatus = lockForStatus.GetIP()
@@ -465,11 +469,34 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		return nil
 	} else {
 		lockForStatus, ipForStatus, err = ctlr.pickAndLockAddress(ns, name, att, subnetName, desiredVNI, desiredBaseU, desiredLastU)
-		if err != nil {
+		if isFullSubnetErr(err) && !fullSubnetMsgFound(att.Status.Errors.IPAM) {
+			fullSubnetErr = err
+			naStatusErrs = []string{fullSubnetStatusMsg}
+		} else if err != nil {
 			return err
 		}
 	}
-	return ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetRV, lockForStatus, ipForStatus)
+	err = ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetRV, lockForStatus, ipForStatus)
+	if fullSubnetErr != nil {
+		if err != nil {
+			return fmt.Errorf("%s. %s", fullSubnetErr.Error(), err.Error())
+		}
+		return fullSubnetErr
+	}
+	return err
+}
+
+func isFullSubnetErr(e error) bool {
+	return e != nil && strings.Contains(e.Error(), fullSubnetErrMsgPrefix)
+}
+
+func fullSubnetMsgFound(messages []string) (found bool) {
+	for _, m := range messages {
+		if found = fullSubnetStatusMsg == m; found {
+			return
+		}
+	}
+	return
 }
 
 func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData) (subnetName, subnetRV string, desiredVNI, desiredBaseU, desiredLastU uint32, lockInStatus, lockForStatus ParsedLock, statusErrs []string, err error, ok bool) {
@@ -643,7 +670,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 	}
 	ipForStatusU, ok := ctlr.PickAddress(vni, addrMin, addrMax)
 	if !ok {
-		err = fmt.Errorf("No IP address available in %x/%x--%x for %s/%s", vni, subnetBaseU, subnetLastU, ns, name)
+		err = fmt.Errorf("%s %s (%x/%x--%x)", fullSubnetErrMsgPrefix, subnetName, vni, subnetBaseU, subnetLastU)
 		return
 	}
 	ipForStatus = convert.Uint32ToIPv4(ipForStatusU)
@@ -758,11 +785,17 @@ func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.Network
 		}
 		return nil
 	}
+	errMsg := fmt.Sprintf("Failed to write into status of NetworkAttachment %s/%s", ns, name)
+	if len(statusErrs) > 0 {
+		errMsg = fmt.Sprintf("%s error messages %v", errMsg, statusErrs)
+	} else {
+		errMsg = fmt.Sprintf("%s allocated address %s", errMsg, ipForStatus)
+	}
 	if k8serrors.IsNotFound(err) {
-		glog.V(4).Infof("NetworkAttachment %s/%s was deleted while address %s was allocated\n", ns, name, ipForStatus)
+		glog.V(4).Infof("%s: NetworkAttachment was deleted.", errMsg)
 		return nil
 	}
-	return fmt.Errorf("Failed to update status of NetworkAttachment %s/%s to record address %s: %s", ns, name, ipForStatus, err.Error())
+	return fmt.Errorf("%s: %s", errMsg, err.Error())
 }
 
 func (ctlr *IPAMController) getNetworkAttachmentData(ns, name string, addIfMissing bool) *NetworkAttachmentData {
