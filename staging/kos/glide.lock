@@ -1,5 +1,5 @@
-hash: 291e991d2d0c4fd1e6030abc4feb7f685df4b46dbff43b8e5fc95fd6564fa30e
-updated: 2019-03-01T14:28:42.941102-05:00
+hash: d86810b0993779b48c3b2ecb9809fafb4fe246c8aedd8ceb79260ac644093f5d
+updated: 2019-04-19T12:54:07.665117+02:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -516,7 +516,7 @@ imports:
   - plugin/pkg/authenticator/token/webhook
   - plugin/pkg/authorizer/webhook
 - name: k8s.io/client-go
-  version: 77e032213d34c856222b4d4647c1c175ba8d22b9
+  version: 701b913670036511e3d752318272c97f1a2a2edd
   subpackages:
   - discovery
   - discovery/fake
@@ -658,6 +658,8 @@ imports:
   version: 0689ccc1d7d65d9dd1bedcc3b0b1ed7df91ba266
   subpackages:
   - args
+- name: k8s.io/klog
+  version: e531227889390a39d9533dde61f590fe9f4b0035
 - name: k8s.io/kube-openapi
   version: 0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803
   subpackages:
@@ -675,7 +677,7 @@ testImports:
   - watch
   - winfile
 - name: github.com/onsi/ginkgo
-  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - internal/codelocation
@@ -695,7 +697,7 @@ testImports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion

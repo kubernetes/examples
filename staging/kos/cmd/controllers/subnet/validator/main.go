@@ -27,15 +27,13 @@ import (
 
 	"github.com/golang/glog"
 
-	k8scorev1api "k8s.io/api/core/v1"
-	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
-	ipamctlr "k8s.io/examples/staging/kos/pkg/controllers/ipam"
+	"k8s.io/examples/staging/kos/pkg/controllers/subnet"
 	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
 )
 
@@ -43,16 +41,14 @@ func main() {
 	var kubeconfigFilename string
 	var workers int
 	var clientQPS, clientBurst int
-	var indirectRequests bool
 	flag.StringVar(&kubeconfigFilename, "kubeconfig", "", "kubeconfig filename")
 	flag.IntVar(&workers, "workers", 2, "number of worker threads")
 	flag.IntVar(&clientQPS, "qps", 100, "limit on rate of calls to api-server")
 	flag.IntVar(&clientBurst, "burst", 200, "allowance for transient burst of calls to api-server")
-	flag.BoolVar(&indirectRequests, "indirect-requests", false, "send requests through the main apiserver(s) rather than directly to the network apiservers")
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-	glog.Infof("IPAM controller start, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirectRequests=%v\n", kubeconfigFilename, workers, clientQPS, clientBurst, indirectRequests)
+	glog.Infof("Subnets validator start, kubeconfig=%q, workers=%d, QPS=%d, burst=%d", kubeconfigFilename, workers, clientQPS, clientBurst)
 
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -64,55 +60,34 @@ func main() {
 
 	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigFilename)
 	if err != nil {
-		glog.Errorf("Failed to build client config for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
+		glog.Errorf("Failed to build client config for kubeconfig=%q: %s", kubeconfigFilename, err.Error())
 		os.Exit(2)
 	}
 	clientCfg.QPS = float32(clientQPS)
 	clientCfg.Burst = clientBurst
 
-	kubeClientset, err := k8sclient.NewForConfig(clientCfg)
-	if err != nil {
-		glog.Errorf("Failed to configure k8s clientset: %s\n", err.Error())
-		os.Exit(4)
-	}
-	eventIfc := kubeClientset.CoreV1().Events(k8scorev1api.NamespaceAll)
-
-	if !indirectRequests {
-		clientCfg.Host = "network-api:443"
-	}
 	// TODO: give our apiservers verifiable identities
 	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
 
 	kcs, err := kosclientset.NewForConfig(clientCfg)
 	if err != nil {
-		glog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
-		os.Exit(8)
-	}
-	hostname, err := os.Hostname()
-	if err != nil {
-		glog.Errorf("Failed to get local hostname: %s\n", err.Error())
-		os.Exit(10)
+		glog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s", kubeconfigFilename, err.Error())
+		os.Exit(3)
 	}
 
 	stopCh := StopOnSignals()
 	sif := kosinformers.NewSharedInformerFactory(kcs, 0)
 	net1 := sif.Network().V1alpha1()
 	subnetInformer := net1.Subnets()
-	netattInformer := net1.NetworkAttachments()
-	lockInformer := net1.IPLocks()
 	sif.Start(stopCh)
-	queue := workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue")
-	ctlr, err := ipamctlr.NewIPAMController(kcs.NetworkV1alpha1(), subnetInformer.Informer(), subnetInformer.Lister(), netattInformer.Informer(), netattInformer.Lister(), lockInformer.Informer(), lockInformer.Lister(), eventIfc, queue, workers, hostname)
-	if err != nil {
-		glog.Errorf("Failed to initialize IPAM controller: %s\n", err.Error())
-		os.Exit(9)
-	}
-	glog.V(2).Infoln("Created IPAMController")
-	ctlr.Run(stopCh)
+	queue := workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue")
+	validator := subnet.NewValidator(kcs.NetworkV1alpha1(), subnetInformer.Informer(), subnetInformer.Lister(), queue, workers)
+	glog.V(2).Infoln("Created subnets validator")
+	validator.Run(stopCh)
 }
 
 // StopOnSignals makes a "stop channel" that is closed upon receipt of certain
-// OS signals commonly used to request termination of a process.  On the second
+// OS signals commonly used to request termination of a process. On the second
 // such signal, Exit(1) immediately.
 func StopOnSignals() <-chan struct{} {
 	stopCh := make(chan struct{})

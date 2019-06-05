@@ -14,47 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package convert
 
 import (
 	"encoding/binary"
 	"net"
 )
 
-func MapStringStringGet(m map[string]string, i string) (mi string) {
-	if m != nil {
-		mi = m[i]
-	}
-	return
-}
-
-// makeUint32From4Bytes makes a uint32 from a byte array
-func MakeUint32FromIPv4(ip []byte) uint32 {
-	var iv uint32
+func IPv4ToUint32(ip net.IP) uint32 {
 	if len(ip) > 4 {
-		iv = binary.BigEndian.Uint32(ip[len(ip)-4:])
-	} else {
-		iv = binary.BigEndian.Uint32(ip)
+		return binary.BigEndian.Uint32(ip[len(ip)-4:])
 	}
-	return iv
+	return binary.BigEndian.Uint32(ip)
 }
 
-func MakeIPv4FromUint32(n uint32) net.IP {
+func Uint32ToIPv4(i uint32) net.IP {
 	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, n)
+	binary.BigEndian.PutUint32(ip, i)
 	return ip
 }
 
-type SliceOfString []string
-
-func (x SliceOfString) Equal(y SliceOfString) bool {
-	if len(x) != len(y) {
-		return false
-	}
-	for i, xi := range x {
-		if xi != y[i] {
-			return false
-		}
-	}
-	return true
+func IPNetToBoundsU(ipNet *net.IPNet) (min, max uint32) {
+	min = IPv4ToUint32(ipNet.IP)
+	ones, bits := ipNet.Mask.Size()
+	delta := uint32(uint64(1)<<uint(bits-ones) - 1)
+	max = min + delta
+	return
 }

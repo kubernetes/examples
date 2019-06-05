@@ -4,15 +4,16 @@ KOS_PERSIST=${HOME}/.kos
 publish:: publish-network-apiserver
 publish:: publish-ipam-controller
 publish:: publish-connection-agent
+publish:: publish-subnets-validator
 
 build:: build-network-apiserver
 build:: build-ipam-controller
 build:: build-connection-agent
+build:: build-subnets-validator
 build:: build-attachment-tput-driver
 
 clean:
-	rm -f images/*/*r
-	rm -f images/*/*/*[rt]
+	find images/ ! -name 'Dockerfile' -type f -delete
 	rm -rf local-binaries
 	rm -f deploy/main/50-*
 	rm -rf "${KOS_PERSIST}/etcd-tls"
@@ -25,6 +26,9 @@ build-ipam-controller:
 
 build-connection-agent:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o images/controllers/connectionagent/connection-agent k8s.io/examples/staging/kos/cmd/controllers/connectionagent
+
+build-subnets-validator:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o images/controllers/subnet/validator/subnets-validator k8s.io/examples/staging/kos/cmd/controllers/subnet/validator
 
 build-attachment-tput-driver:
 	go build -a -o local-binaries/attachment-tput-driver k8s.io/examples/staging/kos/cmd/attachment-tput-driver
@@ -39,6 +43,9 @@ publish-connection-agent:
 	cp -R cmd/attachment-tput-driver/test-scripts images/controllers/connectionagent
 	cd images/controllers/connectionagent && docker build -t ${DOCKER_PREFIX}/kos-connection-agent:latest . && docker push ${DOCKER_PREFIX}/kos-connection-agent:latest
 
+publish-subnets-validator:
+	cd images/controllers/subnet/validator && docker build -t ${DOCKER_PREFIX}/kos-subnets-validator:latest . && docker push ${DOCKER_PREFIX}/kos-subnets-validator:latest
+
 deploy/main/50-rs-xs.yaml: deploy.m4/main/50-rs-xs.yaml.m4
 	m4 -DDOCKER_PREFIX=${DOCKER_PREFIX} deploy.m4/main/50-rs-xs.yaml.m4 > deploy/main/50-rs-xs.yaml
 
@@ -47,6 +54,9 @@ deploy/main/50-rs-ipam.yaml: deploy.m4/main/50-rs-ipam.yaml.m4
 
 deploy/main/50-ds-ca.yaml: deploy.m4/main/50-ds-ca.yaml.m4
 	m4 -DDOCKER_PREFIX=${DOCKER_PREFIX} deploy.m4/main/50-ds-ca.yaml.m4 > deploy/main/50-ds-ca.yaml
+
+deploy/main/50-d-sv.yaml: deploy.m4/main/50-d-sv.yaml.m4
+	m4 -DDOCKER_PREFIX=${DOCKER_PREFIX} deploy.m4/main/50-d-sv.yaml.m4 > deploy/main/50-d-sv.yaml
 
 %.key:
 	mkdir -p $$(dirname $@)
@@ -118,7 +128,7 @@ ${KOS_PERSIST}/etcd-tls/client-secret.yaml:  ${KOS_PERSIST}/etcd-tls/ca.pem ${KO
 		etcd-tls/client-secret.yaml.m4 > ${KOS_PERSIST}/etcd-tls/client-secret.yaml
 
 .PHONY: deploy
-deploy: deploy/main/50-rs-xs.yaml deploy/main/50-rs-ipam.yaml deploy/main/50-ds-ca.yaml ${KOS_PERSIST}/etcd-tls/peer-secret.yaml ${KOS_PERSIST}/etcd-tls/server-secret.yaml ${KOS_PERSIST}/etcd-tls/client-secret.yaml
+deploy: deploy/main/50-rs-xs.yaml deploy/main/50-rs-ipam.yaml deploy/main/50-ds-ca.yaml deploy/main/50-d-sv.yaml ${KOS_PERSIST}/etcd-tls/peer-secret.yaml ${KOS_PERSIST}/etcd-tls/server-secret.yaml ${KOS_PERSIST}/etcd-tls/client-secret.yaml
 	kubectl apply -f deploy/ns && \
 	kubectl apply -f deploy/etcd-operator-rbac && \
 	kubectl apply -f ${KOS_PERSIST}/etcd-tls/peer-secret.yaml && \
@@ -130,7 +140,7 @@ deploy: deploy/main/50-rs-xs.yaml deploy/main/50-rs-ipam.yaml deploy/main/50-ds-
 	kubectl apply -f deploy/main
 
 .PHONY: undeploy
-undeploy: deploy/main/50-rs-xs.yaml deploy/main/50-rs-ipam.yaml deploy/main/50-ds-ca.yaml ${KOS_PERSIST}/etcd-tls/peer-secret.yaml ${KOS_PERSIST}/etcd-tls/server-secret.yaml ${KOS_PERSIST}/etcd-tls/client-secret.yaml
+undeploy: deploy/main/50-rs-xs.yaml deploy/main/50-rs-ipam.yaml deploy/main/50-ds-ca.yaml deploy/main/50-d-sv.yaml ${KOS_PERSIST}/etcd-tls/peer-secret.yaml ${KOS_PERSIST}/etcd-tls/server-secret.yaml ${KOS_PERSIST}/etcd-tls/client-secret.yaml
 	kubectl delete --ignore-not-found -f deploy/main && \
 	! kubectl get EtcdCluster || kubectl delete --ignore-not-found -f deploy/etcd-cluster && \
 	while kubectl get EtcdCluster -n example-com the-etcd-cluster ; do sleep 15; done && \

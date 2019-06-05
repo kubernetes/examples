@@ -19,7 +19,6 @@ package networkattachment
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -67,7 +66,7 @@ func SelectableFields(obj *network.NetworkAttachment) fields.Set {
 			"spec.subnet":       obj.Spec.Subnet,
 			"status.ipv4":       obj.Status.IPv4,
 			"status.hostIP":     obj.Status.HostIP,
-			"status.addressVNI": strconv.FormatUint(uint64(obj.Status.AddressVNI), 10),
+			"status.addressVNI": fmt.Sprint(obj.Status.AddressVNI),
 		},
 		&obj.ObjectMeta, true)
 }

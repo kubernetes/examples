@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: example:subnets-validator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: example:subnets-validator
+subjects:
+- kind: ServiceAccount
+  name: subnets-validator
+  namespace: example-com

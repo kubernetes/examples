@@ -20,10 +20,10 @@ scrape and display metrics from the cluster, including the SDN.
 
 This is an early work in progress.  Currently there are initial drafts
 of the kube API objects, the API extension server that holds them, the
-interface to the local network machinery, the controller that assigns
-IP addresses, the controller that invokes the local network machinery,
-an implementation of that interface that just logs invocations, and a
-test driver.
+controller that validates API objects of kind `subnet`, the interface
+to the local network machinery, the controller that assigns IP addresses,
+the controller that invokes the local network machinery, an implementation
+of that interface that just logs invocations, and a test driver.
 
 
 ## Architecture
@@ -51,6 +51,9 @@ This example adds the following to the Kubernetes cluster.
   extension servers serve the custom resources used in this example,
   using the etcd cluster for storage.
 
+- A Deployment of a controller that validates API objects of kind `subnet`
+  and marks them as either validated or not.
+
 - A Deployment of a controller that assigns IP addresses.
 
 - A DaemonSet of connection agents that implement the node-local
@@ -65,16 +68,15 @@ This example adds the following to the Kubernetes cluster.
 All components are created in the Kubernetes API namespace
 `example-com`.
 
-The controllers (i.e., IPAM controller and connection agents) connect
-directly to the API extension servers rather than utilizing the
-proxying ability of the Kubernetes main apiservers, avoiding
-unnecessary load and configuration challenges on those main
-apiservers.  The connections are made to the DNS name of the
-Kubernetes service implemented by the API extension servers, and this
-engages the TCP connection load balancing of Kubernetes (i.e.,
-normally the kube-proxy).  If the number of worker nodes is low then
-this load balancing may not be very balanced, and adjustments are made
-only as new TCP connections are made.
+The controllers (i.e., subnets validator, IPAM controller, connection
+agents) connect directly to the API extension servers rather than
+utilizing the proxying ability of the Kubernetes main apiservers,
+avoiding unnecessary load and configuration challenges on those main
+apiservers.  The connections are made to the DNS name of the Kubernetes
+service implemented by the API extension servers, and this engages the
+TCP connection load balancing of Kubernetes (i.e., normally the kube-proxy).
+If the number of worker nodes is low then this load balancing may not be
+very balanced, and adjustments are made only as new TCP connections are made.
 
 
 ## The SDN
@@ -109,7 +111,9 @@ The SDN has just four concepts, as follows.
 
 - VNI, a VXLAN virtual network identifier.  Usually represented by a
   golang `uint32`.  VNIs are chosen by the clients that create
-  Subnets.
+  Subnets. A VXLAN virtual network is, by design choice, confined to
+  a single K8s API namespace, but multiple virtual networks can reside
+  in the same namespace.
 
 - Subnet, a kube custom resource.  A subnet has a single CIDR block,
   from which addresses are assigned (with the usual omissions).  Each
@@ -129,6 +133,10 @@ A controller chooses the IP address for each NetworkAttachment.  An
 attachment's MAC address is a function of the IP address and the VNI.
 
 The problems that the SDN solves are as follows.
+
+- Subnets must be consistent. More precisely, for a given VNI all the
+  subnets with that VNI must have disjoint CIDRs and must be within the
+  same Kubernetes API namespace.
 
 - IP addresses must be assigned to the NetworkAttachments.  For a
   given VNI, a given IP address can be assigned to at most one
@@ -186,6 +194,113 @@ remote NetworkAttachment and forward the packet to the `vtep` port. From
 there, OvS will take care of forwarding the packet to the bridge in the
 remote NetworkAttachment node. The flows installed in that bridge will
 make it possible to deliver the packet to the NetworkAttachment's interface.
+
+
+## The Subnets Validator
+
+This is a singleton that attempts to solve the problem of enforcing the
+two following invariants:
+
+  1. There are no subnets with the same VNI and overlapping CIDR blocks.
+  2. There are no subnets with the same VNI and different Kubernetes API
+     namespaces.
+
+The first is intrinsic in the nature of virtual networks and subnets,
+while the second is a consequence of the design choice of confining VXLAN
+virtual networks to a single Kubernetes API namespace.
+
+The general problem here is enforcement of multi-objects invariants. For
+such a simple SDN as `kos`, we could have ignored it, leaving it to the
+user or to a higher-level UI. Since we believe this is a relevant problem
+in distributed systems and we're building `kos` to assess Kubernetes API
+machinery suitability for building distributed systems other than
+Kubernetes itself, we chose to tackle it.
+
+A request to create a subnet *X* with VNI *V* which violates any of the
+invariants should fail. The only way to get this behavior is having the
+extension API server do the validation, because it is the only component
+to see *X* **before** it has already been created. But this alone is not
+reliable. When *X* is being validated, all the other existing subnets with
+VNI *V* must be retrieved, and each one of them must be compared to *X*
+to check if an invariant is violated. But different API objects are not
+necessarily validated sequentially by the extension API server. If a
+subnet *Y* in *conflict* with *X* (i.e, *X* and *Y* mutual existences
+lead to a violation of one invariant) is validated in parallel with *X*,
+they will both be created. This case must be handled, but it is a rare
+occurrence, so we chose to keep the validation by the API server
+nevertheless.
+
+To solve the problem also in the cases where two conflicting subnets
+are created, we replaced the hard-to-enforce constraint that two subnets
+violating the invariants cannot exist with the easier-to-enforce constraint
+that if two subnets violating the invariants exist, subnet consumers use
+at most one. To achieve this, each subnet has a `bool` field called
+`SubnetStatus.Validated`. Upon creation it is set to false by the extension
+API server, which also sets it to false after updates to `SubnetSpec.IPv4`
+(the CIDR) and `SubnetSpec.VNI`. Consumers of subnets (currently only the
+[IPAM controller](#the-ipam-controller)) can use a subnet only when
+`SubnetStatus.Validated` is `true`.
+
+The subnets validator's task is setting `SubnetStatus.Validated` as appropriate
+for every subnet. It uses an Informer to remain appraised of all the subnets
+and follows the usual Kubernetes controller design pattern based on a rate
+limiting queue and worker goroutines. When a worker processes an existing
+subnet *X*, it does a live list of all the existing subnets against the
+extension API server, and compares *X* against the results of the list. If no
+violation of the invariants is found, *X*'s `SubnetStatus.Validated` is set
+to true. The validator also keeps a *conflicts cache* which associates each
+processed subnet *Y* to its last seen *VNI* and *CIDR* and a list with the
+namespaced names of the subnets whose validation failed because of a conflict
+with *Y* when *Y* had the last seen *VNI* and *CIDR*. If, while validating
+*X*, a conflict with *Y* is found, *Y*'s *VNI* and *CIDR* are compared to those
+stored in its *conflicts cache* entry. If they match, *X*'s status is updated
+by adding information on the conflict, and *X*'s namespaced name is added to
+the conflicts cache entry for *Y*. If they do not match, no further action is
+taken and *X* is processed again after a delay. When *Y* is deleted or its
+*VNI* and *CIDR* are updated, its *confilcts cache* entry is updated: the new
+*VNI* and *CIDR* override the old ones (in case of an update) and the list of
+conflicting subnets namespaced names is reset. All the namespaced names in the
+old list are enqueued so that their subnets can be re-validated: they did not
+pass validation because of a conflict with *Y*, but *Y* no longer exists or has
+changed (potentially making the conflict disappear), so they might be
+successfully validated now. Making the addition of X to the conflicts cache
+of Y fail on mistach with the VNI or CIDR in that conflict cache correctly
+handles the possible concurrent execution where one goroutine processing X
+finds a conflict with Y, then a different goroutine processes an update to
+the VNI or CIDR of Y, then the first goroutine gets around to trying to add
+X to the conflict cache of Y; doing that addition in this situation would
+falsely indicate that X does not need to be reconsidered until a further
+change is made to Y.
+
+One apparently odd design choice is having the validator retrieve all the
+subnets with a live list against the API server rather than a cache-based
+list using its Informer. The live list is worse performance-wise, but is
+necessary to avoid race conditions that can lead to two conflicting subnets
+having both `SubnetStatus.Validated` set to true. The subnets validator is a
+singleton, but Kubernetes makes no guarantee that there cannot be transients
+with more than one running. Assume two --- *V1* and *V2* --- are running and
+cache-based lists are used. Also assume a subnet *X* is created and shortly
+after another subnet *Y* in conflict with *X* is created. *X* and *Y* might
+appear in *V1* and *V2*'s Informers caches in opposite orders: *V1*
+processes *X* first, and when it does the cache-based list *Y* is not in
+the cache yet. Likewise, *V2* might validate *Y* without seeing *X*. Hence
+both *X* and *Y* are marked as validated even if they are in conflict. The
+problem is due to the fact that Informer's caches are not populated in order.
+API objects are stored in `etcd` in a sequential order represented by a
+*resource version* (basically a logical clock). Informers caches are populated
+through two API calls: *LIST* and *WATCH*. A *LIST* is a request-response
+which returns all the API objects matching certain parameters, while a
+*WATCH* is a long-lived request that returns a stream of create/udpate/delete
+notifications for API objects starting at a given *resource version*
+(typically representing the state of `etcd` corresponding to a previous
+*LIST* result). Notifications delivered through a *WATCH* are applied to
+Informers caches in resource version order, while the results of a *LIST* are
+not. Thus, if while validating *X* and *Y* *V2*'s Informer cache is being
+populated through a *LIST*, *Y* might appear in its Informer cache before *X*
+even if it's the newest. On the other hand, results for live lists against the
+API server are populated from `etcd`: if *Y* already exists, there's the
+guarantee that *X* is also in the results. Hence, using live lists instead of
+cache-based ones prevents the race condition described above.
 
 
 ## The IPAM Controller
@@ -249,7 +364,7 @@ how to avoid doing duplicate work while waiting for its earlier
 actions to fully take effect.  To save on client/server traffic, this
 controller does not normally actively query the apiservers to find out
 its previous actions; rather, this controller simply waits to be
-informed through its Informers.  In the interim, this conrtroller
+informed through its Informers.  In the interim, this controller
 maintains a record of actions in flight.  In particular, for each
 address assignment in flight, the controller records: the
 ResourceVersion of the NetworkAttachment that was seen to need an IP

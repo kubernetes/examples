@@ -44,17 +44,23 @@ type NetworkAPIServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
 	ServerRunOptions   *genericoptions.ServerRunOptions
 
+	// CheckSubnetsConflicts determines whether subnet creation or update fails
+	// when conflicts with other subnets are detected. Should be false when
+	// testing the subnets validation controller, otherwise most conflicts will
+	// be caught by the server, making testing complicated.
+	CheckSubnetsConflicts bool
+
 	StdOut io.Writer
 	StdErr io.Writer
 }
 
 func NewNetworkAPIServerOptions(out, errOut io.Writer) *NetworkAPIServerOptions {
 	o := &NetworkAPIServerOptions{
-		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
-		ServerRunOptions:   genericoptions.NewServerRunOptions(),
-
-		StdOut: out,
-		StdErr: errOut,
+		RecommendedOptions:    genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
+		ServerRunOptions:      genericoptions.NewServerRunOptions(),
+		CheckSubnetsConflicts: true,
+		StdOut:                out,
+		StdErr:                errOut,
 	}
 
 	return o
@@ -84,6 +90,7 @@ func NewCommandStartNetworkAPIServer(defaults *NetworkAPIServerOptions, stopCh <
 	flags := cmd.Flags()
 	o.RecommendedOptions.AddFlags(flags)
 	o.ServerRunOptions.AddUniversalFlags(flags)
+	flags.BoolVar(&o.CheckSubnetsConflicts, "check-subnets-conflicts", true, "Whether subnet creation/update fails if conflicting subnets are found. Setting it to false can ease testing of other control plane components.")
 
 	return cmd
 }
@@ -125,7 +132,8 @@ func (o *NetworkAPIServerOptions) Config() (*apiserver.Config, error) {
 
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
-		ExtraConfig:   &apiserver.ExtraConfig{networkInformerFactory},
+		ExtraConfig: &apiserver.ExtraConfig{o.CheckSubnetsConflicts,
+			networkInformerFactory},
 	}
 	return config, nil
 }

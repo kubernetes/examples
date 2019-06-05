@@ -37,7 +37,7 @@ import (
 
 	"k8s.io/examples/staging/kos/pkg/networkfabric"
 	"k8s.io/examples/staging/kos/pkg/networkfabric/factory"
-	"k8s.io/examples/staging/kos/pkg/util"
+	"k8s.io/examples/staging/kos/pkg/util/convert"
 )
 
 const (
@@ -985,7 +985,7 @@ func (f *ovsFabric) newListOFportsAndIfcNamesCmd() *exec.Cmd {
 func (f *ovsFabric) lockVNIIPPair(vni uint32, ip net.IP) (err error) {
 	vniIP := vniAndIP{
 		vni: vni,
-		ip:  util.MakeUint32FromIPv4(ip),
+		ip:  convert.IPv4ToUint32(ip),
 	}
 	f.lockedVNIIPPairsMutex.Lock()
 	defer func() {
@@ -1005,7 +1005,7 @@ func (f *ovsFabric) lockVNIIPPair(vni uint32, ip net.IP) (err error) {
 func (f *ovsFabric) unlockVNIIPPair(vni uint32, ip net.IP) {
 	vniIP := vniAndIP{
 		vni: vni,
-		ip:  util.MakeUint32FromIPv4(ip),
+		ip:  convert.IPv4ToUint32(ip),
 	}
 	f.lockedVNIIPPairsMutex.Lock()
 	defer func() {

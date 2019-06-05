@@ -68,6 +68,8 @@ import:
 - package: k8s.io/gengo
   subpackages:
   - args
+- package: k8s.io/klog
+  version: ~0.3.0
 testImport:
 - package: github.com/onsi/ginkgo
   version: ^1.7.0

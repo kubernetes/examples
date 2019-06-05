@@ -178,9 +178,34 @@ type SubnetSpec struct {
 }
 
 type SubnetStatus struct {
-	// Errors are the complaints, if any, from the IPAM controller.
+	// Validated tells users and consumers whether the subnet spec has passed
+	// validation or not. The fields that undergo validation are VNI and CIDR.
+	// If Validated is true it is guaranteed to stay true until either one of
+	// SubnetSpec.IPv4 or SubnetSpec.VNI is updated.
+	// If Validated is false or unset, there are three possible reasons:
+	// 	(1) Validation has not been performed yet.
+	// 	(2) The subnet CIDR overlaps with the CIDR of another subnet with the
+	//		same VNI.
+	//	(3) The subnet Namespace is different than that of another subnet with
+	// 		the same VNI.
 	// +optional
-	Errors []string
+	Validated bool
+
+	// +optional
+	Errors SubnetErrors
+}
+
+type SubnetErrors struct {
+	// IPAM holds the complaints, if any, from the IPAM controller.
+	// +optional
+	// +patchStrategy=replace
+	IPAM []string
+
+	// Validation holds the complaints, if any, from the subnets validator. It
+	// might contain an explanation on why SubnetStatus.Validated is false.
+	// +optional
+	// +patchStrategy=replace
+	Validation []string
 }
 
 // +genclient
