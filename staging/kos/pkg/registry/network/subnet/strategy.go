@@ -133,7 +133,7 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 }
 
 func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
-	glog.V(2).Infof("Validating subnet %s/%s", s.Namespace, s.Name)
+	glog.V(4).Infof("Validating subnet %s/%s", s.Namespace, s.Name)
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
 	var errs field.ErrorList
 	var vniOutOfRange, malformedCIDR bool
