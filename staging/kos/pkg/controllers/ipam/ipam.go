@@ -479,7 +479,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 	err = ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetRV, lockForStatus, ipForStatus)
 	if fullSubnetErr != nil {
 		if err != nil {
-			return fmt.Errorf("%s. %s", fullSubnetErr.Error(), err.Error())
+			return fmt.Errorf("%s; %s", fullSubnetErr.Error(), err.Error())
 		}
 		return fullSubnetErr
 	}
@@ -670,7 +670,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 	}
 	ipForStatusU, ok := ctlr.PickAddress(vni, addrMin, addrMax)
 	if !ok {
-		err = fmt.Errorf("%s %s (%x/%x--%x)", fullSubnetErrMsgPrefix, subnetName, vni, subnetBaseU, subnetLastU)
+		err = fmt.Errorf("%s %s/%s (%x/%x--%x)", fullSubnetErrMsgPrefix, ns, subnetName, vni, subnetBaseU, subnetLastU)
 		return
 	}
 	ipForStatus = convert.Uint32ToIPv4(ipForStatusU)
