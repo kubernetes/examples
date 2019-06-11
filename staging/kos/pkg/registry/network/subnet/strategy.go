@@ -162,7 +162,7 @@ func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, malformedCIDR bool) (errs field.ErrorList) {
 	potentialRivals, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, strconv.FormatUint(uint64(candidate.VNI), 10))
 	if err != nil {
-		glog.Errorf(".ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
+		glog.Errorf("subnetIndexer.ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
 		errs = field.ErrorList{field.InternalError(field.NewPath("spec", "vni"), errors.New("failed to retrieve other subnets with same vni"))}
 		return
 	}
