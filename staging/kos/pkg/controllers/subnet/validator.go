@@ -17,7 +17,6 @@ limitations under the License.
 package subnet
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -99,7 +98,7 @@ type Validator struct {
 	staleRVsMutex sync.Mutex
 }
 
-func NewValidator(netIfc kosclientv1a1.NetworkV1alpha1Interface,
+func NewValidationController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	subnetInformer k8scache.SharedInformer,
 	subnetLister netlistv1a1.SubnetLister,
 	queue k8sworkqueue.RateLimitingInterface,
@@ -118,19 +117,19 @@ func NewValidator(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 
 // Run starts the validator and blocks until stop is closed. This entails
 // starting its Informer and the worker goroutines.
-func (v *Validator) Run(stop <-chan struct{}) error {
+func (v *Validator) Run(stop <-chan struct{}) {
 	defer k8sutilruntime.HandleCrash()
 	defer v.queue.ShutDown()
 
+	glog.Info("Starting subnet validation controller.")
+	defer glog.Info("Shutting down subnet validation controller.")
+
 	v.subnetInformer.AddEventHandler(v)
 
-	go v.subnetInformer.Run(stop)
-	glog.V(2).Infof("Informer run forked.")
-
 	if !k8scache.WaitForCacheSync(stop, v.subnetInformer.HasSynced) {
-		return errors.New("cache failed to sync")
+		panic("informer cache failed to sync")
 	}
-	glog.V(2).Infof("Cache synced.")
+	glog.V(2).Infof("Informer cache synced.")
 
 	// Start workers.
 	for i := 0; i < v.workers; i++ {
@@ -139,7 +138,6 @@ func (v *Validator) Run(stop <-chan struct{}) error {
 	glog.V(2).Infof("Launched %d workers.", v.workers)
 
 	<-stop
-	return nil
 }
 
 func (v *Validator) OnAdd(obj interface{}) {

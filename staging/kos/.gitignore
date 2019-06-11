@@ -1,17 +1,11 @@
 ## Exclusions for KOS
 
 # The built binaries
-images/network-apiserver/network-apiserver
-images/controllers/ipam/ipam-controller
-images/controllers/connectionagent/connection-agent
-images/controllers/connectionagent/test-scripts
-images/controllers/subnet/validator/subnets-validator
+images/*/*[!e]
 local-binaries
 
 # The generated manifests
-deploy/main/50-rs-*.yaml
-deploy/main/50-ds-*.yaml
-deploy/main/50-d-*.yaml
+deploy/main/50-*.yaml
 
 # Do not need vendor, see glide.lock
 vendor

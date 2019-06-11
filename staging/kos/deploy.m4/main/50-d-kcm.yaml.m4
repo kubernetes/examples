@@ -1,28 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: subnets-validator
+  name: kos-controller-manager
   namespace: example-com
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: subnets-validator
+      app: kos-controller-manager
   template:
     metadata:
       labels:
-        app: subnets-validator
+        app: kos-controller-manager
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "9296"
+        prometheus.io/port: "9295"
     spec:
-      serviceAccountName: subnets-validator
+      serviceAccountName: kos-controller-manager
       nodeSelector:
         role.kos.example.com/control: "true"
       containers:
-      - name: subnets-validator
-        image: DOCKER_PREFIX/kos-subnets-validator:latest
+      - name: kos-controller-manager
+        image: DOCKER_PREFIX/kos-controller-manager:latest
         imagePullPolicy: Always
         command:
-        - /subnets-validator
+        - /controller-manager
         - -v=5
+        - --ipam-qps=200

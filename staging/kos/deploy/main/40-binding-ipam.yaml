@@ -8,5 +8,5 @@ roleRef:
   name: example:ipam-controller
 subjects:
 - kind: ServiceAccount
-  name: ipam-controller
+  name: kos-controller-manager
   namespace: example-com
