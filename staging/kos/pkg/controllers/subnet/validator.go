@@ -59,7 +59,7 @@ type conflictsCache struct {
 	// the cache. If subnet X is the owner of the conflicts cache and a subnet Y
 	// is in rivals this means that when Y was last processed by a queue worker
 	// a conflict with X was found and at that time X had the VNI and CIDR
-	// values in ownerData.
+	// values in ownerSummary.
 	rivals []k8stypes.NamespacedName
 }
 
