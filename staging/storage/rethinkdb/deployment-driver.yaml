@@ -1,23 +1,25 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1
+kind: Deployment
 metadata:
+  name: rethinkdb-driver
+  namespace: default
   labels:
-    db: rethinkdb
-  name: rethinkdb-rc
+    db: rethinkdb-driver
 spec:
-  replicas: 1
+  replicas: 3
   selector:
-    db: rethinkdb
-    role: replicas
+    matchLabels:
+      app: rethinkdb-driver
   template:
     metadata:
       labels:
-        db: rethinkdb
-        role: replicas
+        app: rethinkdb-driver
     spec:
+      spec:
+      serviceAccountName: rethinkdb
       containers:
       - image: k8s.gcr.io/rethinkdb:1.16.0_1
-        name: rethinkdb
+        name: rethinkdb-driver
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -36,3 +38,16 @@ spec:
       volumes:
       - name: rethinkdb-storage
         emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    db: rethinkdb
+  name: rethinkdb-driver
+spec:
+  ports:
+    - port: 28015
+      targetPort: 28015
+  selector:
+    db: rethinkdb
