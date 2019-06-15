@@ -296,7 +296,6 @@ func schema_pkg_apis_meta_v1_APIResource(ref common.ReferenceCallback) common.Op
 				Required: []string{"name", "singularName", "namespaced", "kind", "verbs"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -452,7 +451,6 @@ func schema_pkg_apis_meta_v1_CreateOptions(ref common.ReferenceCallback) common.
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -543,7 +541,6 @@ func schema_pkg_apis_meta_v1_Duration(ref common.ReferenceCallback) common.OpenA
 				Required: []string{"Duration"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -586,7 +583,6 @@ func schema_pkg_apis_meta_v1_ExportOptions(ref common.ReferenceCallback) common.
 				Required: []string{"export", "exact"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -628,7 +624,6 @@ func schema_pkg_apis_meta_v1_GetOptions(ref common.ReferenceCallback) common.Ope
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -655,7 +650,6 @@ func schema_pkg_apis_meta_v1_GroupKind(ref common.ReferenceCallback) common.Open
 				Required: []string{"group", "kind"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -682,7 +676,6 @@ func schema_pkg_apis_meta_v1_GroupResource(ref common.ReferenceCallback) common.
 				Required: []string{"group", "resource"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -709,7 +702,6 @@ func schema_pkg_apis_meta_v1_GroupVersion(ref common.ReferenceCallback) common.O
 				Required: []string{"group", "version"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -738,7 +730,6 @@ func schema_pkg_apis_meta_v1_GroupVersionForDiscovery(ref common.ReferenceCallba
 				Required: []string{"groupVersion", "version"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -771,7 +762,6 @@ func schema_pkg_apis_meta_v1_GroupVersionKind(ref common.ReferenceCallback) comm
 				Required: []string{"group", "version", "kind"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -804,7 +794,6 @@ func schema_pkg_apis_meta_v1_GroupVersionResource(ref common.ReferenceCallback) 
 				Required: []string{"group", "version", "resource"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -826,7 +815,6 @@ func schema_pkg_apis_meta_v1_Initializer(ref common.ReferenceCallback) common.Op
 				Required: []string{"name"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -911,6 +899,7 @@ func schema_pkg_apis_meta_v1_LabelSelector(ref common.ReferenceCallback) common.
 							Description: "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -986,7 +975,6 @@ func schema_pkg_apis_meta_v1_LabelSelectorRequirement(ref common.ReferenceCallba
 				Required: []string{"key", "operator"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1070,7 +1058,6 @@ func schema_pkg_apis_meta_v1_ListMeta(ref common.ReferenceCallback) common.OpenA
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1154,7 +1141,6 @@ func schema_pkg_apis_meta_v1_ListOptions(ref common.ReferenceCallback) common.Op
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1250,6 +1236,7 @@ func schema_pkg_apis_meta_v1_ObjectMeta(ref common.ReferenceCallback) common.Ope
 							Description: "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -1264,6 +1251,7 @@ func schema_pkg_apis_meta_v1_ObjectMeta(ref common.ReferenceCallback) common.Ope
 							Description: "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -1385,7 +1373,6 @@ func schema_pkg_apis_meta_v1_OwnerReference(ref common.ReferenceCallback) common
 				Required: []string{"apiVersion", "kind", "name", "uid"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1395,10 +1382,8 @@ func schema_pkg_apis_meta_v1_Patch(ref common.ReferenceCallback) common.OpenAPID
 			SchemaProps: spec.SchemaProps{
 				Description: "Patch is provided to give a concrete name and type to the Kubernetes PATCH request body.",
 				Type:        []string{"object"},
-				Properties:  map[string]spec.Schema{},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1419,7 +1404,6 @@ func schema_pkg_apis_meta_v1_Preconditions(ref common.ReferenceCallback) common.
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1448,7 +1432,6 @@ func schema_pkg_apis_meta_v1_RootPaths(ref common.ReferenceCallback) common.Open
 				Required: []string{"paths"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1477,7 +1460,6 @@ func schema_pkg_apis_meta_v1_ServerAddressByClientCIDR(ref common.ReferenceCallb
 				Required: []string{"clientCIDR", "serverAddress"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1581,7 +1563,6 @@ func schema_pkg_apis_meta_v1_StatusCause(ref common.ReferenceCallback) common.Op
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1685,7 +1666,6 @@ func schema_pkg_apis_meta_v1_Timestamp(ref common.ReferenceCallback) common.Open
 				Required: []string{"seconds", "nanos"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1713,7 +1693,6 @@ func schema_pkg_apis_meta_v1_TypeMeta(ref common.ReferenceCallback) common.OpenA
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1755,7 +1734,6 @@ func schema_pkg_apis_meta_v1_UpdateOptions(ref common.ReferenceCallback) common.
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1805,7 +1783,6 @@ func schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref common.ReferenceCall
 				Required: []string{"Raw"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1831,7 +1808,6 @@ func schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref common.ReferenceCallback
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1879,7 +1855,6 @@ func schema_k8sio_apimachinery_pkg_runtime_Unknown(ref common.ReferenceCallback)
 				Required: []string{"Raw", "ContentEncoding", "ContentType"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1948,7 +1923,6 @@ func schema_k8sio_apimachinery_pkg_version_Info(ref common.ReferenceCallback) co
 				Required: []string{"major", "minor", "gitVersion", "gitCommit", "gitTreeState", "buildDate", "goVersion", "compiler", "platform"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -2099,7 +2073,6 @@ func schema_pkg_apis_network_v1alpha1_IPLockSpec(ref common.ReferenceCallback) c
 				Required: []string{"subnetName"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -2194,7 +2167,6 @@ func schema_pkg_apis_network_v1alpha1_NetworkAttachmentErrors(ref common.Referen
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -2253,14 +2225,14 @@ func schema_pkg_apis_network_v1alpha1_NetworkAttachmentSpec(ref common.Reference
 				Properties: map[string]spec.Schema{
 					"node": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Node is the name of the node where the attachment should appear",
+							Description: "Node is the name of the node where the attachment should appear. It is immutable: attempts to update it will fail.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"subnet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Subnet is the object name of the subnet of this attachment",
+							Description: "Subnet is the object name of the subnet of this attachment. It is immutable: attempts to update it will fail.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2272,7 +2244,7 @@ func schema_pkg_apis_network_v1alpha1_NetworkAttachmentSpec(ref common.Reference
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "PostCreateExec is a command to exec inside the attachment host's connection agent container after the Linux network interface is created.  Precisely: if a local NetworkAttachment is in the network fabric, has a non-empty PostCreateExec, and that command has not yet been launched then the command is launched and, upon completion, the results reported through the NetworkAttachmentStatus PostCreateExecReport field.  The connection agent is configured with a set of allowed programs to invoke.  If a non-allowed program is requested then the result will report an error.  Each argument is subjected to a very restricted form of variable expansion.  The only allowed syntax is `${variableName}` and the only variables are `ifname`, `ipv4`, and `mac`.",
+							Description: "PostCreateExec is a command to exec inside the attachment host's connection agent container after the Linux network interface is created.  Precisely: if a local NetworkAttachment is in the network fabric, has a non-empty PostCreateExec, and that command has not yet been launched then the command is launched and, upon completion, the results reported through the NetworkAttachmentStatus PostCreateExecReport field.  The connection agent is configured with a set of allowed programs to invoke.  If a non-allowed program is requested then the result will report an error.  Each argument is subjected to a very restricted form of variable expansion.  The only allowed syntax is `${variableName}` and the only variables are `ifname`, `ipv4`, and `mac`. PostCreateExec is immutable: attempts to update it will fail.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -2307,7 +2279,6 @@ func schema_pkg_apis_network_v1alpha1_NetworkAttachmentSpec(ref common.Reference
 				Required: []string{"node", "subnet"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -2478,14 +2449,14 @@ func schema_pkg_apis_network_v1alpha1_SubnetSpec(ref common.ReferenceCallback) c
 				Properties: map[string]spec.Schema{
 					"ipv4": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPv4 is the CIDR notation for the v4 address range of this subnet.",
+							Description: "IPv4 is the CIDR notation for the v4 address range of this subnet. It is immutable: attempts to update it will fail.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"vni": {
 						SchemaProps: spec.SchemaProps{
-							Description: "VNI identifies the virtual network. Valid values are in the range [1,2097151].",
+							Description: "VNI identifies the virtual network. Valid values are in the range [1,2097151]. It is immutable: attempts to update it will fail.",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -2494,7 +2465,6 @@ func schema_pkg_apis_network_v1alpha1_SubnetSpec(ref common.ReferenceCallback) c
 				Required: []string{"ipv4", "vni"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -2504,6 +2474,13 @@ func schema_pkg_apis_network_v1alpha1_SubnetStatus(ref common.ReferenceCallback)
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
+					"validated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Validated tells users and consumers whether the subnet spec has passed validation or not. The fields that undergo validation are spec.ipv4 and spec.vni. If Validated is true it is guaranteed to stay true for the whole lifetime of the subnet. If Validated is false or unset, there are three possible reasons:\n\t(1) Validation has not been performed yet.\n\t(2) The subnet CIDR overlaps with the CIDR of another subnet with the\n\t\tsame VNI.\n\t(3) The subnet Namespace is different than that of another subnet with\n\t\tthe same VNI.\nIf for a subnet X Validated is false because of other conflicting subnets, deletion of the conflicting subnets will cause a transition to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"errors": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -2511,7 +2488,7 @@ func schema_pkg_apis_network_v1alpha1_SubnetStatus(ref common.ReferenceCallback)
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Errors are the complaints, if any, from the IPAM controller.",
+							Description: "Errors holds the complaints, if any, from the subnets validator. It might contain an explanation on why SubnetStatus.Validated is false.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -2526,6 +2503,5 @@ func schema_pkg_apis_network_v1alpha1_SubnetStatus(ref common.ReferenceCallback)
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }

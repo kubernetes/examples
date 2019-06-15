@@ -100,19 +100,11 @@ func (*subnetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 }
 
 func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newS, oldS := obj.(*network.Subnet), old.(*network.Subnet)
-	if oldS.Spec.VNI != newS.Spec.VNI || oldS.Spec.IPv4 != newS.Spec.IPv4 {
-		// The fields that affect a subnet validation are VNI and CIDR. If one
-		// of these fields is updated, the subnet validity should be assessed
-		// again, hence we update accordingly all the subnet's status fields
-		// related to validation.
-		newS.Status.Validated = false
-		newS.Status.Errors.Validation = make([]string, 0)
-	}
 }
 
 func (ss *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	s := obj.(*network.Subnet)
+<<<<<<< HEAD
 	return ss.validate(s)
 }
 
@@ -134,6 +126,8 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 
 func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
 	glog.V(4).Infof("Validating subnet %s/%s", s.Namespace, s.Name)
+=======
+>>>>>>> Make Subnet and NetworkAttachment specs immutable
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
 	var errs field.ErrorList
 	var vniOutOfRange, malformedCIDR bool
@@ -186,6 +180,53 @@ func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, mal
 	return errs
 }
 
+<<<<<<< HEAD
+=======
+func (*subnetStrategy) AllowCreateOnUpdate() bool {
+	return false
+}
+
+func (*subnetStrategy) AllowUnconditionalUpdate() bool {
+	return false
+}
+
+func (*subnetStrategy) Canonicalize(obj runtime.Object) {
+}
+
+func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+	var errs field.ErrorList
+	immutableFieldMsg := "attempt to update immutable field"
+	newS, oldS := obj.(*network.Subnet), old.(*network.Subnet)
+	if newS.Spec.VNI != oldS.Spec.VNI {
+		errs = append(errs, field.Forbidden(field.NewPath("spec.vni"), immutableFieldMsg))
+	}
+	if newS.Spec.IPv4 != oldS.Spec.IPv4 {
+		errs = append(errs, field.Forbidden(field.NewPath("spec.ipv4"), immutableFieldMsg))
+	}
+	return errs
+}
+
+func (ss *subnetStrategy) subnetsWithVNI(vni string) ([]*subnet.Summary, error) {
+	subnets, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, vni)
+	if err != nil {
+		return nil, fmt.Errorf(".ByIndex failed for index %s and vni %s: %s", subnetVNIIndex, vni, err.Error())
+	}
+	glog.V(3).Infof("Found %d subnets with vni %s", len(subnets), vni)
+
+	summaries := make([]*subnet.Summary, 0, len(subnets))
+	for _, s := range subnets {
+		if summary, err := subnet.NewSummary(s); err == nil {
+			summaries = append(summaries, summary)
+			glog.V(3).Infof("Parsed subnet %s with vni %s", summary.NamespacedName, vni)
+		} else {
+			glog.Errorf("failed to parse subnet %s with vni %s: %s", summary.NamespacedName, vni, err.Error())
+		}
+	}
+
+	return summaries, nil
+}
+
+>>>>>>> Make Subnet and NetworkAttachment specs immutable
 func SubnetVNI(obj interface{}) ([]string, error) {
 	s, isInternalVersionSubnet := obj.(*network.Subnet)
 	if isInternalVersionSubnet {

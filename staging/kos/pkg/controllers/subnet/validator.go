@@ -19,6 +19,7 @@ package subnet
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -50,6 +51,7 @@ const subnetVNIField = "spec.vni"
 // stored in it might no longer be in conflict with the owning subnet, for
 // instance because of an update to Y's CIDR following its addition to the
 // cache.
+// TODO: need re-thinking
 type conflictsCache struct {
 	// ownerSummary stores the data relevant to validation for the subnet owning
 	// the conflicts cache.
@@ -156,8 +158,11 @@ func (v *Validator) OnUpdate(oldObj, newObj interface{}) {
 	oldS, newS := oldObj.(*netv1a1.Subnet), newObj.(*netv1a1.Subnet)
 	glog.V(5).Infof("Notified of update from %#+v to %#+v.", oldS, newS)
 
-	// Process a subnet only if the fields that affect validation have changed.
-	if oldS.Spec.IPv4 != newS.Spec.IPv4 || oldS.Spec.VNI != newS.Spec.VNI {
+	// Process a subnet only if has not passed validation yet. No need to check
+	// if the fields that affect validation (spec.IPv4 and spec.VNI) have
+	// changed because they are immutable.
+	// TODO: need re-thinking
+	if !newS.Status.Validated {
 		v.queue.Add(k8stypes.NamespacedName{
 			Namespace: newS.Namespace,
 			Name:      newS.Name,
@@ -232,6 +237,9 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	}
 
 	if v.subnetIsStale(ss.NamespacedName, s.ResourceVersion) {
+		// If we're here there's been an update to the subnet which has not been
+		// reflected yet in the Informer's cache: halt processing because we
+		// would be processing a stale subnet.
 		return nil
 	}
 
@@ -239,13 +247,13 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	// validation. We need to update its conflicts cache accordingly and
 	// reconsider old rivals because they might no longer be in conflict with
 	// s.
+	// TODO: need re-thinking
 	oldRivals := v.updateConflictsCache(ss)
 	for _, r := range oldRivals {
 		v.queue.Add(r)
 	}
 
-	// Keep the promise that a Subnet stays validated once it becomes validated
-	// (unless and until its VNI or CIDR block changes).
+	// Keep the promise that a Subnet stays validated once it becomes validated.
 	if s.Status.Validated {
 		return nil
 	}
@@ -254,7 +262,8 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	// opposed to a cache-based one (through the informer) prevents race
 	// conditions that can arise in case of multiple validators running.
 	potentialRivals, err := v.netIfc.Subnets(k8scorev1api.NamespaceAll).List(k8smetav1.ListOptions{
-		FieldSelector: k8sfields.OneTermEqualSelector(subnetVNIField, fmt.Sprint(ss.VNI)).String(),
+		// TODO: Make sure that 10 is the correct base when formatting the VNI as opposed to 16.
+		FieldSelector: k8sfields.OneTermEqualSelector(subnetVNIField, strconv.FormatUint(uint64(ss.VNI), 10)).String(),
 	})
 	if err != nil {
 		if malformedRequest(err) {
@@ -346,6 +355,7 @@ func malformedRequest(e error) bool {
 		k8serrors.IsInvalid(e)
 }
 
+// TODO: need review.
 func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals []netv1a1.Subnet) (conflictsMsgs []string, conflictFound bool, err error) {
 	for _, pr := range potentialRivals {
 		potentialRival, parsingErrs := subnet.NewSummary(&pr)
@@ -395,7 +405,7 @@ func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validated bool, vali
 		}
 		v.updateStaleRV(nsn, s.ResourceVersion)
 	case malformedRequest(err):
-		glog.Errorf("failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error", s, sCopy, err.Error())
+		glog.Errorf("Failed to update subnet from %#+v to %#+v: %s. There will be no retry because of the nature of the error.", s, sCopy, err.Error())
 	default:
 		return fmt.Errorf("failed to update subnet from %#+v to %#+v: %s", s, sCopy, err.Error())
 	}

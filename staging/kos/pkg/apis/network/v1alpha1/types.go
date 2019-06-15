@@ -35,10 +35,12 @@ type NetworkAttachmentList struct {
 }
 
 type NetworkAttachmentSpec struct {
-	// Node is the name of the node where the attachment should appear
+	// Node is the name of the node where the attachment should appear.
+	// It is immutable: attempts to update it will fail.
 	Node string `json:"node" protobuf:"bytes,1,name=node"`
 
-	// Subnet is the object name of the subnet of this attachment
+	// Subnet is the object name of the subnet of this attachment.
+	// It is immutable: attempts to update it will fail.
 	Subnet string `json:"subnet" protobuf:"bytes,2,name=subnet"`
 
 	// PostCreateExec is a command to exec inside the attachment
@@ -54,6 +56,7 @@ type NetworkAttachmentSpec struct {
 	// very restricted form of variable expansion.  The only allowed
 	// syntax is `${variableName}` and the only variables are
 	// `ifname`, `ipv4`, and `mac`.
+	// PostCreateExec is immutable: attempts to update it will fail.
 	// +optional
 	// +patchStrategy=replace
 	PostCreateExec []string `json:"postCreateExec,omitempty" protobuf:"bytes,3,opt,name=postCreateExec" patchStrategy:"replace"`
@@ -138,7 +141,7 @@ type ExecReport struct {
 	StdErr string `json:"stdErr" protobuf:"bytes,5,name=stdErr"`
 }
 
-// Equal tests whether the two referenced ExecReports say the same
+// Equiv tests whether the two referenced ExecReports say the same
 // thing within the available time precision.  The apiservers only
 // store time values with seconds precision.
 func (x *ExecReport) Equiv(y *ExecReport) bool {
@@ -176,42 +179,37 @@ type NetworkAttachment struct {
 // - are in the same Kubernetes API namespace.
 type SubnetSpec struct {
 	// IPv4 is the CIDR notation for the v4 address range of this subnet.
+	// It is immutable: attempts to update it will fail.
 	IPv4 string `json:"ipv4" protobuf:"bytes,1,name=ipv4"`
 
 	// VNI identifies the virtual network.
 	// Valid values are in the range [1,2097151].
+	// It is immutable: attempts to update it will fail.
 	VNI uint32 `json:"vni" protobuf:"bytes,2,name=vni"`
 }
 
 type SubnetStatus struct {
 	// Validated tells users and consumers whether the subnet spec has passed
-	// validation or not. The fields that undergo validation are VNI and CIDR.
-	// If Validated is true it is guaranteed to stay true until either one of
-	// SubnetSpec.IPv4 or SubnetSpec.VNI is updated.
-	// If Validated is false or unset, there are three possible reasons:
+	// validation or not. The fields that undergo validation are spec.ipv4 and
+	// spec.vni. If Validated is true it is guaranteed to stay true for the
+	// whole lifetime of the subnet. If Validated is false or unset, there are
+	// three possible reasons:
 	// 	(1) Validation has not been performed yet.
 	// 	(2) The subnet CIDR overlaps with the CIDR of another subnet with the
 	//		same VNI.
 	//	(3) The subnet Namespace is different than that of another subnet with
 	// 		the same VNI.
+	// If for a subnet X Validated is false because of other conflicting
+	// subnets, deletion of the conflicting subnets will cause a transition to
+	// true.
 	// +optional
 	Validated bool `json:"validated,omitempty" protobuf:"bytes,1,opt,name=validated"`
 
-	// +optional
-	Errors SubnetErrors `json:"errors,omitempty" protobuf:"bytes,2,opt,name=errors"`
-}
-
-type SubnetErrors struct {
-	// IPAM holds the complaints, if any, from the IPAM controller.
+	// Errors holds the complaints, if any, from the subnets validator. It might
+	// contain an explanation on why SubnetStatus.Validated is false.
 	// +optional
 	// +patchStrategy=replace
-	IPAM []string `json:"ipam,omitempty" protobuf:"bytes,1,opt,name=ipam" patchStrategy:"replace"`
-
-	// Validation holds the complaints, if any, from the subnets validator. It
-	// might contain an explanation on why SubnetStatus.Validated is false.
-	// +optional
-	// +patchStrategy=replace
-	Validation []string `json:"validation,omitempty" protobuf:"bytes,2,opt,name=validation" patchStrategy:"replace"`
+	Errors []string `json:"errors,omitempty" protobuf:"bytes,2,opt,name=errors" patchStrategy:"replace"`
 }
 
 // +genclient
