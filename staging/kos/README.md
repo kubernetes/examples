@@ -51,10 +51,17 @@ This example adds the following to the Kubernetes cluster.
   extension servers serve the custom resources used in this example,
   using the etcd cluster for storage.
 
-- A Deployment of a controller that validates API objects of kind `subnet`
-  and marks them as either validated or not.
-
-- A Deployment of a controller that assigns IP addresses.
+- A Controller Manager Deployment. It is meant to be a singleton. It
+  runs some of the controllers that KOS needs. Logically, each controller
+  is a separate process, but to reduce complexity, they are all compiled
+  into a single binary and run in a single process, in the same way the
+  [Kubernetes controller manager](https://kubernetes.io/docs/concepts/overview/components/#kube-controller-manager)
+  does. These controllers are:
+  - [Subnet validation controller](#the-subnet-validation-controller):
+    Responsible for validation of API objects of kind `subnet` and marking
+    them as validated or not.
+  - [IPAM controller](#the-ipam-controller): Responsible for assigning IP
+    addresses to NetworkAttachments.
 
 - A DaemonSet of connection agents that implement the node-local
   functionality of the SDN, by talking to the kube API machinery and
@@ -196,10 +203,10 @@ remote NetworkAttachment node. The flows installed in that bridge will
 make it possible to deliver the packet to the NetworkAttachment's interface.
 
 
-## The Subnets Validator
+## The Subnet Validation Controller
 
-This is a singleton that attempts to solve the problem of enforcing the
-two following invariants:
+This is a singleton that runs within the Controller Manager and attempts
+to solve the problem of enforcing the two following invariants:
 
   1. There are no subnets with the same VNI and overlapping CIDR blocks.
   2. There are no subnets with the same VNI and different Kubernetes API
@@ -305,9 +312,8 @@ cache-based ones prevents the race condition described above.
 
 ## The IPAM Controller
 
-This is a singleton that assigns IP addresses to NetworkAttachments.
-It is managed by a Deployment object with its number of replicas set
-to 1.
+This is a singleton that runs within the Controller Manager and assigns IP
+addresses to NetworkAttachments.
 
 The following three approaches were considered, with the last one
 taken.
