@@ -17,6 +17,7 @@ limitations under the License.
 package ipam
 
 import (
+	"errors"
 	"fmt"
 	gonet "net"
 	"net/http"
@@ -228,7 +229,7 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	}
 }
 
-func (ctlr *IPAMController) Run(stopCh <-chan struct{}) {
+func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer ctlr.queue.ShutDown()
 
@@ -255,14 +256,17 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) {
 		ctlr.OnLockDelete})
 
 	if !k8scache.WaitForCacheSync(stopCh, ctlr.subnetInformer.HasSynced, ctlr.lockInformer.HasSynced, ctlr.netattInformer.HasSynced) {
-		panic("informers' caches failed to sync")
+		return errors.New("informers' caches failed to sync")
 	}
 	glog.V(2).Info("Informers' caches synced.")
 	for i := 0; i < ctlr.workers; i++ {
 		go k8swait.Until(ctlr.processQueue, time.Second, stopCh)
 	}
 	glog.V(4).Infof("Launched %d workers\n", ctlr.workers)
+
 	<-stopCh
+
+	return nil
 }
 
 func (ctlr *IPAMController) OnSubnetCreate(obj interface{}) {

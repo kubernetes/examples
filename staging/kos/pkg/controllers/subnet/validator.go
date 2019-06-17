@@ -17,6 +17,7 @@ limitations under the License.
 package subnet
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -117,7 +118,7 @@ func NewValidationController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 
 // Run starts the validator and blocks until stop is closed. This entails
 // starting its Informer and the worker goroutines.
-func (v *Validator) Run(stop <-chan struct{}) {
+func (v *Validator) Run(stop <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer v.queue.ShutDown()
 
@@ -127,7 +128,7 @@ func (v *Validator) Run(stop <-chan struct{}) {
 	v.subnetInformer.AddEventHandler(v)
 
 	if !k8scache.WaitForCacheSync(stop, v.subnetInformer.HasSynced) {
-		panic("informer cache failed to sync")
+		return errors.New("informer cache failed to sync")
 	}
 	glog.V(2).Infof("Informer cache synced.")
 
@@ -138,6 +139,8 @@ func (v *Validator) Run(stop <-chan struct{}) {
 	glog.V(2).Infof("Launched %d workers.", v.workers)
 
 	<-stop
+
+	return nil
 }
 
 func (v *Validator) OnAdd(obj interface{}) {

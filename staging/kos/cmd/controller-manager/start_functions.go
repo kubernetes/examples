@@ -100,7 +100,11 @@ func startIPAMController(c controllerContext) error {
 		queue,
 		options.Workers,
 		hostname)
-	go ctlr.Run(c.stop)
+	go func() {
+		if err := ctlr.Run(c.stop); err != nil {
+			panic(err.Error())
+		}
+	}()
 
 	return nil
 }
@@ -129,7 +133,11 @@ func startSubnetValidationController(c controllerContext) error {
 		subnets.Lister(),
 		queue,
 		options.Workers)
-	go ctlr.Run(c.stop)
+	go func() {
+		if err := ctlr.Run(c.stop); err != nil {
+			panic(err.Error())
+		}
+	}()
 
 	return nil
 }
