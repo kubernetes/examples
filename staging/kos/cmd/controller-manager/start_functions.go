@@ -60,7 +60,7 @@ func startIPAMController(c controllerContext) error {
 	clientCfg.Burst = options.Burst
 	clientCfg.UserAgent = "ipam-controller"
 
-	glog.Infof("Starting IPAM controller with config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d, indirect-requests=%t", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst, options.IndirectRequests)
+	glog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d, indirect-requests=%t", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst, options.IndirectRequests)
 
 	//? We're giving to the events client the same QPS and burst as the other
 	// client. Not necessarily bad, not necessarily good.
@@ -116,7 +116,7 @@ func startSubnetValidationController(c controllerContext) error {
 	clientCfg.Burst = options.Burst
 	clientCfg.UserAgent = "subnet-validation-controller"
 
-	glog.Infof("Starting subnet validation controller with config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst)
+	glog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst)
 
 	// TODO: Give our API servers verifiable identities.
 	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
