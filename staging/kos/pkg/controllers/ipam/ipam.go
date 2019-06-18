@@ -285,7 +285,7 @@ func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
 }
 
 func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
-	if op != opDeletion && !subnet.Status.Validated && len(subnet.Status.Errors.Validation) == 0 {
+	if op != opDeletion && !subnet.Status.Validated && len(subnet.Status.Errors) == 0 {
 		// subnet has not been processed by the subent validator yet, soon a new
 		// notification with the outcome of the validation will arrive, hence we
 		// can ignore this one.
@@ -544,7 +544,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 				// This attachment will be requeued upon notification of subnet creation
 				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
 			} else {
-				if len(subnet.Status.Errors.Validation) == 0 {
+				if len(subnet.Status.Errors) == 0 {
 					glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
 					// In the future the subnet will undergo validation and a
 					// notification carrying the outcome will trigger

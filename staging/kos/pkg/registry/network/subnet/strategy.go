@@ -104,30 +104,6 @@ func (*subnetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Ob
 
 func (ss *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	s := obj.(*network.Subnet)
-<<<<<<< HEAD
-	return ss.validate(s)
-}
-
-func (*subnetStrategy) AllowCreateOnUpdate() bool {
-	return false
-}
-
-func (*subnetStrategy) AllowUnconditionalUpdate() bool {
-	return false
-}
-
-func (*subnetStrategy) Canonicalize(obj runtime.Object) {
-}
-
-func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	newS := obj.(*network.Subnet)
-	return ss.validate(newS)
-}
-
-func (ss *subnetStrategy) validate(s *network.Subnet) field.ErrorList {
-	glog.V(4).Infof("Validating subnet %s/%s", s.Namespace, s.Name)
-=======
->>>>>>> Make Subnet and NetworkAttachment specs immutable
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
 	var errs field.ErrorList
 	var vniOutOfRange, malformedCIDR bool
@@ -161,15 +137,13 @@ func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, mal
 		return
 	}
 	glog.V(5).Infof("Found %d subnets with vni %d", len(potentialRivals), candidate.VNI)
+	// Check whether there are Namespace and CIDR conflicts with other subnets.
 	for _, potentialRival := range potentialRivals {
-		pr, err := subnet.NewSummary(potentialRival)
-		if err != nil || candidate.SameSubnetAs(pr) {
-			if err != nil {
-				glog.Errorf("failed to parse subnet %s with vni %d: %s", pr.NamespacedName, candidate.VNI, err.Error())
-			}
-			continue
-		}
-		glog.V(6).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
+		// Ignore the error because a malformed subnet would not have been
+		// allowed: it's the code in this file that performs validation.
+		pr, _ := subnet.NewSummary(potentialRival)
+
+		glog.V(2).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
 		if candidate.NSConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}
@@ -180,8 +154,6 @@ func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, mal
 	return errs
 }
 
-<<<<<<< HEAD
-=======
 func (*subnetStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
@@ -206,31 +178,10 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 	return errs
 }
 
-func (ss *subnetStrategy) subnetsWithVNI(vni string) ([]*subnet.Summary, error) {
-	subnets, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, vni)
-	if err != nil {
-		return nil, fmt.Errorf(".ByIndex failed for index %s and vni %s: %s", subnetVNIIndex, vni, err.Error())
-	}
-	glog.V(3).Infof("Found %d subnets with vni %s", len(subnets), vni)
-
-	summaries := make([]*subnet.Summary, 0, len(subnets))
-	for _, s := range subnets {
-		if summary, err := subnet.NewSummary(s); err == nil {
-			summaries = append(summaries, summary)
-			glog.V(3).Infof("Parsed subnet %s with vni %s", summary.NamespacedName, vni)
-		} else {
-			glog.Errorf("failed to parse subnet %s with vni %s: %s", summary.NamespacedName, vni, err.Error())
-		}
-	}
-
-	return summaries, nil
-}
-
->>>>>>> Make Subnet and NetworkAttachment specs immutable
 func SubnetVNI(obj interface{}) ([]string, error) {
 	s, isInternalVersionSubnet := obj.(*network.Subnet)
 	if isInternalVersionSubnet {
-		return []string{fmt.Sprint(s.Spec.VNI)}, nil
+		return []string{strconv.FormatUint(uint64(s.Spec.VNI), 10)}, nil
 	}
 	return nil, errors.New("received object which is not an internal version subnet")
 }
