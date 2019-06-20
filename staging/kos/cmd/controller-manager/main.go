@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -30,17 +31,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"k8s.io/examples/staging/kos/cmd/controller-manager/options"
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 )
 
 func main() {
-	controllersOptions := &options.KOSControllerManagerOptions{
-		SubnetValidationController: &options.SubnetValidationControllerOptions{},
-		IPAMController:             &options.IPAMControllerOptions{},
-	}
-	controllersOptions.AddFlags()
+	ctlrOpts := &KOSControllerManagerOptions{}
+	ctlrOpts.AddFlags()
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
@@ -52,28 +49,24 @@ func main() {
 	rand.Uint64()
 	rand.Uint64()
 
-	baseClientCfg, err := clientcmd.BuildConfigFromFlags("", controllersOptions.KubeconfigFilename)
+	k8sClientCfg, kosClientCfg, err := buildClientConfigs(ctlrOpts)
 	if err != nil {
-		glog.Errorf("Failed to build client config for kubeconfig=%q: %s", controllersOptions.KubeconfigFilename, err.Error())
+		glog.Errorf("Failed to build client configs: %s.", err.Error())
 		os.Exit(2)
 	}
 
-	kosInformersClientCfg := *baseClientCfg
-	// TODO we might want to set QPS and burst for the Informers' clientset as
-	// well. If that's the case we need new flags.
-	kosInformersClientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
-	kosInformersClientset, err := kosclientset.NewForConfig(&kosInformersClientCfg)
+	kosInformersClientset, err := kosclientset.NewForConfig(kosClientCfg)
 	if err != nil {
-		glog.Errorf("Failed to configure kos clientset for informers: %s", err.Error())
+		glog.Errorf("Failed to configure kos clientset for informers: %s.", err.Error())
 		os.Exit(3)
 	}
 
-	stop := stopOnSignals()
 	ctx := controllerContext{
-		clientCfg:       baseClientCfg,
-		options:         controllersOptions,
+		k8sClientCfg:    k8sClientCfg,
+		kosClientCfg:    kosClientCfg,
+		options:         ctlrOpts,
 		sharedInformers: kosinformers.NewSharedInformerFactory(kosInformersClientset, 0),
-		stop:            stop,
+		stop:            stopOnSignals(),
 	}
 	for controller, startController := range managedControllers {
 		if err := startController(ctx); err != nil {
@@ -83,10 +76,32 @@ func main() {
 	}
 	glog.Info("All controllers started.")
 
-	ctx.sharedInformers.Start(stop)
+	ctx.sharedInformers.Start(ctx.stop)
 	glog.V(2).Info("Informers started.")
 
-	<-stop
+	<-ctx.stop
+}
+
+func buildClientConfigs(opts *KOSControllerManagerOptions) (k8sCfg, kosCfg *rest.Config, err error) {
+	k8sCfg, err = clientcmd.BuildConfigFromFlags("", opts.KubeconfigFilename)
+	if err != nil {
+		err = fmt.Errorf("Failed to build client config for kubeconfig=%q: %s", opts.KubeconfigFilename, err.Error())
+		return
+	}
+	k8sCfg.QPS = float32(opts.QPS)
+	k8sCfg.Burst = opts.Burst
+
+	{
+		tmpCopy := *k8sCfg
+		kosCfg = &tmpCopy
+	}
+	// TODO: Give our API servers verifiable identities.
+	kosCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
+	if !opts.IndirectRequests {
+		kosCfg.Host = "network-api:443"
+	}
+
+	return
 }
 
 // stopOnSignals makes a "stop channel" that is closed upon receipt of certain

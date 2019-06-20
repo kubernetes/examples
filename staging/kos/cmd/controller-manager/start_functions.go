@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 
-	"k8s.io/examples/staging/kos/cmd/controller-manager/options"
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 	"k8s.io/examples/staging/kos/pkg/controllers/ipam"
@@ -45,41 +44,27 @@ func init() {
 }
 
 type controllerContext struct {
-	clientCfg       *rest.Config
-	options         *options.KOSControllerManagerOptions
+	k8sClientCfg    *rest.Config
+	kosClientCfg    *rest.Config
+	options         *KOSControllerManagerOptions
 	sharedInformers kosinformers.SharedInformerFactory
 	stop            <-chan struct{}
 }
 
-type startFunction func(c controllerContext) error
+type startFunction func(ctx controllerContext) error
 
-func startIPAMController(c controllerContext) error {
-	options := c.options.IPAMController
-	clientCfg := *c.clientCfg
-	clientCfg.QPS = float32(options.QPS)
-	clientCfg.Burst = options.Burst
-	clientCfg.UserAgent = "ipam-controller"
+func startIPAMController(ctx controllerContext) error {
+	glog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.IPAMControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
-	glog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d, indirect-requests=%t", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst, options.IndirectRequests)
-
-	//? We're giving to the events client the same QPS and burst as the other
-	// client. Not necessarily bad, not necessarily good.
-	k8sClientset, err := k8sclient.NewForConfig(&clientCfg)
+	k8sClientset, err := k8sclient.NewForConfig(ctx.k8sClientCfg)
 	if err != nil {
-		return fmt.Errorf("failed to configure k8s clientset for kubeconfig=%q: %s", c.options.KubeconfigFilename, err.Error())
+		return fmt.Errorf("failed to configure k8s clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
 	eventIfc := k8sClientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 
-	if !options.IndirectRequests {
-		clientCfg.Host = "network-api:443"
-	}
-
-	// TODO: Give our API servers verifiable identities.
-	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
-
-	kosClientset, err := kosclientset.NewForConfig(&clientCfg)
+	kosClientset, err := kosclientset.NewForConfig(ctx.kosClientCfg)
 	if err != nil {
-		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", c.options.KubeconfigFilename, err.Error())
+		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
 
 	hostname, err := os.Hostname()
@@ -87,8 +72,7 @@ func startIPAMController(c controllerContext) error {
 		return fmt.Errorf("failed to get local hostname: %s", err.Error())
 	}
 
-	kosInformers := c.sharedInformers.Network().V1alpha1()
-	queue := workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue")
+	kosInformers := ctx.sharedInformers.Network().V1alpha1()
 	ctlr := ipam.NewController(kosClientset.NetworkV1alpha1(),
 		kosInformers.Subnets().Informer(),
 		kosInformers.Subnets().Lister(),
@@ -97,11 +81,14 @@ func startIPAMController(c controllerContext) error {
 		kosInformers.IPLocks().Informer(),
 		kosInformers.IPLocks().Lister(),
 		eventIfc,
-		queue,
-		options.Workers,
-		hostname)
+		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue"),
+		ctx.options.IPAMControllerWorkers,
+		hostname,
+	)
+
+	// Start the controller.
 	go func() {
-		if err := ctlr.Run(c.stop); err != nil {
+		if err := ctlr.Run(ctx.stop); err != nil {
 			panic(err.Error())
 		}
 	}()
@@ -109,32 +96,25 @@ func startIPAMController(c controllerContext) error {
 	return nil
 }
 
-func startSubnetValidationController(c controllerContext) error {
-	options := c.options.SubnetValidationController
-	clientCfg := *c.clientCfg
-	clientCfg.QPS = float32(options.QPS)
-	clientCfg.Burst = options.Burst
-	clientCfg.UserAgent = "subnet-validation-controller"
+func startSubnetValidationController(ctx controllerContext) error {
+	glog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.SubnetValidationControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
-	glog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%f, burst=%d", c.options.KubeconfigFilename, options.Workers, clientCfg.QPS, clientCfg.Burst)
-
-	// TODO: Give our API servers verifiable identities.
-	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
-
-	kosClientset, err := kosclientset.NewForConfig(&clientCfg)
+	kosClientset, err := kosclientset.NewForConfig(ctx.kosClientCfg)
 	if err != nil {
-		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", c.options.KubeconfigFilename, err.Error())
+		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
 
-	subnets := c.sharedInformers.Network().V1alpha1().Subnets()
-	queue := workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue")
+	subnets := ctx.sharedInformers.Network().V1alpha1().Subnets()
 	ctlr := subnet.NewValidationController(kosClientset.NetworkV1alpha1(),
 		subnets.Informer(),
 		subnets.Lister(),
-		queue,
-		options.Workers)
+		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue"),
+		ctx.options.SubnetValidationControllerWorkers,
+	)
+
+	// Start the controller.
 	go func() {
-		if err := ctlr.Run(c.stop); err != nil {
+		if err := ctlr.Run(ctx.stop); err != nil {
 			panic(err.Error())
 		}
 	}()

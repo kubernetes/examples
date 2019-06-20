@@ -26,4 +26,8 @@ spec:
         command:
         - /controller-manager
         - -v=5
-        - --ipam-qps=200
+        - --qps=100
+        - --burst=200
+        - --indirect-requests=true
+        - --ipam-workers=2
+        - --subnet-validator-workers=2

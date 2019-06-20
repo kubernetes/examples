@@ -14,27 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package options
+package main
 
 import "flag"
 
+const (
+	defaultQPS              = 100
+	defaultBurst            = 200
+	defaultIndirectRequests = false
+	defaultWorkers          = 2
+)
+
 // KOSControllerManagerOptions stores the options for all the managed
-// controllers.
+// KOS controllers.
 type KOSControllerManagerOptions struct {
 	KubeconfigFilename string
+	QPS                int
+	Burst              int
+	IndirectRequests   bool
 
-	// IPAMController stores the options specific to the IPAM controller.
-	IPAMController *IPAMControllerOptions
-
-	// SubnetValidationController stores the options specific to the subnet
-	// validation controller.
-	SubnetValidationController *SubnetValidationControllerOptions
+	IPAMControllerWorkers             int
+	SubnetValidationControllerWorkers int
 }
 
 // AddFlags binds o's fields to the corresponding CLI flags for the managed
 // controllers.
 func (o *KOSControllerManagerOptions) AddFlags() {
 	flag.StringVar(&o.KubeconfigFilename, "kubeconfig", "", "kubeconfig filename")
-	o.IPAMController.addFlags()
-	o.SubnetValidationController.addFlags()
+	flag.IntVar(&o.QPS, "qps", defaultQPS, "QPS to use while talking to the api-servers")
+	flag.IntVar(&o.Burst, "burst", defaultBurst, "Burst to use while talking to the api-servers")
+	flag.BoolVar(&o.IndirectRequests, "indirect-requests", defaultIndirectRequests, "requests go through main api-servers instead of directly to network api-servers")
+	flag.IntVar(&o.IPAMControllerWorkers, "ipam-workers", defaultWorkers, "number of worker threads for the IPAM controller")
+	flag.IntVar(&o.SubnetValidationControllerWorkers, "subnet-validator-workers", defaultWorkers, "number of worker threads for the subnet validator")
 }
