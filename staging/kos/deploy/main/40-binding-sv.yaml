@@ -8,5 +8,5 @@ roleRef:
   name: example:subnets-validator
 subjects:
 - kind: ServiceAccount
-  name: subnets-validator
+  name: kos-controller-manager
   namespace: example-com

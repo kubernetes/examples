@@ -17,6 +17,7 @@ limitations under the License.
 package ipam
 
 import (
+	"errors"
 	"fmt"
 	gonet "net"
 	"net/http"
@@ -128,7 +129,7 @@ type NetworkAttachmentData struct {
 	anticipationSubnetRV        string
 }
 
-func NewIPAMController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
+func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	subnetInformer k8scache.SharedInformer,
 	subnetLister netlistv1a1.SubnetLister,
 	netattInformer k8scache.SharedIndexInformer,
@@ -138,7 +139,7 @@ func NewIPAMController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	eventIfc k8scorev1client.EventInterface,
 	queue k8sworkqueue.RateLimitingInterface,
 	workers int,
-	hostname string) (ctlr *IPAMController, err error) {
+	hostname string) *IPAMController {
 
 	attachmentCreateToLockHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
@@ -203,7 +204,10 @@ func NewIPAMController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	eventBroadcaster.StartRecordingToSink(&k8scorev1client.EventSinkImpl{eventIfc})
 	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "ipam", Host: hostname})
 
-	ctlr = &IPAMController{
+	netattInformer.AddIndexers(map[string]k8scache.IndexFunc{attachmentSubnetIdxName: AttachmentSubnets})
+	lockInformer.AddIndexers(map[string]k8scache.IndexFunc{owningAttachmentIdxName: OwningAttachments})
+
+	return &IPAMController{
 		netIfc:                             netIfc,
 		subnetInformer:                     subnetInformer,
 		subnetLister:                       subnetLister,
@@ -223,12 +227,14 @@ func NewIPAMController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 		anticipationUsedHistogram:          anticipationUsedHistogram,
 		statusUsedHistogram:                statusUsedHistogram,
 	}
-	return
 }
 
 func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer ctlr.queue.ShutDown()
+
+	glog.Info("Starting IPAM controller.")
+	defer glog.Info("Shutting down IPAM controller.")
 
 	// Serve Prometheus metrics
 	http.Handle("/metrics", promhttp.Handler())
@@ -236,8 +242,6 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 		glog.Errorf("In-process HTTP server crashed: %s\n", http.ListenAndServe(MetricsAddr, nil).Error())
 	}()
 
-	ctlr.netattInformer.AddIndexers(map[string]k8scache.IndexFunc{attachmentSubnetIdxName: AttachmentSubnets})
-	ctlr.lockInformer.AddIndexers(map[string]k8scache.IndexFunc{owningAttachmentIdxName: OwningAttachments})
 	ctlr.subnetInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		ctlr.OnSubnetCreate,
 		ctlr.OnSubnetUpdate,
@@ -250,19 +254,18 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 		ctlr.OnLockCreate,
 		ctlr.OnLockUpdate,
 		ctlr.OnLockDelete})
-	go ctlr.lockInformer.Run(stopCh)
-	go ctlr.netattInformer.Run(stopCh)
-	go ctlr.subnetInformer.Run(stopCh)
-	glog.V(2).Infof("Informer Runs forked\n")
+
 	if !k8scache.WaitForCacheSync(stopCh, ctlr.subnetInformer.HasSynced, ctlr.lockInformer.HasSynced, ctlr.netattInformer.HasSynced) {
-		return fmt.Errorf("Caches failed to sync")
+		return errors.New("informers' caches failed to sync")
 	}
-	glog.V(2).Infof("Caches synced\n")
+	glog.V(2).Info("Informers' caches synced.")
 	for i := 0; i < ctlr.workers; i++ {
 		go k8swait.Until(ctlr.processQueue, time.Second, stopCh)
 	}
 	glog.V(4).Infof("Launched %d workers\n", ctlr.workers)
+
 	<-stopCh
+
 	return nil
 }
 
