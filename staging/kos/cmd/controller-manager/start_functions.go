@@ -38,31 +38,29 @@ var managedControllers map[string]startFunction
 
 func init() {
 	managedControllers = map[string]startFunction{
-		"subnet-validation-contoller": startSubnetValidationController,
-		"ipam-controller":             startIPAMController,
+		"kos-subnet-validation-controller": startSubnetValidationController,
+		"kos-ipam-controller":              startIPAMController,
 	}
 }
 
 type controllerContext struct {
-	k8sClientCfg    *rest.Config
-	kosClientCfg    *rest.Config
 	options         *KOSControllerManagerOptions
 	sharedInformers kosinformers.SharedInformerFactory
 	stop            <-chan struct{}
 }
 
-type startFunction func(ctx controllerContext) error
+type startFunction func(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error
 
-func startIPAMController(ctx controllerContext) error {
+func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error {
 	glog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.IPAMControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
-	k8sClientset, err := k8sclient.NewForConfig(ctx.k8sClientCfg)
+	k8sClientset, err := k8sclient.NewForConfig(k8sClientCfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure k8s clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
 	eventIfc := k8sClientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 
-	kosClientset, err := kosclientset.NewForConfig(ctx.kosClientCfg)
+	kosClientset, err := kosclientset.NewForConfig(kosClientCfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
@@ -96,10 +94,10 @@ func startIPAMController(ctx controllerContext) error {
 	return nil
 }
 
-func startSubnetValidationController(ctx controllerContext) error {
+func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error {
 	glog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.SubnetValidationControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
-	kosClientset, err := kosclientset.NewForConfig(ctx.kosClientCfg)
+	kosClientset, err := kosclientset.NewForConfig(kosClientCfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}

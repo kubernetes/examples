@@ -55,21 +55,21 @@ func main() {
 		os.Exit(2)
 	}
 
-	kosInformersClientset, err := kosclientset.NewForConfig(kosClientCfg)
+	kosInformersClientset, err := kosclientset.NewForConfig(addUserAgent(kosClientCfg, "kos-controller-manager"))
 	if err != nil {
 		glog.Errorf("Failed to configure kos clientset for informers: %s.", err.Error())
 		os.Exit(3)
 	}
 
 	ctx := controllerContext{
-		k8sClientCfg:    k8sClientCfg,
-		kosClientCfg:    kosClientCfg,
 		options:         ctlrOpts,
 		sharedInformers: kosinformers.NewSharedInformerFactory(kosInformersClientset, 0),
 		stop:            stopOnSignals(),
 	}
 	for controller, startController := range managedControllers {
-		if err := startController(ctx); err != nil {
+		k8sCC := addUserAgent(k8sClientCfg, controller)
+		kosCC := addUserAgent(kosClientCfg, controller)
+		if err := startController(ctx, k8sCC, kosCC); err != nil {
 			glog.Errorf("Failed to start %s: %s", controller, err.Error())
 			os.Exit(4)
 		}
@@ -82,6 +82,12 @@ func main() {
 	<-ctx.stop
 }
 
+func addUserAgent(cfg *rest.Config, agent string) *rest.Config {
+	newCfg := *cfg
+	rest.AddUserAgent(&newCfg, agent)
+	return &newCfg
+}
+
 func buildClientConfigs(opts *KOSControllerManagerOptions) (k8sCfg, kosCfg *rest.Config, err error) {
 	k8sCfg, err = clientcmd.BuildConfigFromFlags("", opts.KubeconfigFilename)
 	if err != nil {
@@ -90,17 +96,13 @@ func buildClientConfigs(opts *KOSControllerManagerOptions) (k8sCfg, kosCfg *rest
 	}
 	k8sCfg.QPS = float32(opts.QPS)
 	k8sCfg.Burst = opts.Burst
-
-	{
-		tmpCopy := *k8sCfg
-		kosCfg = &tmpCopy
-	}
+	kosCfgStruct := *k8sCfg
+	kosCfg = &kosCfgStruct
 	// TODO: Give our API servers verifiable identities.
 	kosCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
 	if !opts.IndirectRequests {
 		kosCfg.Host = "network-api:443"
 	}
-
 	return
 }
 
