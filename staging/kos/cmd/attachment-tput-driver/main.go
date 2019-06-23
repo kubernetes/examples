@@ -401,7 +401,7 @@ func (slot *Slot) observeState(virtNet *VirtNet, slotIndex int, natt *netv1a1.Ne
 			}
 			glog.Infof("Attachment was tested: attachment=%s/%s, VNI=%06x, subnet=%s, RV=%s, node=%s, IPv4=%s, MAC=%s, preCreateTime=%s, postCreateTime=%s, addressedTime=%s, readyTime=%s, testedTime=%s, fullTest=%v, testES=%d, ipv4=%s\n", theKubeNS, slot.currentAttachmentName, virtNet.ID, natt.Spec.Subnet, natt.ResourceVersion, natt.Spec.Node, natt.Status.IPv4, natt.Status.MACAddress, slot.preCreateTime.Format(rfc3339MilliLayout), slot.postCreateTime.Format(rfc3339MilliLayout), slot.addressedTime.Format(rfc3339MilliLayout), slot.readyTime.Format(rfc3339MilliLayout), slot.testedTime.Format(rfc3339MilliLayout), slot.fullTest, slot.testES, natt.Status.IPv4)
 		}
-	} else if len(natt.Status.Errors.IPAM) > 0 || len(natt.Status.Errors.Host) > 0 {
+	} else if hasBrokenIPAM(natt.Status.Errors.IPAM) || len(natt.Status.Errors.Host) > 0 {
 		if slot.brokenTime == (time.Time{}) {
 			cd.NoteNoTest(slotIndex)
 			slot.brokenTime = now
@@ -412,6 +412,15 @@ func (slot *Slot) observeState(virtNet *VirtNet, slotIndex int, natt *netv1a1.Ne
 		}
 	}
 	slot.natt = natt
+}
+
+func hasBrokenIPAM(errs []string) bool {
+	for _, err := range errs {
+		if !strings.Contains(err, "run out of IPs") {
+			return true
+		}
+	}
+	return false
 }
 
 // ipAddressChanged changes the IPv4 address of a NetworkAttachment.
@@ -544,7 +553,10 @@ func (neh subnetEventHandler) OnAdd(obj interface{}) {
 	if virtNet == nil {
 		return
 	}
-	glog.Infof("Notified about subnet %s, VNI=%06x\n", subnet.Name, subnet.Spec.VNI)
+	glog.Infof("Notified about subnet %s, VNI=%06x, Validated=%v\n", subnet.Name, subnet.Spec.VNI, subnet.Status.Validated)
+	if !subnet.Status.Validated {
+		return
+	}
 	initializedSubnetsMutex.Lock()
 	defer func() { initializedSubnetsMutex.Unlock() }()
 	initializedSubnets[subnet.Name] = struct{}{}
