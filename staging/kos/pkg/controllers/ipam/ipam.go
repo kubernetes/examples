@@ -109,24 +109,22 @@ type IPAMController struct {
 	statusUsedHistogram prometheus.Histogram
 }
 
-// NetworkAttachmentData holds the local state for a
-// NetworkAttachment.  The fields can only be accessed by a worker
-// thread working on the NetworkAttachment.  The data for a given
-// attachment is used to remember a status update while it is in
-// flight. When the attachment's ResourceVersion is either
-// anticipatingResourceVersion or anticiaptedResourceVersion,
-// anticipationSubnetRV is the ResourceVersion of the attachment's
-// subnet, and anticipatedIPv4 != nil then that address has been
-// chosen based on that subnet revision and written into the
-// attachment's status and there exists an IPLock that supports this,
-// even if this controller has not yet been notified about that lock;
-// when any other ResourceVersion is seen these three fields get set
-// to their zero value.
+// NetworkAttachmentData holds the local state for a NetworkAttachment.
+// The fields can only be accessed by a worker thread working on the
+// NetworkAttachment.  The data for a given attachment is used to remember a
+// status update while it is in flight. When the attachment's ResourceVersion
+// is either anticipatingResourceVersion or anticipatedResourceVersion,
+// anticipationSubnetUID is the UID of the attachment's subnet, and
+// anticipatedIPv4 != nil then that address has been chosen based on that
+// subnet and written into the attachment's status and there exists an IPLock
+// that supports this, even if this controller has not yet been notified about
+// that lock; when any other ResourceVersion or UID is seen these three fields
+// get set to their zero value.
 type NetworkAttachmentData struct {
 	anticipatedIPv4             gonet.IP
 	anticipatingResourceVersion string
 	anticipatedResourceVersion  string
-	anticipationSubnetRV        string
+	anticipationSubnetUID       k8stypes.UID
 }
 
 func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
@@ -433,7 +431,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		return nil
 	}
 	nadat := ctlr.getNetworkAttachmentData(ns, name, att != nil)
-	subnetName, subnetRV, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, naStatusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
+	subnetName, subnetUID, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, naStatusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
 	if err != nil || !ok {
 		return err
 	}
@@ -482,7 +480,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 			return err
 		}
 	}
-	err = ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetRV, lockForStatus, ipForStatus)
+	err = ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetUID, lockForStatus, ipForStatus)
 	if fullSubnetErr != nil {
 		if err != nil {
 			return fmt.Errorf("%s; %s", fullSubnetErr.Error(), err.Error())
@@ -505,12 +503,12 @@ func fullSubnetMsgFound(messages []string) (found bool) {
 	return
 }
 
-func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData) (subnetName, subnetRV string, desiredVNI, desiredBaseU, desiredLastU uint32, lockInStatus, lockForStatus ParsedLock, statusErrs []string, err error, ok bool) {
+func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData) (subnetName string, subnetUID k8stypes.UID, desiredVNI, desiredBaseU, desiredLastU uint32, lockInStatus, lockForStatus ParsedLock, statusErrs []string, err error, ok bool) {
 	statusLockUID := "<none>"
 	ipInStatus := ""
 	attUID := "."
 	attRV := "."
-	subnetRV = "."
+	subnetUID = "."
 	var subnet *netv1a1.Subnet
 	if att != nil {
 		statusLockUID = att.Status.LockUID
@@ -526,7 +524,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 		}
 		if subnet != nil && subnet.Status.Validated {
 			desiredVNI = subnet.Spec.VNI
-			subnetRV = subnet.ResourceVersion
+			subnetUID = subnet.UID
 			var ipNet *gonet.IPNet
 			_, ipNet, err = gonet.ParseCIDR(subnet.Spec.IPv4)
 			if err != nil {
@@ -545,13 +543,21 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
 			} else {
 				if len(subnet.Status.Errors) == 0 {
+<<<<<<< HEAD
 					glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
+=======
+					glog.Infof("NetworkAttachment %s/%s references subnet %s, whose validation status is unknown.", ns, name, subnetName)
+>>>>>>> Update IPAM after API fields immutability
 					// In the future the subnet will undergo validation and a
 					// notification carrying the outcome will trigger
 					// re-processing of the attachment.
 					return
 				}
+<<<<<<< HEAD
 				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation.", ns, name, subnetName)
+=======
+				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation", ns, name, subnetName)
+>>>>>>> Update IPAM after API fields immutability
 				// If the subnet passes validation in the future the attachment
 				// will be requeued upon notification of subnet validation
 				statusErrs = []string{fmt.Sprintf("Subnet %s has not passed validation", subnetName)}
@@ -623,10 +629,10 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			}
 		}
 	}
-	if nadat != nil && (att == nil || nadat.anticipatingResourceVersion != att.ResourceVersion && nadat.anticipatedResourceVersion != att.ResourceVersion || nadat.anticipationSubnetRV != subnetRV) {
+	if nadat != nil && (att == nil || nadat.anticipatingResourceVersion != att.ResourceVersion && nadat.anticipatedResourceVersion != att.ResourceVersion || nadat.anticipationSubnetUID != subnetUID) {
 		nadat.anticipatingResourceVersion = ""
 		nadat.anticipatedResourceVersion = ""
-		nadat.anticipationSubnetRV = ""
+		nadat.anticipationSubnetUID = ""
 		nadat.anticipatedIPv4 = nil
 	}
 	var usableToRelease ParsedLockList
@@ -767,7 +773,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 	return
 }
 
-func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData, statusErrs []string, subnetRV string, lockForStatus ParsedLock, ipForStatus gonet.IP) error {
+func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.NetworkAttachment, nadat *NetworkAttachmentData, statusErrs []string, subnetUID k8stypes.UID, lockForStatus ParsedLock, ipForStatus gonet.IP) error {
 	att2 := att.DeepCopy()
 	att2.Status.Errors.IPAM = statusErrs
 	att2.Status.LockUID = string(lockForStatus.UID)
@@ -790,10 +796,10 @@ func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.Network
 		if len(statusErrs) > 0 {
 			glog.V(4).Infof("Recorded errors %v in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s\n", statusErrs, ns, name, att.ResourceVersion, att3.ResourceVersion)
 		} else {
-			glog.V(4).Infof("Recorded locked address %s in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s, subnetRV=%s\n", ipForStatus, ns, name, att.ResourceVersion, att3.ResourceVersion, subnetRV)
+			glog.V(4).Infof("Recorded locked address %s in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s, subnetUID=%s\n", ipForStatus, ns, name, att.ResourceVersion, att3.ResourceVersion, subnetUID)
 			nadat.anticipatingResourceVersion = att.ResourceVersion
 			nadat.anticipatedResourceVersion = att3.ResourceVersion
-			nadat.anticipationSubnetRV = subnetRV
+			nadat.anticipationSubnetUID = subnetUID
 			nadat.anticipatedIPv4 = ipForStatus
 		}
 		return nil
