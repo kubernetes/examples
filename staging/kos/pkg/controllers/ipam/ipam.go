@@ -286,7 +286,10 @@ func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
 
 func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
 	if op != opDeletion && !subnet.Status.Validated && len(subnet.Status.Errors.Validation) == 0 {
-		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because subnet has not been validated yet.", op, subnet.Namespace, subnet.Name)
+		// subnet has not been processed by the subent validator yet, soon a new
+		// notification with the outcome of the validation will arrive, hence we
+		// can ignore this one.
+		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because it has not been examined for validity yet.", op, subnet.Namespace, subnet.Name)
 		return
 	}
 	indexer := ctlr.netattInformer.GetIndexer()
@@ -537,11 +540,18 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			desiredBaseU, desiredLastU = convert.IPNetToBoundsU(ipNet)
 		} else {
 			if subnet == nil {
-				glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
+				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
 				// This attachment will be requeued upon notification of subnet creation
 				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
 			} else {
-				glog.Errorf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation", ns, name, subnetName)
+				if len(subnet.Status.Errors.Validation) == 0 {
+					glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
+					// In the future the subnet will undergo validation and a
+					// notification carrying the outcome will trigger
+					// re-processing of the attachment.
+					return
+				}
+				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation.", ns, name, subnetName)
 				// If the subnet passes validation in the future the attachment
 				// will be requeued upon notification of subnet validation
 				statusErrs = []string{fmt.Sprintf("Subnet %s has not passed validation", subnetName)}
