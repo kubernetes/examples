@@ -109,7 +109,7 @@ The Redis master we created earlier is a single pod (REPLICAS = 1), while the Re
     $ kubectl get rc
     CONTROLLER              CONTAINER(S)            IMAGE(S)                         SELECTOR                    REPLICAS
     redis-master            redis-master            redis                            app=redis,role=master       1
-    redis-slave             redis-slave             kubernetes/redis-slave:v2        app=redis,role=slave        2
+    redis-slave             redis-slave             k8s.gcr.io/redis-slave:v2        app=redis,role=slave        2
     ...
     ```
 
@@ -180,7 +180,7 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
     CONTROLLER            CONTAINER(S)         IMAGE(S)                               SELECTOR                  REPLICAS
     guestbook             guestbook            k8s.gcr.io/guestbook:v3  app=guestbook             3
     redis-master          redis-master         redis                                  app=redis,role=master     1
-    redis-slave           redis-slave          kubernetes/redis-slave:v2              app=redis,role=slave      2
+    redis-slave           redis-slave          k8s.gcr.io/redis-slave:v2              app=redis,role=slave      2
     ...
     ```
 
