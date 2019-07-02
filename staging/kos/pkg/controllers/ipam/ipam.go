@@ -543,21 +543,13 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
 			} else {
 				if len(subnet.Status.Errors) == 0 {
-<<<<<<< HEAD
 					glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
-=======
-					glog.Infof("NetworkAttachment %s/%s references subnet %s, whose validation status is unknown.", ns, name, subnetName)
->>>>>>> Update IPAM after API fields immutability
 					// In the future the subnet will undergo validation and a
 					// notification carrying the outcome will trigger
 					// re-processing of the attachment.
 					return
 				}
-<<<<<<< HEAD
 				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation.", ns, name, subnetName)
-=======
-				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation", ns, name, subnetName)
->>>>>>> Update IPAM after API fields immutability
 				// If the subnet passes validation in the future the attachment
 				// will be requeued upon notification of subnet validation
 				statusErrs = []string{fmt.Sprintf("Subnet %s has not passed validation", subnetName)}
