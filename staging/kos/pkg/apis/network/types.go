@@ -199,8 +199,8 @@ type SubnetStatus struct {
 	// +optional
 	Validated bool
 
-	// Errors holds the complaints, if any, from the subnets validator. It might
-	// contain an explanation on why SubnetStatus.Validated is false.
+	// Errors holds the complaints, if any, from the subnet validator. It is
+	// non-empty if and only if Validated is false for reasons (2) or (3).
 	// +optional
 	// +patchStrategy=replace
 	Errors []string

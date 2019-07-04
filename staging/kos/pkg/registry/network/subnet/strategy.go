@@ -170,10 +170,10 @@ func (ss *subnetStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.O
 	immutableFieldMsg := "attempt to update immutable field"
 	newS, oldS := obj.(*network.Subnet), old.(*network.Subnet)
 	if newS.Spec.VNI != oldS.Spec.VNI {
-		errs = append(errs, field.Forbidden(field.NewPath("spec.vni"), immutableFieldMsg))
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), immutableFieldMsg))
 	}
 	if newS.Spec.IPv4 != oldS.Spec.IPv4 {
-		errs = append(errs, field.Forbidden(field.NewPath("spec.ipv4"), immutableFieldMsg))
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), immutableFieldMsg))
 	}
 	return errs
 }

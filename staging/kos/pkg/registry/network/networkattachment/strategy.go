@@ -113,13 +113,13 @@ func (networkattachmentStrategy) ValidateUpdate(ctx context.Context, obj, old ru
 	immutableFieldMsg := "attempt to update immutable field"
 	newNa, oldNa := obj.(*network.NetworkAttachment), old.(*network.NetworkAttachment)
 	if newNa.Spec.Node != oldNa.Spec.Node {
-		errs = append(errs, field.Forbidden(field.NewPath("spec.node"), immutableFieldMsg))
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "node"), immutableFieldMsg))
 	}
 	if newNa.Spec.Subnet != oldNa.Spec.Subnet {
-		errs = append(errs, field.Forbidden(field.NewPath("spec.subnet"), immutableFieldMsg))
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "subnet"), immutableFieldMsg))
 	}
 	if differ(newNa.Spec.PostCreateExec, oldNa.Spec.PostCreateExec) {
-		errs = append(errs, field.Forbidden(field.NewPath("spec.postCreateExec"), immutableFieldMsg))
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "postCreateExec"), immutableFieldMsg))
 	}
 	return errs
 }

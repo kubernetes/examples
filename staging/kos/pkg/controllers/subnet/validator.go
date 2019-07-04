@@ -235,11 +235,12 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 		return fmt.Errorf("current version (%s) is stale", s.ResourceVersion)
 	}
 
-	// Initialize s's conflicts cache if it's the first time s is processed. In
-	// case the conflicts cache still records a deleted subnet with same
-	// namespaced name as s return old rivals and reconsider them: the conflict
-	// might have disappeared.
-	oldRivals := v.initConflictsCache(ss.NamespacedName, ss.UID)
+	// Clear an old conflicts cache which belonged to a deleted subnet with the
+	// same namespaced name as s if it's there, then initialize s's conflicts
+	// cache if this is the first time s is being processed. If an old conflicts
+	// cache is found, return the rival subnets in it and re-enqueue them: their
+	// conflicts might have disappeared.
+	oldRivals := v.updateConflictsCache(ss.NamespacedName, ss.UID)
 	for _, r := range oldRivals {
 		v.queue.Add(r)
 	}
@@ -309,7 +310,7 @@ func (v *Validator) clearConflictsCache(s k8stypes.NamespacedName) []k8stypes.Na
 	return nil
 }
 
-func (v *Validator) initConflictsCache(ownerNSN k8stypes.NamespacedName, ownerUID k8stypes.UID) []k8stypes.NamespacedName {
+func (v *Validator) updateConflictsCache(ownerNSN k8stypes.NamespacedName, ownerUID k8stypes.UID) []k8stypes.NamespacedName {
 	v.conflictsMutex.Lock()
 	defer v.conflictsMutex.Unlock()
 

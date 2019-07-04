@@ -864,7 +864,7 @@ func (ca *ConnectionAgent) updateVNState(attNewVNI uint32,
 // is stopped and references to the remote attachments are enqueued). If the
 // attachment is remote and its vnState cannot be found (because the last local
 // attachment in the same Virtual Network has been deleted) noVnStateFoundForRemoteAtt
-// is set to false so that the caller knows and can react appropriately.
+// is set to true so that the caller knows and can react appropriately.
 func (ca *ConnectionAgent) updateVNStateForExistingAtt(attNSN k8stypes.NamespacedName,
 	attIsLocal bool,
 	vni uint32) (vnStateRet *vnState, noVnStateFoundForRemoteAtt bool) {
@@ -914,7 +914,7 @@ func (ca *ConnectionAgent) updateVNStateForExistingAtt(attNSN k8stypes.Namespace
 		// vni is no longer relevant to the connection agent, hence we unset and
 		// return the vnState so that the caller can perform the necessary clean
 		// up. If the vnState is missing, we set the return flag
-		// noVnStateFoundForRemoteAtt to false so that the caller knows that the
+		// noVnStateFoundForRemoteAtt to true so that the caller knows that the
 		// remote attachment it is processing must not get an interface (this is
 		// needed because a reference to such attachment is not necessarily
 		// already in the list of remote attachments in the vn, hence it's not
