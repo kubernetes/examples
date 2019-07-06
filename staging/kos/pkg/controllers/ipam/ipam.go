@@ -278,7 +278,7 @@ func (ctlr *IPAMController) OnSubnetUpdate(oldObj, newObj interface{}) {
 }
 
 func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
-	subnet := obj.(*netv1a1.Subnet)
+	subnet := parse.Peel(obj).(*netv1a1.Subnet)
 	ctlr.OnSubnetNotify(subnet, opDeletion)
 }
 
@@ -290,17 +290,18 @@ func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
 		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because it has not been examined for validity yet.", op, subnet.Namespace, subnet.Name)
 		return
 	}
+	subnetNSN := subnet.Namespace + "/" + subnet.Name
 	indexer := ctlr.netattInformer.GetIndexer()
-	subnetAttachments, err := indexer.ByIndex(attachmentSubnetIdxName, subnet.Name)
+	subnetAttachments, err := indexer.ByIndex(attachmentSubnetIdxName, subnetNSN)
 	if err != nil {
-		glog.Errorf("NetworkAttachment indexer .ByIndex(%q, %q) failed: %s\n", attachmentSubnetIdxName, subnet.Name, err.Error())
+		glog.Errorf("NetworkAttachment indexer .ByIndex(%q, %q) failed: %s\n", attachmentSubnetIdxName, subnetNSN, err.Error())
 		return
 	}
 	glog.V(4).Infof("Notified of %s of Subnet %s/%s, queuing %d attachments\n", op, subnet.Namespace, subnet.Name, len(subnetAttachments))
 	for _, attObj := range subnetAttachments {
 		att := attObj.(*netv1a1.NetworkAttachment)
-		ctlr.queue.Add(parse.AttNSN(att))
 		glog.V(5).Infof("Queuing %s/%s due to notification of %s of Subnet %s/%s\n", att.Namespace, att.Name, op, subnet.Namespace, subnet.Name)
+		ctlr.queue.Add(parse.AttNSN(att))
 	}
 }
 
@@ -325,17 +326,17 @@ func (ctlr *IPAMController) OnAttachmentDelete(obj interface{}) {
 
 func (ctlr *IPAMController) OnLockCreate(obj interface{}) {
 	ipl := obj.(*netv1a1.IPLock)
-	ctlr.OnLockNotify(ipl, "create", true)
+	ctlr.OnLockNotify(ipl, opCreation, true)
 }
 
 func (ctlr *IPAMController) OnLockUpdate(old, new interface{}) {
 	newIPL := new.(*netv1a1.IPLock)
-	ctlr.OnLockNotify(newIPL, "update", true)
+	ctlr.OnLockNotify(newIPL, opUpdate, true)
 }
 
 func (ctlr *IPAMController) OnLockDelete(obj interface{}) {
-	ipl := obj.(*netv1a1.IPLock)
-	ctlr.OnLockNotify(ipl, "delete", false)
+	ipl := parse.Peel(obj).(*netv1a1.IPLock)
+	ctlr.OnLockNotify(ipl, opDeletion, false)
 }
 
 func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists bool) {
@@ -354,11 +355,11 @@ func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists 
 		addrOp = "released"
 		changed = ctlr.ReleaseAddress(vni, addrU)
 	}
-	ownerNames, _ := OwningAttachments(ipl)
-	glog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d\n", op, ipl.Namespace, ipl.Name, addrOp, convert.Uint32ToIPv4(addrU), changed, len(ownerNames))
-	for _, ownerName := range ownerNames {
-		glog.V(5).Infof("Queuing NetworkAttachment %s/%s due to notification about IPLock %s\n", ipl.Namespace, ownerName, ipl.Name)
-		ctlr.queue.Add(k8stypes.NamespacedName{ipl.Namespace, ownerName})
+	ownerNSNs, _ := OwningAttachments(ipl)
+	glog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d\n", op, ipl.Namespace, ipl.Name, addrOp, convert.Uint32ToIPv4(addrU), changed, len(ownerNSNs))
+	for _, ownerNSN := range ownerNSNs {
+		glog.V(5).Infof("Queuing NetworkAttachment %s due to notification about IPLock %s\n", ownerNSN, ipl.Name)
+		ctlr.queue.Add(k8stypes.NamespacedName{ipl.Namespace, strings.Split(ownerNSN, "/")[1]})
 	}
 }
 
@@ -431,7 +432,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		return nil
 	}
 	nadat := ctlr.getNetworkAttachmentData(ns, name, att != nil)
-	subnetName, subnetUID, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, naStatusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
+	subnetName, subnetUID, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, statusErrs, err, ok := ctlr.analyzeAndRelease(ns, name, att, nadat)
 	if err != nil || !ok {
 		return err
 	}
@@ -460,7 +461,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		}
 	}()
 	var fullSubnetErr error
-	if len(naStatusErrs) > 0 {
+	if len(statusErrs) > 0 {
 	} else if lockForStatus.Obj != nil {
 		ipForStatus = lockForStatus.GetIP()
 		if ipForStatus.Equal(nadat.anticipatedIPv4) {
@@ -475,12 +476,12 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 		lockForStatus, ipForStatus, err = ctlr.pickAndLockAddress(ns, name, att, subnetName, desiredVNI, desiredBaseU, desiredLastU)
 		if isFullSubnetErr(err) && !fullSubnetMsgFound(att.Status.Errors.IPAM) {
 			fullSubnetErr = err
-			naStatusErrs = []string{fullSubnetStatusMsg}
+			statusErrs = []string{fullSubnetStatusMsg}
 		} else if err != nil {
 			return err
 		}
 	}
-	err = ctlr.updateNAStatus(ns, name, att, nadat, naStatusErrs, subnetUID, lockForStatus, ipForStatus)
+	err = ctlr.updateNAStatus(ns, name, att, nadat, statusErrs, subnetUID, lockForStatus, ipForStatus)
 	if fullSubnetErr != nil {
 		if err != nil {
 			return fmt.Errorf("%s; %s", fullSubnetErr.Error(), err.Error())
@@ -560,22 +561,21 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 		}
 	}
 	var ownedObjs []interface{}
+	attNSN := ns + "/" + name
 	iplIndexer := ctlr.lockInformer.GetIndexer()
-	ownedObjs, err = iplIndexer.ByIndex(owningAttachmentIdxName, name)
+	ownedObjs, err = iplIndexer.ByIndex(owningAttachmentIdxName, attNSN)
 	if err != nil {
-		glog.Errorf("iplIndexer.ByIndex(%s, %s) failed: %s\n", owningAttachmentIdxName, name, err.Error())
+		glog.Errorf("iplIndexer.ByIndex(%s, %s) failed: %s\n", owningAttachmentIdxName, attNSN, err.Error())
 		// Retry unlikely to help
 		err = nil
 		return
 	}
 	var timeSlippers, undesiredLocks, usableLocks ParsedLockList
-	considered := make(map[uint32]struct{})
 	consider := func(ipl *netv1a1.IPLock) {
 		parsed, parseErr := NewParsedLock(ipl)
 		if parseErr != nil {
 			return
 		}
-		considered[parsed.addrU] = struct{}{}
 		_, ownerUID := GetOwner(ipl, "NetworkAttachment")
 		if att != nil && ownerUID != att.UID {
 			// This is for an older or newer edition of `att`; ignore it.
@@ -598,25 +598,22 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 		ipl := ownedObj.(*netv1a1.IPLock)
 		consider(ipl)
 	}
-	if att != nil && att.Status.IPv4 != "" {
+	if att != nil && att.Status.IPv4 != "" && lockInStatus.Obj == nil {
 		// Make sure we do not skip this one just because we have not
 		// yet been notified about it.
 		statusIP := gonet.ParseIP(att.Status.IPv4)
 		if statusIP != nil {
-			statusIPU := convert.IPv4ToUint32(statusIP)
 			statusUsed := float64(0)
 			defer func() { ctlr.statusUsedHistogram.Observe(statusUsed) }()
-			if _, found := considered[statusIPU]; !found {
-				antName := makeIPLockName2(desiredVNI, statusIP)
-				ipl, err := ctlr.netIfc.IPLocks(ns).Get(antName, k8smetav1.GetOptions{})
-				if err != nil {
-					glog.Infof("For NetworkAttachment %s/%s failed to fetch lock %s for IP in Status: %s\n", ns, name, antName, err.Error())
-				} else {
-					on, _ := GetOwner(ipl, "NetworkAttachment")
-					if on == name {
-						statusUsed = 1
-						consider(ipl)
-					}
+			antName := makeIPLockName2(desiredVNI, statusIP)
+			ipl, err := ctlr.netIfc.IPLocks(ns).Get(antName, k8smetav1.GetOptions{})
+			if err != nil {
+				glog.Infof("For NetworkAttachment %s/%s failed to fetch lock %s for IP in Status: %s\n", ns, name, antName, err.Error())
+			} else {
+				on, _ := GetOwner(ipl, "NetworkAttachment")
+				if on == name {
+					statusUsed = 1
+					consider(ipl)
 				}
 			}
 		}
@@ -666,7 +663,7 @@ func (ctlr *IPAMController) deleteIPLockObject(parsed ParsedLock) error {
 	ctlr.lockOpHistograms.With(prometheus.Labels{"op": "delete", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
 		glog.V(4).Infof("Deleted IPLock %s/%s=%s\n", parsed.ns, parsed.name, string(parsed.UID))
-	} else if k8serrors.IsNotFound(err) || k8serrors.IsGone(err) {
+	} else if k8serrors.IsNotFound(err) {
 		glog.V(4).Infof("IPLock %s/%s=%s is undesired and already gone\n", parsed.ns, parsed.name, string(parsed.UID))
 	} else {
 		return err
@@ -847,7 +844,7 @@ func (ctlr *IPAMController) clearNetworkAttachmentData(ns, name string) {
 
 func AttachmentSubnets(obj interface{}) (subnets []string, err error) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	return []string{att.Spec.Subnet}, nil
+	return []string{att.Namespace + "/" + att.Spec.Subnet}, nil
 }
 
 var _ k8scache.IndexFunc = AttachmentSubnets
@@ -857,7 +854,7 @@ func OwningAttachments(obj interface{}) (owners []string, err error) {
 	owners = make([]string, 0, 1)
 	for _, oref := range meta.GetOwnerReferences() {
 		if oref.Kind == "NetworkAttachment" && oref.Controller != nil && *oref.Controller {
-			owners = append(owners, oref.Name)
+			owners = append(owners, meta.GetNamespace()+"/"+oref.Name)
 		}
 	}
 	return
