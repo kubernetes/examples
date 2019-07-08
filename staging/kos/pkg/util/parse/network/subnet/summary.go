@@ -37,6 +37,7 @@ const (
 // tasks.
 type Summary struct {
 	NamespacedName types.NamespacedName
+	UID            types.UID
 	VNI            uint32
 
 	// BaseU is the lowest IPv4 address of the subnet as a uint32.
@@ -81,9 +82,9 @@ func (errs Errors) Error() string {
 func NewSummary(subnet interface{}) (*Summary, Errors) {
 	switch sn := subnet.(type) {
 	case *internal.Subnet:
-		return makeSummary(sn.Namespace, sn.Name, sn.Spec.VNI, sn.Spec.IPv4)
+		return makeSummary(sn.Namespace, sn.Name, sn.UID, sn.Spec.VNI, sn.Spec.IPv4)
 	case *v1alpha1.Subnet:
-		return makeSummary(sn.Namespace, sn.Name, sn.Spec.VNI, sn.Spec.IPv4)
+		return makeSummary(sn.Namespace, sn.Name, sn.UID, sn.Spec.VNI, sn.Spec.IPv4)
 	default:
 		return nil, []*Error{&Error{
 			Message: fmt.Sprintf("type %T of object %#+v is unknown", subnet, subnet),
@@ -92,7 +93,7 @@ func NewSummary(subnet interface{}) (*Summary, Errors) {
 	}
 }
 
-func makeSummary(ns, name string, vni uint32, ipv4 string) (summary *Summary, errs Errors) {
+func makeSummary(ns, name string, uid types.UID, vni uint32, ipv4 string) (summary *Summary, errs Errors) {
 	// Check VNI is within allowed range.
 	if vni < minVNI || vni > maxVNI {
 		e := &Error{
@@ -120,26 +121,12 @@ func makeSummary(ns, name string, vni uint32, ipv4 string) (summary *Summary, er
 			Namespace: ns,
 			Name:      name,
 		},
+		UID:   uid,
 		VNI:   vni,
 		BaseU: baseU,
 		LastU: lastU,
 	}
 	return
-}
-
-// Contains returns true if s2's CIDR is a subset of s1's (regardless of s1 and
-// s2 VNIs), false otherwise.
-func (s1 *Summary) Contains(s2 *Summary) bool {
-	return s1.BaseU <= s2.BaseU && s1.LastU >= s2.LastU
-}
-
-func (s1 *Summary) Equal(s2 *Summary) bool {
-	return s1.NamespacedName == s2.NamespacedName && s1.VNI == s2.VNI && s1.BaseU == s2.BaseU && s1.LastU == s2.LastU
-}
-
-// SameSubnetAs returns true if s1 and s2 have identical namespaced names.
-func (s1 *Summary) SameSubnetAs(s2 *Summary) bool {
-	return s1.NamespacedName == s2.NamespacedName
 }
 
 // CIDRConflict returns true if there is a CIDR conflict between s1 and s2,

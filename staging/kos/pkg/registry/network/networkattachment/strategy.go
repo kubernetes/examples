@@ -86,6 +86,8 @@ func (networkattachmentStrategy) NamespaceScoped() bool {
 }
 
 func (networkattachmentStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+	na := obj.(*network.NetworkAttachment)
+	na.Status = network.NetworkAttachmentStatus{}
 }
 
 func (networkattachmentStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -107,5 +109,29 @@ func (networkattachmentStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (networkattachmentStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return field.ErrorList{}
+	var errs field.ErrorList
+	immutableFieldMsg := "attempt to update immutable field"
+	newNa, oldNa := obj.(*network.NetworkAttachment), old.(*network.NetworkAttachment)
+	if newNa.Spec.Node != oldNa.Spec.Node {
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "node"), immutableFieldMsg))
+	}
+	if newNa.Spec.Subnet != oldNa.Spec.Subnet {
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "subnet"), immutableFieldMsg))
+	}
+	if differ(newNa.Spec.PostCreateExec, oldNa.Spec.PostCreateExec) {
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "postCreateExec"), immutableFieldMsg))
+	}
+	return errs
+}
+
+func differ(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
+		return true
+	}
+	for i := range s1 {
+		if s1[i] != s2[i] {
+			return true
+		}
+	}
+	return false
 }
