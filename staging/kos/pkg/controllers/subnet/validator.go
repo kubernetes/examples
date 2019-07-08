@@ -19,6 +19,7 @@ package subnet
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -90,9 +91,11 @@ type Validator struct {
 	// When a worker begins processing a subnet X, it checks whether X's
 	// resource version matches the resource version in staleRVs[X]. If that's
 	// the case X is stale, i.e. it does not reflect the latest update yet,
-	// hence processing is postponed. Only access while holding staleRVsMutex.
+	// hence processing is postponed to when the notification for the update is
+	// received.
+	// Only access while holding staleRVsMutex.
 	staleRVs      map[k8stypes.NamespacedName]string
-	staleRVsMutex sync.Mutex
+	staleRVsMutex sync.RWMutex
 }
 
 func NewValidationController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
@@ -152,16 +155,30 @@ func (v *Validator) OnUpdate(oldObj, newObj interface{}) {
 	oldS, newS := oldObj.(*netv1a1.Subnet), newObj.(*netv1a1.Subnet)
 	glog.V(5).Infof("Notified of update from %#+v to %#+v.", oldS, newS)
 
-	// Subnet updates convey nothing useful validation-wise, because only VNI
-	// and CIDR block affect validation and they're immutable. But a subnet
-	// could still be deleted and re-created with different VNI and/or CIDR
-	// block, and the two events could be delivered as an update notification.
-	if oldS.UID != newS.UID {
-		v.queue.Add(k8stypes.NamespacedName{
-			Namespace: newS.Namespace,
-			Name:      newS.Name,
-		})
+	nsn := k8stypes.NamespacedName{
+		Namespace: newS.Namespace,
+		Name:      newS.Name,
 	}
+
+	// Since only VNI and CIDR block affect validation and they're immutable
+	// don't enqueue on update notifications, except for those which are caused
+	// by a delete followed by a re-create (UID change) or those caused by
+	// status updates from this controller so that all the processing which was
+	// not performed because the subnet in the Informer's cache was stale can be
+	// performed.
+	if oldS.UID != newS.UID || v.subnetIsAwaited(nsn, newS.ResourceVersion) {
+		v.queue.Add(nsn)
+	}
+}
+
+func (v *Validator) subnetIsAwaited(subnet k8stypes.NamespacedName, rv string) bool {
+	v.staleRVsMutex.RLock()
+	defer v.staleRVsMutex.RUnlock()
+
+	if oldRV, found := v.staleRVs[subnet]; found && oldRV != rv {
+		return true
+	}
+	return false
 }
 
 func (v *Validator) OnDelete(obj interface{}) {
@@ -232,7 +249,8 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	}
 
 	if v.subnetIsStale(ss.NamespacedName, s.ResourceVersion) {
-		return fmt.Errorf("current version (%s) is stale", s.ResourceVersion)
+		glog.V(5).Infof("Stopping processing of %s because it's stale. Processing will be restarted upon receiving the fresh version.", ss.NamespacedName)
+		return nil
 	}
 
 	// Clear an old conflicts cache which belonged to a deleted subnet with the
@@ -383,9 +401,16 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 }
 
 func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validationErrors []string) error {
-	sCopy := s.DeepCopy()
+	// Check if s's status needs an update.
+	sort.Strings(validationErrors)
+	validated := len(validationErrors) == 0
+	if s.Status.Validated == validated && equal(s.Status.Errors, validationErrors) {
+		glog.V(4).Infof("%s/%s's status was not updated because it is already up to date.", s.Namespace, s.Name)
+		return nil
+	}
 
-	sCopy.Status.Validated = len(validationErrors) == 0
+	sCopy := s.DeepCopy()
+	sCopy.Status.Validated = validated
 	sCopy.Status.Errors = validationErrors
 
 	_, err := v.netIfc.Subnets(sCopy.Namespace).Update(sCopy)
@@ -395,9 +420,10 @@ func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validationErrors []s
 			Namespace: s.Namespace,
 			Name:      s.Name,
 		}
+		glog.V(4).Infof("Recorded errors=%s and validated=%t into %s's status.", validationErrors, sCopy.Status.Validated, nsn)
 		v.updateStaleRV(nsn, s.ResourceVersion)
 	case malformedRequest(err):
-		glog.Errorf("failed update from %#+v to %#+v: %s; there will be no retry because of the nature of the error", s, sCopy, err.Error())
+		glog.Errorf("Failed update from %#+v to %#+v: %s; there will be no retry because of the nature of the error.", s, sCopy, err.Error())
 	default:
 		return fmt.Errorf("failed update from %#+v to %#+v: %s", s, sCopy, err.Error())
 	}
@@ -439,4 +465,17 @@ func (v *Validator) updateStaleRV(s k8stypes.NamespacedName, rv string) {
 	defer v.staleRVsMutex.Unlock()
 
 	v.staleRVs[s] = rv
+}
+
+// TODO move to shared util pkg
+func equal(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i := range s1 {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+	return true
 }
