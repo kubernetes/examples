@@ -124,13 +124,16 @@ The SDN has just four concepts, as follows.
 
 - Subnet, a kube custom resource.  A subnet has a single CIDR block,
   from which addresses are assigned (with the usual omissions).  Each
-  Subnet is on a VNI, and a VNI can have multiple Subnets.
+  Subnet is on a VNI, and a VNI can have multiple Subnets. Both the
+  CIDR block and the VNI are immutable: attempts to update them will
+  fail.
 
 - NetworkAttachment, a kube custom resource.  A NetworkAttachment is a
-  request and a response to that request for a Linux network
-  interface attached to a particular Subnet on a particular node.  A
-  NetworkAttachment has an IP address and a MAC address that are
-  chosen by the SDN.
+  request and a response to that request for a Linux network interface
+  attached to a particular Subnet on a particular node. Both the subnet
+  and the node are immutable: attempts to update them will fail.
+  NetworkAttachment has an IP address and a MAC address that are chosen
+  by the SDN.
 
 - IPLock, a kube custom resource.  An IPLock is the hard state that
   stipulates the usage of a particular IP address for a particular
@@ -138,6 +141,25 @@ The SDN has just four concepts, as follows.
 
 A controller chooses the IP address for each NetworkAttachment.  An
 attachment's MAC address is a function of the IP address and the VNI.
+
+Neither controller enforces any interlock between its actions and the
+lifecycle of any API object. Consequently, there can not be any fully
+effective enforcement of immutability of any field of any API object ---
+the client can always delete and object and create a replacement with the
+same name, possibly without the controller seeing any intermediate state.
+Coping with all possible changes makes for complicated controller code.
+Stay tuned for lifecycle interlocks.
+
+Neither controller enforces or assumes any connections between the
+lifecycles of NetworkAttachments and their Subnets; either can be
+created or deleted at any time.  There are, however, some intended
+consistency constraints between certain fields of certain objects.
+The apiservers attempt to enforce this consistency, but this
+enforcement is necessarily imperfect because there are no ACID
+transactions that involve more than one object.  The controllers
+therefore must be prepared to react safely if and when an
+inconsistency gets through.  Again, this makes for very complicated
+controller code and this area is still work in progress.
 
 The problems that the SDN solves are as follows.
 
@@ -243,47 +265,57 @@ violating the invariants cannot exist with the easier-to-enforce constraint
 that if two subnets violating the invariants exist, subnet consumers use
 at most one. To achieve this, each subnet has a `bool` field called
 `SubnetStatus.Validated`. Upon creation it is set to false by the extension
-API server, which also sets it to false after updates to `SubnetSpec.IPv4`
-(the CIDR) and `SubnetSpec.VNI`. Consumers of subnets (currently only the
+API server. Consumers of subnets (currently only the
 [IPAM controller](#the-ipam-controller)) can use a subnet only when
-`SubnetStatus.Validated` is `true`.
+`SubnetStatus.Validated` is `true`. Once a subnet's `SubnetStatus.Validated`
+becomes `true` it is guaranteed to stay `true` for the whole lifetime of
+the subnet, although deleting the subnet and then quickly creating one with
+the same name can practically look like a subnet update where
+`SubnetStatus.Validated` transitions from `true` to `false` to a consumer
+which did not see any intermediate state.
 
-The subnets validator's task is setting `SubnetStatus.Validated` as appropriate
-for every subnet. It uses an Informer to remain appraised of all the subnets
-and follows the usual Kubernetes controller design pattern based on a rate
-limiting queue and worker goroutines. When a worker processes an existing
-subnet *X*, it does a live list of all the existing subnets against the
-extension API server, and compares *X* against the results of the list. If no
-violation of the invariants is found, *X*'s `SubnetStatus.Validated` is set
-to true. The validator also keeps a *conflicts cache* which associates each
-processed subnet *Y* to its last seen *VNI* and *CIDR* and a list with the
-namespaced names of the subnets whose validation failed because of a conflict
-with *Y* when *Y* had the last seen *VNI* and *CIDR*. If, while validating
-*X*, a conflict with *Y* is found, *Y*'s *VNI* and *CIDR* are compared to those
-stored in its *conflicts cache* entry. If they match, *X*'s status is updated
-by adding information on the conflict, and *X*'s namespaced name is added to
-the conflicts cache entry for *Y*. If they do not match, no further action is
-taken and *X* is processed again after a delay. When *Y* is deleted or its
-*VNI* and *CIDR* are updated, its *confilcts cache* entry is updated: the new
-*VNI* and *CIDR* override the old ones (in case of an update) and the list of
-conflicting subnets namespaced names is reset. All the namespaced names in the
-old list are enqueued so that their subnets can be re-validated: they did not
-pass validation because of a conflict with *Y*, but *Y* no longer exists or has
-changed (potentially making the conflict disappear), so they might be
-successfully validated now. Making the addition of X to the conflicts cache
-of Y fail on mistach with the VNI or CIDR in that conflict cache correctly
-handles the possible concurrent execution where one goroutine processing X
-finds a conflict with Y, then a different goroutine processes an update to
-the VNI or CIDR of Y, then the first goroutine gets around to trying to add
-X to the conflict cache of Y; doing that addition in this situation would
-falsely indicate that X does not need to be reconsidered until a further
-change is made to Y.
+The subnet validator's task is setting `SubnetStatus.Validated` as
+appropriate for every subnet. It uses an Informer to remain appraised of
+all the subnets and follows the usual Kubernetes controller design pattern
+based on a rate limiting queue and worker goroutines. When a worker processes
+an existing subnet *X*, it does a live list of all the existing subnets
+against the extension API server, and compares *X* against the results of the
+list. If no violation of the invariants is found, *X*'s
+`SubnetStatus.Validated` is set to `true`. The validator also keeps a
+*conflicts cache* which associates each processed subnet *Y*'s namespaced
+name to *Y*'s UID and a list with the namespaced names of the subnets whose
+validation failed because of a conflict with *Y*. If, while validating *X*,
+a conflict with *Y* is found, *Y*'s *UID* is compared to that stored in *Y*'s
+namespaced name *conflicts cache* entry. If they match, *X*'s status is
+updated by adding information on the conflict, and *X*'s namespaced name is
+added to the conflicts cache entry for *Y*'s namespaced name. If they do not
+match, no further action is taken and *X* is processed again after a delay.
+If *Y* is deleted the *conflicts cache* entry for its namespaced name is
+deleted and all the namespaced names in it are enqueued so that their
+subnets can be re-validated: they did not pass validation because of a
+conflict with *Y*, but *Y* no longer exists so the conflict might have
+disappeared and they might be successfully validated now. The same happens
+if a subnet *Y1* with the same namespaced name as *Y* is created shortly
+after *Y*'s deletion and the validator misses the deletion and processes
+*Y1* directly, the only difference being that the *conflicts cache* entry
+for *Y* and *Y1*'s namespaced name is kept and reset by overriding *Y*'s UID
+with *Y1*'s and resetting the list of conflicting subnets' namespaced names.
+Making the addition of *X* to the conflicts cache corresponding to *Y*'s
+namespaced name fail on mistach with the *UID* in that conflict cache
+correctly handles the possible concurrent execution where one goroutine
+processing *X* finds a conflict with *Y*, then *Y* is deleted and immediately
+after another subnet *Y1* with the same namespaced name but different VNI
+and CIDR block is created and a different goroutine processes *Y1*, then the
+first goroutine gets around to trying to add *X* to the conflict cache which
+belonged to *Y* and now belongs to *Y1*; doing that addition in this situation
+would falsely indicate that *X* does not need to be reconsidered until *Y1*
+is deleted.
 
 One apparently odd design choice is having the validator retrieve all the
 subnets with a live list against the API server rather than a cache-based
 list using its Informer. The live list is worse performance-wise, but is
 necessary to avoid race conditions that can lead to two conflicting subnets
-having both `SubnetStatus.Validated` set to true. The subnets validator is a
+having both `SubnetStatus.Validated` set to `true`. The subnets validator is a
 singleton, but Kubernetes makes no guarantee that there cannot be transients
 with more than one running. Assume two --- *V1* and *V2* --- are running and
 cache-based lists are used. Also assume a subnet *X* is created and shortly
@@ -345,26 +377,6 @@ object equals successfully taking the lock.  A lock object's
 `ObjectMeta.OwnerReferences` include a reference to the
 NetworkAttachment that holds the lock.
 
-Neither the IPAM controller nor the connection agent enforces any
-interlock between its actions and the lifecycle of any API object.
-Consequently, there can not be any fully effective enforcement of
-immutability of any field of any API object --- the client can always
-delete and object and create a replacement with the same name,
-possibly without the controller seeing any intermediate state.  Coping
-with all possible changes makes for complicated controller code.  Stay
-tuned for lifecycle interlocks.
-
-Neither controller enforces or assumes any connections between the
-lifecycles of NetworkAttachments and their Subnets; either can be
-created or deleted at any time.  There are, however, some intended
-consistency constraints between certain fields of certain objects.
-The apiservers attempt to enforce this consistency, but this
-enforcement is necessarily imperfect because there are no ACID
-transactions that involve more than one object.  The controllers
-therefore must be prepared to react safely if and when an
-inconsistency gets through.  Again, this makes for very complicated
-controller code and this area is still work in progress.
-
 As with any controller, one of the IP address controller's problems is
 how to avoid doing duplicate work while waiting for its earlier
 actions to fully take effect.  To save on client/server traffic, this
@@ -374,16 +386,15 @@ informed through its Informers.  In the interim, this controller
 maintains a record of actions in flight.  In particular, for each
 address assignment in flight, the controller records: the
 ResourceVersion of the NetworkAttachment that was seen to need an IP
-address, the ResourceVersion of the Subnet that was referenced when
-making the assignment, the IP address assigned, and the
-ResourceVersion of the NetworkAttachment created by the update that
-writes the assigned address into the status of the attachment object.
-As long as the Subnet's ResourceVersion is unchanged and the
-attachment object's ResourceVersion is one of the two recorded, the
-record is valid and retained.  However, this does not work well
-enough, because the connection agents also updates the
-NetworkAttachment objects, and the IP address controller can be
-notified of such an update before being notified of the IP lock
+address, the UID of the Subnet that was referenced when making the
+assignment, the IP address assigned, and the ResourceVersion of the
+NetworkAttachment created by the update that writes the assigned
+address into the status of the attachment object. As long as the
+Subnet's UID is unchanged and the attachment object's ResourceVersion
+is one of the two recorded, the record is valid and retained.  However,
+this does not work well enough, because the connection agents also
+updates the NetworkAttachment objects, and the IP address controller
+can be notified of such an update before being notified of the IP lock
 object's creation.  To handle this possibility the IP address
 controller will actively query for the lock object corresponding to
 the IP address in a NetworkAttachment's Status if the controller does
@@ -429,6 +440,7 @@ The following approaches were considered, with the last one adopted.
   and that Informer's list&watch filter on whether `status.addressVNI`
   (which is the VNI where the attachment's locked address resides)
   equals the Informer's VNI.
+
 
 ## Test Driver
 

@@ -166,12 +166,12 @@ func (v *Validator) OnUpdate(oldObj, newObj interface{}) {
 	// status updates from this controller so that all the processing which was
 	// not performed because the subnet in the Informer's cache was stale can be
 	// performed.
-	if oldS.UID != newS.UID || v.subnetIsAwaited(nsn, newS.ResourceVersion) {
+	if oldS.UID != newS.UID || v.subnetIsStaleNoMore(nsn, newS.ResourceVersion) {
 		v.queue.Add(nsn)
 	}
 }
 
-func (v *Validator) subnetIsAwaited(subnet k8stypes.NamespacedName, rv string) bool {
+func (v *Validator) subnetIsStaleNoMore(subnet k8stypes.NamespacedName, rv string) bool {
 	v.staleRVsMutex.RLock()
 	defer v.staleRVsMutex.RUnlock()
 
