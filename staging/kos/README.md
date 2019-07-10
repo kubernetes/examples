@@ -122,7 +122,8 @@ The SDN has just four concepts, as follows.
   a single K8s API namespace, but multiple virtual networks can reside
   in the same namespace.
 
-- Subnet, a kube custom resource.  A subnet has a single CIDR block,
+- Subnet, a kube custom resource.  A subnet has a single CIDR block
+  compliant with [RFC 1918](https://tools.ietf.org/html/rfc1918),
   from which addresses are assigned (with the usual omissions).  Each
   Subnet is on a VNI, and a VNI can have multiple Subnets. Both the
   CIDR block and the VNI are immutable: attempts to update them will
