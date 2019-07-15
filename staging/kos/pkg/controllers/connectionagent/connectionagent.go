@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -42,6 +41,7 @@ import (
 	k8scache "k8s.io/client-go/tools/cache"
 	k8seventrecord "k8s.io/client-go/tools/record"
 	k8sworkqueue "k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
@@ -341,7 +341,7 @@ func NewConnectionAgent(localNodeName string,
 	fabricNameCounts.With(prometheus.Labels{"fabric": netFabric.Name()}).Inc()
 	workerCount.Add(float64(workers))
 	eventBroadcaster := k8seventrecord.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.V(3).Infof)
+	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&k8scorev1client.EventSinkImpl{eventIfc})
 	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "connection-agent", Host: localNodeName})
 
@@ -383,28 +383,28 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	// Serve Prometheus metrics
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		glog.Errorf("In-process HTTP server crashed: %s\n", http.ListenAndServe(MetricsAddr, nil).Error())
+		klog.Errorf("In-process HTTP server crashed: %s\n", http.ListenAndServe(MetricsAddr, nil).Error())
 	}()
 
 	ca.stopCh = stopCh
 	ca.initLocalAttsInformerAndLister()
 	go ca.localAttsInformer.Run(stopCh)
-	glog.V(2).Infoln("Local NetworkAttachments informer started")
+	klog.V(2).Infoln("Local NetworkAttachments informer started")
 
 	if err := ca.waitForLocalAttsCacheSync(stopCh); err != nil {
 		return err
 	}
-	glog.V(2).Infoln("Local NetworkAttachments cache synced")
+	klog.V(2).Infoln("Local NetworkAttachments cache synced")
 
 	if err := ca.syncPreExistingIfcs(); err != nil {
 		return err
 	}
-	glog.V(2).Infoln("Pre-existing interfaces synced")
+	klog.V(2).Infoln("Pre-existing interfaces synced")
 
 	for i := 0; i < ca.workers; i++ {
 		go k8swait.Until(ca.processQueue, time.Second, stopCh)
 	}
-	glog.V(2).Infof("Launched %d workers", ca.workers)
+	klog.V(2).Infof("Launched %d workers", ca.workers)
 
 	<-stopCh
 	return nil
@@ -428,13 +428,13 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 
 func (ca *ConnectionAgent) onLocalAttAdded(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
+	klog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
 }
 
 func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v", oldAtt, att)
+	klog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v", oldAtt, att)
 	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.AddressVNI != att.Status.AddressVNI {
 		// The only fields affecting local network interfaces handling that can
 		// be seen changing by this function are Status.IPv4 and Status.AddressVNI.
@@ -445,7 +445,7 @@ func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, obj interface{}) {
 func (ca *ConnectionAgent) onLocalAttRemoved(obj interface{}) {
 	peeledObj := parse.Peel(obj)
 	att := peeledObj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
+	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
 }
 
@@ -487,7 +487,7 @@ func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
 			oldLocalState, oldIfcExists := ca.getLocalAttState(nsn)
 			ca.setLocalAttMainState(nsn, LocalAttachmentMainState{aPreExistingLocalIfc, ifcOwnerAtt.Spec.PostDeleteExec})
 			ca.setExecReport(nsn, ifcOwnerAtt.Status.PostCreateExecReport)
-			glog.V(3).Infof("Matched interface %#+v with local attachment %#+v", aPreExistingLocalIfc, ifcOwnerAtt)
+			klog.V(3).Infof("Matched interface %#+v with local attachment %#+v", aPreExistingLocalIfc, ifcOwnerAtt)
 			if oldIfcExists {
 				aPreExistingLocalIfc = oldLocalState.LocalNetIfc
 			} else {
@@ -503,7 +503,7 @@ func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
 			if err == nil {
 				break
 			}
-			glog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
+			klog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
 				aPreExistingLocalIfc,
 				err.Error(),
 				i)
@@ -512,7 +512,7 @@ func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
 		// Do not run the PostDeleteExec, it probably would not work
 		// because the PostCreateExec ran in a different container if
 		// at all.
-		glog.V(3).Infof("Deleted orphan local interface %#+v", aPreExistingLocalIfc)
+		klog.V(3).Infof("Deleted orphan local interface %#+v", aPreExistingLocalIfc)
 	}
 
 	return nil
@@ -558,7 +558,7 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 			nsn := parse.AttNSN(ifcOwnerAtt)
 			oldRemoteIfc, oldRemoteIfcExists := ca.getRemoteIfc(nsn)
 			ca.assignRemoteIfc(nsn, aPreExistingRemoteIfc)
-			glog.V(3).Infof("Matched interface %#+v with remote attachment %#+v",
+			klog.V(3).Infof("Matched interface %#+v with remote attachment %#+v",
 				aPreExistingRemoteIfc,
 				ifcOwnerAtt)
 			if oldRemoteIfcExists {
@@ -570,7 +570,7 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 						if err == nil {
 							break
 						}
-						glog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
+						klog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
 							oldLocalState.LocalNetIfc,
 							err.Error(),
 							i)
@@ -580,7 +580,7 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 					// Do not run the PostDeleteExec, it probably would not work
 					// because the PostCreateExec ran in a different container
 					// if at all.
-					glog.V(3).Infof("Deleted orphan local interface %#+v", oldLocalState.LocalNetIfc)
+					klog.V(3).Infof("Deleted orphan local interface %#+v", oldLocalState.LocalNetIfc)
 				}
 				continue
 			}
@@ -596,13 +596,13 @@ func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
 			if err == nil {
 				break
 			}
-			glog.V(3).Infof("Deletion of orphan remote interface %#+v failed: %s. Attempt nbr. %d",
+			klog.V(3).Infof("Deletion of orphan remote interface %#+v failed: %s. Attempt nbr. %d",
 				aPreExistingRemoteIfc,
 				err.Error(),
 				i)
 			time.Sleep(netFabricRetryPeriod)
 		}
-		glog.V(3).Infof("Deleted orphan remote interface %#+v", aPreExistingRemoteIfc)
+		klog.V(3).Infof("Deleted orphan remote interface %#+v", aPreExistingRemoteIfc)
 	}
 
 	return nil
@@ -622,21 +622,21 @@ func (ca *ConnectionAgent) processQueue() {
 func (ca *ConnectionAgent) processQueueItem(attNSN k8stypes.NamespacedName) {
 	defer ca.queue.Done(attNSN)
 	requeues := ca.queue.NumRequeues(attNSN)
-	glog.V(5).Infof("Working on attachment %s, with %d earlier requeues\n", attNSN, requeues)
+	klog.V(5).Infof("Working on attachment %s, with %d earlier requeues\n", attNSN, requeues)
 	err := ca.processNetworkAttachment(attNSN)
 	if err != nil {
 		// If we're here there's been an error: either the attachment current state was
 		// ambiguous (e.g. more than one vni), or there's been a problem while processing
 		// it (e.g. Interface creation failed). We requeue the attachment reference so that
 		// it can be processed again and hopefully next time there will be no errors.
-		glog.Warningf("Failed processing NetworkAttachment %s, requeuing (%d earlier requeues): %s",
+		klog.Warningf("Failed processing NetworkAttachment %s, requeuing (%d earlier requeues): %s",
 			attNSN,
 			requeues,
 			err.Error())
 		ca.queue.AddRateLimited(attNSN)
 		return
 	}
-	glog.V(4).Infof("Finished NetworkAttachment %s with %d requeues", attNSN, requeues)
+	klog.V(4).Infof("Finished NetworkAttachment %s with %d requeues", attNSN, requeues)
 	ca.queue.Forget(attNSN)
 }
 
@@ -671,7 +671,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 		// VNI with which it's seeing the attachment the attachment state will be
 		// "less ambiguous" (one less potential VNI) and a reference will be enqueued
 		// again triggering reconsideration of the attachment.
-		glog.V(4).Infof("Attachment %s has inconsistent state, found in %d VN(I)s",
+		klog.V(4).Infof("Attachment %s has inconsistent state, found in %d VN(I)s",
 			attNSN,
 			nbrOfVNIs)
 		return nil, false
@@ -698,7 +698,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 		(localAttCacheLookupErr != nil && !k8serrors.IsNotFound(localAttCacheLookupErr)):
 		// If we're here at least one of the two lookups failed. This should
 		// never happen. No point in retrying.
-		glog.V(1).Infof("Attempt to retrieve attachment %s with lister failed: %s. This should never happen, hence a reference to %s will not be requeued",
+		klog.V(1).Infof("Attempt to retrieve attachment %s with lister failed: %s. This should never happen, hence a reference to %s will not be requeued",
 			attNSN,
 			aggregateErrors("\n\t", remAttCacheLookupErr, localAttCacheLookupErr).Error(),
 			attNSN)
@@ -708,7 +708,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 		// this will cause a reference to be enqueued, so it will be processed
 		// again when the ambiguity has been resolved (assuming it has not been
 		// seen with other VNIs meanwhile).
-		glog.V(4).Infof("Att %s has inconsistent state: found both in local atts cache and remote atts cache for VNI %06x",
+		klog.V(4).Infof("Att %s has inconsistent state: found both in local atts cache and remote atts cache for VNI %06x",
 			attNSN,
 			vni)
 	case attAsLocal != nil && attAsRemote == nil:
@@ -729,7 +729,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) error {
 	attNSN, attVNI := parse.AttNSN(att), att.Status.AddressVNI
 	attNode := att.Spec.Node
-	glog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s\n", attNSN, attNode, att.ResourceVersion)
+	klog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s\n", attNSN, attNode, att.ResourceVersion)
 
 	// Update the vnState associated with the attachment. This typically involves
 	// adding the attachment to the vnState associated to its vni (and initializing
@@ -783,10 +783,10 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 		!pcer.Equiv(att.Status.PostCreateExecReport) ||
 		!statusErrs.Equal(SliceOfString(att.Status.Errors.Host)) {
 
-		glog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v\n", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
+		klog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v\n", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
 		updatedAtt, err := ca.setAttStatus(att, macAddrS, ifcName, statusErrs, pcer)
 		if err != nil {
-			glog.V(3).Infof("Failed to update att %s status: oldRV=%s, ipv4=%s, macAddress=%s, ifcName=%s, PostCreateExecReport=%#+v\n",
+			klog.V(3).Infof("Failed to update att %s status: oldRV=%s, ipv4=%s, macAddress=%s, ifcName=%s, PostCreateExecReport=%#+v\n",
 				attNSN,
 				att.ResourceVersion,
 				att.Status.IPv4,
@@ -795,7 +795,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 				pcer)
 			return err
 		}
-		glog.V(3).Infof("Updated att %s status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=%#+v\n",
+		klog.V(3).Infof("Updated att %s status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=%#+v\n",
 			attNSN,
 			att.ResourceVersion,
 			updatedAtt.ResourceVersion,
@@ -881,7 +881,7 @@ func (ca *ConnectionAgent) updateVNStateForExistingAtt(attNSN k8stypes.Namespace
 			ca.unsetVNStateVNI(attNSN)
 		}
 		if firstLocalAttInVN {
-			glog.V(2).Infof("VN with ID %06x became relevant: an Informer has been started", vni)
+			klog.V(2).Infof("VN with ID %06x became relevant: an Informer has been started", vni)
 		}
 	}()
 
@@ -1074,7 +1074,7 @@ func (ca *ConnectionAgent) removeAttFromVNState(attName string, vni uint32) *vnS
 // can be deleted.
 func (ca *ConnectionAgent) clearVNResources(vnState *vnState, lastAttName string, vni uint32) {
 	close(vnState.remoteAttsInformerStopCh)
-	glog.V(2).Infof("NetworkAttachment %s/%s was the last local with vni %06x: remote attachments informer was stopped",
+	klog.V(2).Infof("NetworkAttachment %s/%s was the last local with vni %06x: remote attachments informer was stopped",
 		vnState.namespace,
 		lastAttName,
 		vni)
@@ -1118,7 +1118,7 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 
 func (ca *ConnectionAgent) onRemoteAttAdded(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v",
+	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v",
 		att.Status.AddressVNI,
 		att)
 	attNSN := parse.AttNSN(att)
@@ -1128,7 +1128,7 @@ func (ca *ConnectionAgent) onRemoteAttAdded(obj interface{}) {
 
 func (ca *ConnectionAgent) onRemoteAttUpdated(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of update from %#+v to %#+v.", att.Status.AddressVNI, oldAtt, att)
+	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of update from %#+v to %#+v.", att.Status.AddressVNI, oldAtt, att)
 	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.HostIP != att.Status.HostIP {
 		// The only fields affecting remote network interfaces handling that can
 		// be seen changing by this function are Status.IPv4 and Status.HostIP.
@@ -1139,7 +1139,7 @@ func (ca *ConnectionAgent) onRemoteAttUpdated(oldObj, obj interface{}) {
 func (ca *ConnectionAgent) onRemoteAttRemoved(obj interface{}) {
 	peeledObj := parse.Peel(obj)
 	att := peeledObj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v",
+	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v",
 		att.Status.AddressVNI,
 		att)
 	attNSN := parse.AttNSN(att)

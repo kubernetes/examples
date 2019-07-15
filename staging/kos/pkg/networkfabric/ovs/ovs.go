@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/examples/staging/kos/pkg/networkfabric"
 	"k8s.io/examples/staging/kos/pkg/networkfabric/factory"
@@ -115,11 +115,11 @@ func newFactory(bridge string) factory.Interface {
 			lockedVNIIPPairs: make(map[vniAndIP]struct{}),
 		}
 		f.initFlowsParsingKit()
-		glog.V(6).Infof("Initialized bridge %s flows parsing kit", bridge)
+		klog.V(6).Infof("Initialized bridge %s flows parsing kit", bridge)
 		if err := f.initBridge(bridge); err != nil {
 			return nil, fmt.Errorf("failed to create OvS network fabric: %s", err.Error())
 		}
-		glog.V(2).Infof("Initialized bridge %s", bridge)
+		klog.V(2).Infof("Initialized bridge %s", bridge)
 		return f, nil
 	}
 }
@@ -136,7 +136,7 @@ func (f *ovsFabric) CreateLocalIfc(ifc networkfabric.LocalNetIfc) (err error) {
 	defer func() {
 		if err != nil {
 			f.unlockVNIIPPair(ifc.VNI, ifc.GuestIP)
-			glog.V(5).Infof("Unlocked IP %s in VNI %#x", ifc.GuestIP, ifc.VNI)
+			klog.V(5).Infof("Unlocked IP %s in VNI %#x", ifc.GuestIP, ifc.VNI)
 		}
 	}()
 
@@ -153,7 +153,7 @@ func (f *ovsFabric) CreateLocalIfc(ifc networkfabric.LocalNetIfc) (err error) {
 			// experiencing transient failures
 			time.Sleep(cleanupDelay)
 			if cleanUpErr := f.deleteIfc(ifc.Name); cleanUpErr != nil {
-				glog.Errorf("Could not delete local interface %s during clean up after failure: %s",
+				klog.Errorf("Could not delete local interface %s during clean up after failure: %s",
 					ifc.Name,
 					cleanUpErr.Error())
 			}
@@ -169,7 +169,7 @@ func (f *ovsFabric) CreateLocalIfc(ifc networkfabric.LocalNetIfc) (err error) {
 		return
 	}
 
-	glog.V(2).Infof("Created local interface %#+v connected to bridge %s",
+	klog.V(2).Infof("Created local interface %#+v connected to bridge %s",
 		ifc,
 		f.bridge)
 
@@ -192,7 +192,7 @@ func (f *ovsFabric) DeleteLocalIfc(ifc networkfabric.LocalNetIfc) error {
 
 	f.unlockVNIIPPair(ifc.VNI, ifc.GuestIP)
 
-	glog.V(2).Infof("Deleted local interface %#+v connected to bridge %s",
+	klog.V(2).Infof("Deleted local interface %#+v connected to bridge %s",
 		ifc,
 		f.bridge)
 
@@ -207,13 +207,13 @@ func (f *ovsFabric) CreateRemoteIfc(ifc networkfabric.RemoteNetIfc) (err error) 
 	defer func() {
 		if err != nil {
 			f.unlockVNIIPPair(ifc.VNI, ifc.GuestIP)
-			glog.V(5).Infof("Unlocked IP %s in VNI %#x", ifc.GuestIP, ifc.VNI)
+			klog.V(5).Infof("Unlocked IP %s in VNI %#x", ifc.GuestIP, ifc.VNI)
 		}
 	}()
 	if err = f.addRemoteIfcFlows(ifc.VNI, ifc.GuestMAC, ifc.HostIP, ifc.GuestIP); err != nil {
 		return
 	}
-	glog.V(2).Infof("Created remote interface %#+v", ifc)
+	klog.V(2).Infof("Created remote interface %#+v", ifc)
 	return
 }
 
@@ -222,7 +222,7 @@ func (f *ovsFabric) DeleteRemoteIfc(ifc networkfabric.RemoteNetIfc) error {
 		return err
 	}
 	f.unlockVNIIPPair(ifc.VNI, ifc.GuestIP)
-	glog.V(2).Infof("Deleted remote interface %#+v", ifc)
+	klog.V(2).Infof("Deleted remote interface %#+v", ifc)
 	return nil
 }
 
@@ -243,14 +243,14 @@ func (f *ovsFabric) ListLocalIfcs() ([]networkfabric.LocalNetIfc, error) {
 
 	// build a map from the openflow port of an interface to the two useful
 	// flows it is associated with
-	glog.V(4).Infof("Pairing ARP and normal Datalink traffic flows of local interfaces in bridge %s...",
+	klog.V(4).Infof("Pairing ARP and normal Datalink traffic flows of local interfaces in bridge %s...",
 		f.bridge)
 	ofPortToLocalFlowsPairs := f.ofPortToLocalFlowsPairs(localFlows)
 
 	// use the map from ofPorts to pairs of flows to build a map from ofPort
 	// to LocalNetIfc structs with all the fields set but the name (because no
 	// flow carries info about the interface name)
-	glog.V(4).Infof("Parsing flows pairs found in bridge %s into local Network Interfaces...",
+	klog.V(4).Infof("Parsing flows pairs found in bridge %s into local Network Interfaces...",
 		f.bridge)
 	ofPortToNamelessIfc := f.parseLocalFlowsPairs(ofPortToLocalFlowsPairs)
 
@@ -260,16 +260,16 @@ func (f *ovsFabric) ListLocalIfcs() ([]networkfabric.LocalNetIfc, error) {
 	// agent crashes between the creation of the interface and the addition of
 	// its flows, or if the latter fails for whatever reason and also deleting
 	// the interface for clean up fails.
-	glog.V(4).Infof("Naming local Network Interfaces parsed out of bridge %s...",
+	klog.V(4).Infof("Naming local Network Interfaces parsed out of bridge %s...",
 		f.bridge)
 	completeIfcs, incompleteIfcs := f.nameIfcs(ofPortToIfcName, ofPortToNamelessIfc)
 
 	// best effort attempt to delete orphan interfaces
-	glog.V(4).Infof("Deleting network devices connected to bridge %s for whom OpenFlow flows were not found...",
+	klog.V(4).Infof("Deleting network devices connected to bridge %s for whom OpenFlow flows were not found...",
 		f.bridge)
 	f.deleteIncompleteIfcs(incompleteIfcs)
 
-	glog.V(4).Info("Locking local network interfaces VNIs and IPs...")
+	klog.V(4).Info("Locking local network interfaces VNIs and IPs...")
 	for _, aCompleteIfc := range completeIfcs {
 		f.lockVNIIPPair(aCompleteIfc.VNI, aCompleteIfc.GuestIP)
 	}
@@ -285,15 +285,15 @@ func (f *ovsFabric) ListRemoteIfcs() ([]networkfabric.RemoteNetIfc, error) {
 
 	// each remote interface is associated with two flows. Arrange flows in pairs
 	// by interface.
-	glog.V(4).Infof("Pairing ARP and normal Datalink traffic flows of remote interfaces in bridge %s...",
+	klog.V(4).Infof("Pairing ARP and normal Datalink traffic flows of remote interfaces in bridge %s...",
 		f.bridge)
 	perIfcFlowPairs := f.pairRemoteFlowsPerIfc(flows)
-	glog.V(4).Infof("Parsing flows pairs found in bridge %s into remote Network Interfaces...",
+	klog.V(4).Infof("Parsing flows pairs found in bridge %s into remote Network Interfaces...",
 		f.bridge)
 
 	ifcs := f.parseRemoteFlowsPairs(perIfcFlowPairs)
 
-	glog.V(4).Info("Locking remote network interfaces VNIs and IPs...")
+	klog.V(4).Info("Locking remote network interfaces VNIs and IPs...")
 	for _, anIfc := range ifcs {
 		f.lockVNIIPPair(anIfc.VNI, anIfc.GuestIP)
 	}
@@ -350,7 +350,7 @@ func (f *ovsFabric) createBridge() error {
 			err.Error(),
 			string(out))
 	}
-	glog.V(4).Infof("Created OvS bridge %s", f.bridge)
+	klog.V(4).Infof("Created OvS bridge %s", f.bridge)
 
 	return nil
 }
@@ -364,7 +364,7 @@ func (f *ovsFabric) addVTEP() error {
 			err.Error(),
 			string(out))
 	}
-	glog.V(4).Infof("Added VTEP to bridge %s", f.bridge)
+	klog.V(4).Infof("Added VTEP to bridge %s", f.bridge)
 
 	return nil
 }
@@ -383,7 +383,7 @@ func (f *ovsFabric) getIfcOFport(ifc string) (uint16, error) {
 	}
 
 	ofPort := parseOFport(out)
-	glog.V(4).Infof("Retrieved OpenFlow port nbr (%d) of network device %s in bridge %s",
+	klog.V(4).Infof("Retrieved OpenFlow port nbr (%d) of network device %s in bridge %s",
 		ofPort,
 		ifc,
 		f.bridge)
@@ -419,7 +419,7 @@ func (f *ovsFabric) createIfc(ifc string, mac net.HardwareAddr) error {
 			string(out))
 	}
 
-	glog.V(4).Infof("Created network device %s with MAC %s connected to bridge %s",
+	klog.V(4).Infof("Created network device %s with MAC %s connected to bridge %s",
 		ifc,
 		mac,
 		f.bridge)
@@ -440,7 +440,7 @@ func (f *ovsFabric) deleteIfc(ifc string) error {
 			string(out))
 	}
 
-	glog.V(4).Infof("Deleted network device %s connected to bridge %s",
+	klog.V(4).Infof("Deleted network device %s connected to bridge %s",
 		ifc,
 		f.bridge)
 
@@ -469,7 +469,7 @@ func (f *ovsFabric) addLocalIfcFlows(ofPort uint16, tunID uint32, dlDst net.Hard
 			string(out))
 	}
 
-	glog.V(4).Infof("Bridge %s: added OpenFlow flows: \n\t%s\n\t%s\n\t%s",
+	klog.V(4).Infof("Bridge %s: added OpenFlow flows: \n\t%s\n\t%s\n\t%s",
 		f.bridge,
 		tunnelingFlow,
 		dlTrafficFlow,
@@ -492,7 +492,7 @@ func (f *ovsFabric) deleteLocalIfcFlows(ofPort uint16, tunID uint32, dlDst net.H
 			string(out))
 	}
 
-	glog.V(4).Infof("Bridge %s: deleted OpenFlow flows: \n\t%s\n\t%s\n\t%s",
+	klog.V(4).Infof("Bridge %s: deleted OpenFlow flows: \n\t%s\n\t%s\n\t%s",
 		f.bridge,
 		tunnelingFlow,
 		dlTrafficFlow,
@@ -534,7 +534,7 @@ func (f *ovsFabric) addRemoteIfcFlows(tunID uint32, dlDst net.HardwareAddr, tunD
 			string(out))
 	}
 
-	glog.V(4).Infof("Bridge %s: added OpenFlow flows: \n\t%s\n\t%s",
+	klog.V(4).Infof("Bridge %s: added OpenFlow flows: \n\t%s\n\t%s",
 		f.bridge,
 		dlTrafficFlow,
 		arpFlow)
@@ -559,7 +559,7 @@ func (f *ovsFabric) deleteRemoteIfcFlows(tunID uint32, dlDst net.HardwareAddr, a
 			string(out))
 	}
 
-	glog.V(4).Infof("Bridge %s: deleted OpenFlow flows: \n\t%s\n\t%s",
+	klog.V(4).Infof("Bridge %s: deleted OpenFlow flows: \n\t%s\n\t%s",
 		f.bridge,
 		dlTrafficFlow,
 		arpFlow)
@@ -583,7 +583,7 @@ func (f *ovsFabric) getOFportsToLocalIfcNames() (map[uint16]string, error) {
 			outStr)
 	}
 
-	glog.V(4).Infof("Parsing OpenFlow ports and Interface names in bridge %s...",
+	klog.V(4).Infof("Parsing OpenFlow ports and Interface names in bridge %s...",
 		f.bridge)
 
 	return f.parseOFportsAndIfcNames(outStr), nil
@@ -611,7 +611,7 @@ func (f *ovsFabric) ofPortToLocalFlowsPairs(flows []string) map[uint16][]string 
 		ofPort := f.usefulLocalFlowOFport(aFlow)
 		ofPortToFlowsPairs[ofPort] = append(ofPortToFlowsPairs[ofPort], aFlow)
 		if len(ofPortToFlowsPairs[ofPort]) == 2 {
-			glog.V(5).Infof("Paired flows \"%s\" \"%s\"", ofPortToFlowsPairs[ofPort][0], ofPortToFlowsPairs[ofPort][1])
+			klog.V(5).Infof("Paired flows \"%s\" \"%s\"", ofPortToFlowsPairs[ofPort][0], ofPortToFlowsPairs[ofPort][1])
 		}
 	}
 	return ofPortToFlowsPairs
@@ -620,7 +620,7 @@ func (f *ovsFabric) ofPortToLocalFlowsPairs(flows []string) map[uint16][]string 
 func (f *ovsFabric) parseLocalFlowsPairs(ofPortToPair map[uint16][]string) map[uint16]*networkfabric.LocalNetIfc {
 	ofPortToIfc := make(map[uint16]*networkfabric.LocalNetIfc, len(ofPortToPair))
 	for ofPort, aPair := range ofPortToPair {
-		glog.V(5).Infof("Parsing flows pair \"%s\" \"%s\"...", aPair[0], aPair[1])
+		klog.V(5).Infof("Parsing flows pair \"%s\" \"%s\"...", aPair[0], aPair[1])
 		ofPortToIfc[ofPort] = f.parseLocalFlowPair(aPair)
 	}
 	return ofPortToIfc
@@ -633,7 +633,7 @@ func (f *ovsFabric) pairRemoteFlowsPerIfc(flows []string) [][]string {
 		cookie := f.extractCookie(aFlow)
 		flowPairs[cookie] = append(flowPairs[cookie], aFlow)
 		if len(flowPairs[cookie]) == 2 {
-			glog.V(5).Infof("Paired flows \"%s\" \"%s\"", flowPairs[cookie][0], flowPairs[cookie][1])
+			klog.V(5).Infof("Paired flows \"%s\" \"%s\"", flowPairs[cookie][0], flowPairs[cookie][1])
 		}
 	}
 
@@ -650,7 +650,7 @@ func (f *ovsFabric) pairRemoteFlowsPerIfc(flows []string) [][]string {
 func (f *ovsFabric) parseRemoteFlowsPairs(flowsPairs [][]string) []networkfabric.RemoteNetIfc {
 	ifcs := make([]networkfabric.RemoteNetIfc, 0, len(flowsPairs))
 	for _, aPair := range flowsPairs {
-		glog.V(5).Infof("Parsing flows pair \"%s\" \"%s\"...", aPair[0], aPair[1])
+		klog.V(5).Infof("Parsing flows pair \"%s\" \"%s\"...", aPair[0], aPair[1])
 		ifcs = append(ifcs, f.parseRemoteFlowPair(aPair))
 	}
 	return ifcs
@@ -667,13 +667,13 @@ func (f *ovsFabric) nameIfcs(ofPortToIfcName map[uint16]string, ofPortToIfc map[
 		ifc := ofPortToIfc[ofPort]
 		if ifc == nil {
 			incompleteIfcs = append(incompleteIfcs, name)
-			glog.V(5).Infof("No flows found for network device %s connected to bridge %s",
+			klog.V(5).Infof("No flows found for network device %s connected to bridge %s",
 				name,
 				f.bridge)
 		} else {
 			ifc.Name = name
 			completeIfcs = append(completeIfcs, *ifc)
-			glog.V(5).Infof("Named local network interface %#+v",
+			klog.V(5).Infof("Named local network interface %#+v",
 				ifc)
 		}
 	}
@@ -684,12 +684,12 @@ func (f *ovsFabric) nameIfcs(ofPortToIfcName map[uint16]string, ofPortToIfc map[
 func (f *ovsFabric) deleteIncompleteIfcs(ifcs []string) {
 	for _, anIfc := range ifcs {
 		if err := f.deleteIfc(anIfc); err != nil {
-			glog.Errorf("Failed to delete interface %s from bridge %s: %s. Deletion needed because no flows for the interface were found",
+			klog.Errorf("Failed to delete interface %s from bridge %s: %s. Deletion needed because no flows for the interface were found",
 				anIfc,
 				f.bridge,
 				err.Error())
 		} else {
-			glog.V(5).Infof("Deleted interface %s from bridge %s: no flows found",
+			klog.V(5).Infof("Deleted interface %s from bridge %s: no flows found",
 				anIfc,
 				f.bridge)
 		}
@@ -708,7 +708,7 @@ func (f *ovsFabric) parseOFportsAndIfcNames(ofPortsAndIfcNamesRaw string) map[ui
 }
 
 func (f *ovsFabric) parseOFportAndIfcName(ofPortAndNameJoined string, ofPortToIfcName map[uint16]string) {
-	glog.V(5).Infof("Parsing OpenFlow port number and interface name pair %s from bridge %s",
+	klog.V(5).Infof("Parsing OpenFlow port number and interface name pair %s from bridge %s",
 		ofPortAndNameJoined,
 		f.bridge)
 
@@ -991,7 +991,7 @@ func (f *ovsFabric) lockVNIIPPair(vni uint32, ip net.IP) (err error) {
 	defer func() {
 		f.lockedVNIIPPairsMutex.Unlock()
 		if err == nil {
-			glog.V(5).Infof("Locked IP %s in VNI %#x", ip, vni)
+			klog.V(5).Infof("Locked IP %s in VNI %#x", ip, vni)
 		}
 	}()
 	if _, pairAlreadyLocked := f.lockedVNIIPPairs[vniIP]; pairAlreadyLocked {
@@ -1010,7 +1010,7 @@ func (f *ovsFabric) unlockVNIIPPair(vni uint32, ip net.IP) {
 	f.lockedVNIIPPairsMutex.Lock()
 	defer func() {
 		f.lockedVNIIPPairsMutex.Unlock()
-		glog.V(5).Infof("Unlocked IP %s in VNI %#x", ip, vni)
+		klog.V(5).Infof("Unlocked IP %s in VNI %#x", ip, vni)
 	}()
 	delete(f.lockedVNIIPPairs, vniIP)
 }

@@ -26,10 +26,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang/glog"
-
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog"
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
@@ -39,6 +39,8 @@ func main() {
 	ctlrOpts := &KOSControllerManagerOptions{}
 	ctlrOpts.AddFlags()
 	flag.Set("logtostderr", "true")
+	logs.InitLogs()
+	defer logs.FlushLogs()
 	flag.Parse()
 
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
@@ -51,13 +53,13 @@ func main() {
 
 	k8sClientCfg, kosClientCfg, err := buildClientConfigs(ctlrOpts)
 	if err != nil {
-		glog.Errorf("Failed to build client configs: %s.", err.Error())
+		klog.Errorf("Failed to build client configs: %s.", err.Error())
 		os.Exit(2)
 	}
 
 	kosInformersClientset, err := kosclientset.NewForConfig(addUserAgent(kosClientCfg, "kos-controller-manager"))
 	if err != nil {
-		glog.Errorf("Failed to configure kos clientset for informers: %s.", err.Error())
+		klog.Errorf("Failed to configure kos clientset for informers: %s.", err.Error())
 		os.Exit(3)
 	}
 
@@ -70,14 +72,14 @@ func main() {
 		k8sCC := addUserAgent(k8sClientCfg, controller)
 		kosCC := addUserAgent(kosClientCfg, controller)
 		if err := startController(ctx, k8sCC, kosCC); err != nil {
-			glog.Errorf("Failed to start %s: %s", controller, err.Error())
+			klog.Errorf("Failed to start %s: %s", controller, err.Error())
 			os.Exit(4)
 		}
 	}
-	glog.Info("All controllers started.")
+	klog.Info("All controllers started.")
 
 	ctx.sharedInformers.Start(ctx.stop)
-	glog.V(2).Info("Informers started.")
+	klog.V(2).Info("Informers started.")
 
 	<-ctx.stop
 }

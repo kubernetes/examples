@@ -131,7 +131,7 @@ func (c *FakeNetworkAttachments) DeleteCollection(options *v1.DeleteOptions, lis
 // Patch applies the patch and returns the patched networkAttachment.
 func (c *FakeNetworkAttachments) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.NetworkAttachment, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(networkattachmentsResource, c.ns, name, data, subresources...), &v1alpha1.NetworkAttachment{})
+		Invokes(testing.NewPatchSubresourceAction(networkattachmentsResource, c.ns, name, pt, data, subresources...), &v1alpha1.NetworkAttachment{})
 
 	if obj == nil {
 		return nil, err

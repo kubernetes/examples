@@ -26,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang/glog"
 
 	k8scorev1api "k8s.io/api/core/v1"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +34,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog"
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	cactlr "k8s.io/examples/staging/kos/pkg/controllers/connectionagent"
@@ -76,6 +77,8 @@ func main() {
 	flag.IntVar(&blockProfileRate, "block-profile-rate", 0, "value given to `runtime.SetBlockProfileRate()`")
 	flag.IntVar(&mutexProfileFraction, "mutex-profile-fraction", 0, "value given to `runtime.SetMutexProfileFraction()`")
 	flag.Set("logtostderr", "true")
+	logs.InitLogs()
+	defer logs.FlushLogs()
 	flag.Parse()
 
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
@@ -93,24 +96,24 @@ func main() {
 		// fall back to default node name
 		nodeName, err = os.Hostname()
 		if err != nil {
-			glog.Errorf("-nodename flag value was not provided and default value could not be retrieved: %s\n", err.Error())
+			klog.Errorf("-nodename flag value was not provided and default value could not be retrieved: %s\n", err.Error())
 			os.Exit(2)
 		}
 	}
 	if hostIP == "" {
-		glog.Errorf("-hostip flag MUST have a value\n")
+		klog.Errorf("-hostip flag MUST have a value\n")
 		os.Exit(3)
 	}
 
 	netFabric, err := netfactory.NewNetFabricForName(netFabricName)
 	if err != nil {
-		glog.Errorf("network fabric not found: %s\n", err.Error())
+		klog.Errorf("network fabric not found: %s\n", err.Error())
 		os.Exit(4)
 	}
 
 	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigFilename)
 	if err != nil {
-		glog.Errorf("Failed to build client config for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
+		klog.Errorf("Failed to build client config for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
 		os.Exit(5)
 	}
 	clientCfg.QPS = float32(clientQPS)
@@ -123,20 +126,20 @@ func main() {
 		k8sclientset, err := k8sclient.NewForConfig(clientCfg)
 		var svc *k8scorev1api.Service
 		if err != nil {
-			glog.Errorf("Failed to create Kubernetes clientset: %s\n", err.Error())
+			klog.Errorf("Failed to create Kubernetes clientset: %s\n", err.Error())
 			goto TryAgain
 		}
 		eventIfc = k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 		svc, err = k8sclientset.CoreV1().Services("example-com").Get("network-api", k8smetav1.GetOptions{})
 		if err != nil {
-			glog.Errorf("Failed to fetch network-api service: %s\n", err.Error())
+			klog.Errorf("Failed to fetch network-api service: %s\n", err.Error())
 			goto TryAgain
 		}
 		if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
-			glog.Errorf("The network-api service has a useless Cluster IP (%q).\n", svc.Spec.ClusterIP)
+			klog.Errorf("The network-api service has a useless Cluster IP (%q).\n", svc.Spec.ClusterIP)
 			goto TryAgain
 		}
-		glog.Infof("Found Cluster IP address %q for the network-api service.\n", svc.Spec.ClusterIP)
+		klog.Infof("Found Cluster IP address %q for the network-api service.\n", svc.Spec.ClusterIP)
 		clientCfg.Host = svc.Spec.ClusterIP + ":443"
 		break
 	TryAgain:
@@ -158,7 +161,7 @@ func main() {
 
 	kcs, err := kosclientset.NewForConfig(clientCfg)
 	if err != nil {
-		glog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
+		klog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
 		os.Exit(6)
 	}
 
@@ -167,7 +170,7 @@ func main() {
 
 	ca := cactlr.NewConnectionAgent(nodeName, gonet.ParseIP(hostIP), kcs, eventIfc, queue, workers, netFabric, allowedProgramsSet)
 
-	glog.Infof("Connection Agent start, nodeName=%s, hostIP=%s, netFabric=%s, allowedProgramsSlice=%v, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, blockProfileRate=%d, mutexProfileFraction=%d\n",
+	klog.Infof("Connection Agent start, nodeName=%s, hostIP=%s, netFabric=%s, allowedProgramsSlice=%v, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, blockProfileRate=%d, mutexProfileFraction=%d\n",
 		nodeName,
 		hostIP,
 		netFabric.Name(),
@@ -182,7 +185,7 @@ func main() {
 	stopCh := StopOnSignals()
 	err = ca.Run(stopCh)
 	if err != nil {
-		glog.Info(err)
+		klog.Info(err)
 	}
 }
 

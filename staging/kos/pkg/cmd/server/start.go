@@ -21,7 +21,6 @@ import (
 	"io"
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -30,6 +29,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/klog"
 
 	"k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	"k8s.io/examples/staging/kos/pkg/apiserver"
@@ -56,7 +56,10 @@ type NetworkAPIServerOptions struct {
 
 func NewNetworkAPIServerOptions(out, errOut io.Writer) *NetworkAPIServerOptions {
 	o := &NetworkAPIServerOptions{
-		RecommendedOptions:    genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
+		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix,
+			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
+			genericoptions.NewProcessInfo("kos-apiserver", "example.com"),
+		),
 		ServerRunOptions:      genericoptions.NewServerRunOptions(),
 		CheckSubnetsConflicts: true,
 		StdOut:                out,
@@ -117,7 +120,7 @@ func (o *NetworkAPIServerOptions) Config() (*apiserver.Config, error) {
 	serverConfig.EnableMetrics = true
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "network-apiserver"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig, apiserver.Scheme); err != nil {
+	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, err
 	}
 	if err := o.ServerRunOptions.ApplyTo(&serverConfig.Config); err != nil {
@@ -150,12 +153,12 @@ func (o NetworkAPIServerOptions) RunNetworkAPIServer(stopCh <-chan struct{}) err
 	}
 
 	server.GenericAPIServer.AddPostStartHook("start-network-apiserver-informer", func(context genericapiserver.PostStartHookContext) error {
-		glog.V(1).Infoln("NetworkSharedInformerFactory about to start")
+		klog.V(1).Infoln("NetworkSharedInformerFactory about to start")
 		config.ExtraConfig.NetworkSharedInformerFactory.Start(context.StopCh)
-		glog.V(1).Infoln("NetworkSharedInformerFactory started")
+		klog.V(1).Infoln("NetworkSharedInformerFactory started")
 		return nil
 	})
-	glog.V(1).Infoln("start-network-apiserver-informers PostStartHook added")
+	klog.V(1).Infoln("start-network-apiserver-informers PostStartHook added")
 
 	return server.GenericAPIServer.PrepareRun().Run(stopCh)
 }

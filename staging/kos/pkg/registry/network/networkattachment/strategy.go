@@ -38,14 +38,14 @@ func NewStrategy(typer runtime.ObjectTyper) networkattachmentStrategy {
 	return networkattachmentStrategy{typer, names.SimpleNameGenerator}
 }
 
-// GetAttrs returns labels.Set, fields.Set, the presence of Initializers if any
+// GetAttrs returns labels.Set, fields.Set,
 // and error in case the given runtime.Object is not a NetworkAttachment.
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	networkattachment, ok := obj.(*network.NetworkAttachment)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a NetworkAttachment")
+		return nil, nil, fmt.Errorf("given object is not a NetworkAttachment")
 	}
-	return labels.Set(networkattachment.ObjectMeta.Labels), SelectableFields(networkattachment), networkattachment.Initializers != nil, nil
+	return labels.Set(networkattachment.ObjectMeta.Labels), SelectableFields(networkattachment), nil
 }
 
 // MatchNetworkAttachment is the filter used by the generic etcd backend to

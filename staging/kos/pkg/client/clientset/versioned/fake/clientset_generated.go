@@ -75,8 +75,3 @@ var _ clientset.Interface = &Clientset{}
 func (c *Clientset) NetworkV1alpha1() networkv1alpha1.NetworkV1alpha1Interface {
 	return &fakenetworkv1alpha1.FakeNetworkV1alpha1{Fake: &c.Fake}
 }
-
-// Network retrieves the NetworkV1alpha1Client
-func (c *Clientset) Network() networkv1alpha1.NetworkV1alpha1Interface {
-	return &fakenetworkv1alpha1.FakeNetworkV1alpha1{Fake: &c.Fake}
-}

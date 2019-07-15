@@ -37,14 +37,14 @@ func NewStrategy(typer runtime.ObjectTyper) iplockStrategy {
 	return iplockStrategy{typer, names.SimpleNameGenerator}
 }
 
-// GetAttrs returns labels.Set, fields.Set, the presence of Initializers if any
+// GetAttrs returns labels.Set, fields.Set,
 // and error in case the given runtime.Object is not a IPLock.
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	iplock, ok := obj.(*network.IPLock)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a IPLock")
+		return nil, nil, fmt.Errorf("given object is not a IPLock")
 	}
-	return labels.Set(iplock.ObjectMeta.Labels), SelectableFields(iplock), iplock.Initializers != nil, nil
+	return labels.Set(iplock.ObjectMeta.Labels), SelectableFields(iplock), nil
 }
 
 // MatchIPLock is the filter used by the generic etcd backend to watch events
