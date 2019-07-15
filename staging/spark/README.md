@@ -59,7 +59,7 @@ The Master [service](https://kubernetes.io/docs/concepts/services-networking/ser
 for a Spark cluster.
 
 Use the
-[`examples/staging/sparkspark/spark-master-controller.yaml`](spark-master-controller.yaml)
+[`examples/staging/spark/spark-master-controller.yaml`](spark-master-controller.yaml)
 file to create a
 [replication controller](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/)
 running the Spark Master service.
