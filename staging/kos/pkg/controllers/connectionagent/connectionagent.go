@@ -383,7 +383,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	// Serve Prometheus metrics
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		klog.Errorf("In-process HTTP server crashed: %s\n", http.ListenAndServe(MetricsAddr, nil).Error())
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
 	}()
 
 	ca.stopCh = stopCh
@@ -622,7 +622,7 @@ func (ca *ConnectionAgent) processQueue() {
 func (ca *ConnectionAgent) processQueueItem(attNSN k8stypes.NamespacedName) {
 	defer ca.queue.Done(attNSN)
 	requeues := ca.queue.NumRequeues(attNSN)
-	klog.V(5).Infof("Working on attachment %s, with %d earlier requeues\n", attNSN, requeues)
+	klog.V(5).Infof("Working on attachment %s, with %d earlier requeues", attNSN, requeues)
 	err := ca.processNetworkAttachment(attNSN)
 	if err != nil {
 		// If we're here there's been an error: either the attachment current state was
@@ -729,7 +729,7 @@ func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1
 func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) error {
 	attNSN, attVNI := parse.AttNSN(att), att.Status.AddressVNI
 	attNode := att.Spec.Node
-	klog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s\n", attNSN, attNode, att.ResourceVersion)
+	klog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s", attNSN, attNode, att.ResourceVersion)
 
 	// Update the vnState associated with the attachment. This typically involves
 	// adding the attachment to the vnState associated to its vni (and initializing
@@ -783,10 +783,10 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 		!pcer.Equiv(att.Status.PostCreateExecReport) ||
 		!statusErrs.Equal(SliceOfString(att.Status.Errors.Host)) {
 
-		klog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v\n", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
+		klog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
 		updatedAtt, err := ca.setAttStatus(att, macAddrS, ifcName, statusErrs, pcer)
 		if err != nil {
-			klog.V(3).Infof("Failed to update att %s status: oldRV=%s, ipv4=%s, macAddress=%s, ifcName=%s, PostCreateExecReport=%#+v\n",
+			klog.V(3).Infof("Failed to update att %s status: oldRV=%s, ipv4=%s, macAddress=%s, ifcName=%s, PostCreateExecReport=%#+v",
 				attNSN,
 				att.ResourceVersion,
 				att.Status.IPv4,
@@ -795,7 +795,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 				pcer)
 			return err
 		}
-		klog.V(3).Infof("Updated att %s status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=%#+v\n",
+		klog.V(3).Infof("Updated att %s status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=%#+v",
 			attNSN,
 			att.ResourceVersion,
 			updatedAtt.ResourceVersion,

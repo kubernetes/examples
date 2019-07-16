@@ -96,24 +96,24 @@ func main() {
 		// fall back to default node name
 		nodeName, err = os.Hostname()
 		if err != nil {
-			klog.Errorf("-nodename flag value was not provided and default value could not be retrieved: %s\n", err.Error())
+			klog.Errorf("-nodename flag value was not provided and default value could not be retrieved: %s", err.Error())
 			os.Exit(2)
 		}
 	}
 	if hostIP == "" {
-		klog.Errorf("-hostip flag MUST have a value\n")
+		klog.Errorf("-hostip flag MUST have a value")
 		os.Exit(3)
 	}
 
 	netFabric, err := netfactory.NewNetFabricForName(netFabricName)
 	if err != nil {
-		klog.Errorf("network fabric not found: %s\n", err.Error())
+		klog.Errorf("network fabric not found: %s", err.Error())
 		os.Exit(4)
 	}
 
 	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigFilename)
 	if err != nil {
-		klog.Errorf("Failed to build client config for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
+		klog.Errorf("Failed to build client config for kubeconfig=%q: %s", kubeconfigFilename, err.Error())
 		os.Exit(5)
 	}
 	clientCfg.QPS = float32(clientQPS)
@@ -126,20 +126,20 @@ func main() {
 		k8sclientset, err := k8sclient.NewForConfig(clientCfg)
 		var svc *k8scorev1api.Service
 		if err != nil {
-			klog.Errorf("Failed to create Kubernetes clientset: %s\n", err.Error())
+			klog.Errorf("Failed to create Kubernetes clientset: %s", err.Error())
 			goto TryAgain
 		}
 		eventIfc = k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 		svc, err = k8sclientset.CoreV1().Services("example-com").Get("network-api", k8smetav1.GetOptions{})
 		if err != nil {
-			klog.Errorf("Failed to fetch network-api service: %s\n", err.Error())
+			klog.Errorf("Failed to fetch network-api service: %s", err.Error())
 			goto TryAgain
 		}
 		if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
-			klog.Errorf("The network-api service has a useless Cluster IP (%q).\n", svc.Spec.ClusterIP)
+			klog.Errorf("The network-api service has a useless Cluster IP (%q).", svc.Spec.ClusterIP)
 			goto TryAgain
 		}
-		klog.Infof("Found Cluster IP address %q for the network-api service.\n", svc.Spec.ClusterIP)
+		klog.Infof("Found Cluster IP address %q for the network-api service.", svc.Spec.ClusterIP)
 		clientCfg.Host = svc.Spec.ClusterIP + ":443"
 		break
 	TryAgain:
@@ -161,7 +161,7 @@ func main() {
 
 	kcs, err := kosclientset.NewForConfig(clientCfg)
 	if err != nil {
-		klog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s\n", kubeconfigFilename, err.Error())
+		klog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s", kubeconfigFilename, err.Error())
 		os.Exit(6)
 	}
 
@@ -170,7 +170,7 @@ func main() {
 
 	ca := cactlr.NewConnectionAgent(nodeName, gonet.ParseIP(hostIP), kcs, eventIfc, queue, workers, netFabric, allowedProgramsSet)
 
-	klog.Infof("Connection Agent start, nodeName=%s, hostIP=%s, netFabric=%s, allowedProgramsSlice=%v, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, blockProfileRate=%d, mutexProfileFraction=%d\n",
+	klog.Infof("Connection Agent start, nodeName=%s, hostIP=%s, netFabric=%s, allowedProgramsSlice=%v, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, blockProfileRate=%d, mutexProfileFraction=%d",
 		nodeName,
 		hostIP,
 		netFabric.Name(),

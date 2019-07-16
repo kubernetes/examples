@@ -41,7 +41,7 @@ func Peel(obj interface{}) k8sruntime.Object {
 	case k8sruntime.Object:
 		return o
 	default:
-		klog.Errorf("Peel: object of unexpected type %T: %#+v\n", obj, obj)
+		klog.Errorf("Peel: object of unexpected type %T: %#+v", obj, obj)
 		panic(obj)
 	}
 }
