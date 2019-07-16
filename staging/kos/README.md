@@ -122,7 +122,8 @@ The SDN has just four concepts, as follows.
   a single K8s API namespace, but multiple virtual networks can reside
   in the same namespace.
 
-- Subnet, a kube custom resource.  A subnet has a single CIDR block,
+- Subnet, a kube custom resource.  A subnet has a single CIDR block
+  compliant with [RFC 1918](https://tools.ietf.org/html/rfc1918),
   from which addresses are assigned (with the usual omissions).  Each
   Subnet is on a VNI, and a VNI can have multiple Subnets. Both the
   CIDR block and the VNI are immutable: attempts to update them will
@@ -145,10 +146,12 @@ attachment's MAC address is a function of the IP address and the VNI.
 Neither controller enforces any interlock between its actions and the
 lifecycle of any API object. Consequently, there can not be any fully
 effective enforcement of immutability of any field of any API object ---
-the client can always delete and object and create a replacement with the
+the client can always delete an object and create a replacement with the
 same name, possibly without the controller seeing any intermediate state.
 Coping with all possible changes makes for complicated controller code.
-Stay tuned for lifecycle interlocks.
+Stay tuned for an alternative version of `kos` which will feature
+lifecycle interlocks to investigate their usefulness in simplifying
+controllers.
 
 Neither controller enforces or assumes any connections between the
 lifecycles of NetworkAttachments and their Subnets; either can be
@@ -159,7 +162,7 @@ enforcement is necessarily imperfect because there are no ACID
 transactions that involve more than one object.  The controllers
 therefore must be prepared to react safely if and when an
 inconsistency gets through.  Again, this makes for very complicated
-controller code and this area is still work in progress.
+controller code.
 
 The problems that the SDN solves are as follows.
 
@@ -315,15 +318,15 @@ One apparently odd design choice is having the validator retrieve all the
 subnets with a live list against the API server rather than a cache-based
 list using its Informer. The live list is worse performance-wise, but is
 necessary to avoid race conditions that can lead to two conflicting subnets
-having both `SubnetStatus.Validated` set to `true`. The subnets validator is a
-singleton, but Kubernetes makes no guarantee that there cannot be transients
-with more than one running. Assume two --- *V1* and *V2* --- are running and
-cache-based lists are used. Also assume a subnet *X* is created and shortly
-after another subnet *Y* in conflict with *X* is created. *X* and *Y* might
-appear in *V1* and *V2*'s Informers caches in opposite orders: *V1*
-processes *X* first, and when it does the cache-based list *Y* is not in
-the cache yet. Likewise, *V2* might validate *Y* without seeing *X*. Hence
-both *X* and *Y* are marked as validated even if they are in conflict. The
+having both `SubnetStatus.Validated` set to `true`. The subnets validator is
+intended to be a singleton, but Kubernetes makes no guarantee that there
+cannot be transients with more than one running. Assume two --- *V1* and *V2*
+--- are running and cache-based lists are used. Also assume a subnet *X* is
+created and shortly after another subnet *Y* in conflict with *X* is created.
+*X* and *Y* might appear in *V1* and *V2*'s Informers' caches in opposite
+orders: *V1* processes *X* first, and when it does the cache-based list *Y*
+is not in the cache yet. Likewise, *V2* might validate *Y* without seeing *X*.
+Hence both *X* and *Y* are marked as validated even if they are in conflict. The
 problem is due to the fact that Informer's caches are not populated in order.
 API objects are stored in `etcd` in a sequential order represented by a
 *resource version* (basically a logical clock). Informers caches are populated

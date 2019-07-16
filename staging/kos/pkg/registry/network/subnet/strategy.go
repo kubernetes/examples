@@ -23,16 +23,18 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
+
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-
-	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/client-go/tools/cache"
+
 	"k8s.io/examples/staging/kos/pkg/apis/network"
 	"k8s.io/examples/staging/kos/pkg/util/parse/network/subnet"
 )
@@ -106,30 +108,26 @@ func (ss *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) fiel
 	s := obj.(*network.Subnet)
 	subnetSummary, parsingErrs := subnet.NewSummary(s)
 	var errs field.ErrorList
-	var vniOutOfRange, malformedCIDR bool
 	for _, e := range parsingErrs {
 		if e.Reason == subnet.VNIOutOfRange {
-			vniOutOfRange = true
 			errs = append(errs, field.Invalid(field.NewPath("spec", "vni"), strconv.FormatUint(uint64(s.Spec.VNI), 10), e.Error()))
 		}
 		if e.Reason == subnet.MalformedCIDR {
-			malformedCIDR = true
 			errs = append(errs, field.Invalid(field.NewPath("spec", "ipv4"), s.Spec.IPv4, e.Error()))
 		}
 	}
 
-	if !ss.checkConflicts || vniOutOfRange {
+	if len(errs) > 0 || !ss.checkConflicts {
 		// The only checks left are those for conflicts with other subnets. If
-		// we're here either such checks are disabled or the VNI of the subnet
-		// under validation is out of range (and the checks on conflicts make
-		// sense so long as the VNI is in range). Hence we return immediately.
+		// we're here either such checks are disabled or basic validation (such
+		// as CIDR syntax checks) failed, hence we return.
 		return errs
 	}
 
-	return append(errs, ss.checkNSAndCIDRConflicts(subnetSummary, malformedCIDR)...)
+	return append(errs, ss.checkNSAndCIDRConflicts(subnetSummary)...)
 }
 
-func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, malformedCIDR bool) (errs field.ErrorList) {
+func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary) (errs field.ErrorList) {
 	potentialRivals, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, strconv.FormatUint(uint64(candidate.VNI), 10))
 	if err != nil {
 		glog.Errorf("subnetIndexer.ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
@@ -139,15 +137,17 @@ func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary, mal
 	glog.V(5).Infof("Found %d subnets with vni %d", len(potentialRivals), candidate.VNI)
 	// Check whether there are Namespace and CIDR conflicts with other subnets.
 	for _, potentialRival := range potentialRivals {
-		// Ignore the error because a malformed subnet would not have been
-		// allowed: it's the code in this file that performs validation.
-		pr, _ := subnet.NewSummary(potentialRival)
-
+		pr, err := subnet.NewSummary(potentialRival)
+		if err != nil {
+			prMeta := potentialRival.(k8smetav1.Object)
+			glog.V(6).Infof("Skipping %s/%s while validating %s because parsing failed: %s.", prMeta.GetNamespace(), prMeta.GetName(), candidate.NamespacedName, err.Error())
+			continue
+		}
 		glog.V(2).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
 		if candidate.NSConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}
-		if !malformedCIDR && candidate.CIDRConflict(pr) {
+		if candidate.CIDRConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "ipv4"), fmt.Sprintf("subnets with same VNI must have disjoint CIDRs, but CIDR overlaps with %s's", pr.NamespacedName)))
 		}
 	}

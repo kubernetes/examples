@@ -30,6 +30,14 @@ import (
 const (
 	minVNI uint32 = 1
 	maxVNI uint32 = 2097151
+
+	// Lower and upper bounds for RFC 1918 ranges of IP addresses.
+	rfc1918LB1 uint32 = 0xa000000
+	rfc1918UB1 uint32 = 0xaffffff
+	rfc1918LB2 uint32 = 0xac100000
+	rfc1918UB2 uint32 = 0xac1fffff
+	rfc1918LB3 uint32 = 0xc0a80000
+	rfc1918UB3 uint32 = 0xc0a8ffff
 )
 
 // Summary is a simplified representation of a KOS API Subnet object. It stores
@@ -96,35 +104,43 @@ func NewSummary(subnet interface{}) (*Summary, Errors) {
 func makeSummary(ns, name string, uid types.UID, vni uint32, ipv4 string) (summary *Summary, errs Errors) {
 	// Check VNI is within allowed range.
 	if vni < minVNI || vni > maxVNI {
-		e := &Error{
-			Message: fmt.Sprintf("vni (%d) must be in [%d,%d]", vni, minVNI, maxVNI),
+		errs = append(errs, &Error{
+			Message: fmt.Sprintf("must be in [%d,%d]", minVNI, maxVNI),
 			Reason:  VNIOutOfRange,
-		}
-		errs = append(errs, e)
+		})
 	}
 
-	// Check CIDR is well-formed and extract lowest and highest addresses.
+	// Check CIDR is well-formed and compliant with https://tools.ietf.org/html/rfc1918
+	// because the algorithm that generates MAC addresses for NetworkAttachments
+	// is collision-free only assuming such compliance.
 	var baseU, lastU uint32
 	_, ipNet, err := gonet.ParseCIDR(ipv4)
 	if err == nil {
 		baseU, lastU = convert.IPNetToBoundsU(ipNet)
+		if baseU < rfc1918LB1 || lastU > rfc1918UB1 && baseU < rfc1918LB2 || lastU > rfc1918UB2 && baseU < rfc1918LB3 || lastU > rfc1918UB3 {
+			errs = append(errs, &Error{
+				Message: "must be compliant with RFC 1918 and is not",
+				Reason:  MalformedCIDR,
+			})
+		}
 	} else {
-		e := &Error{
+		errs = append(errs, &Error{
 			Message: err.Error(),
 			Reason:  MalformedCIDR,
-		}
-		errs = append(errs, e)
+		})
 	}
 
-	summary = &Summary{
-		NamespacedName: types.NamespacedName{
-			Namespace: ns,
-			Name:      name,
-		},
-		UID:   uid,
-		VNI:   vni,
-		BaseU: baseU,
-		LastU: lastU,
+	if len(errs) == 0 {
+		summary = &Summary{
+			NamespacedName: types.NamespacedName{
+				Namespace: ns,
+				Name:      name,
+			},
+			UID:   uid,
+			VNI:   vni,
+			BaseU: baseU,
+			LastU: lastU,
+		}
 	}
 	return
 }
