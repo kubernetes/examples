@@ -21,12 +21,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang/glog"
-
 	k8scorev1api "k8s.io/api/core/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
@@ -52,7 +51,7 @@ type controllerContext struct {
 type startFunction func(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error
 
 func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error {
-	glog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.IPAMControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
+	klog.Infof("IPAM controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.IPAMControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
 	k8sClientset, err := k8sclient.NewForConfig(k8sClientCfg)
 	if err != nil {
@@ -95,7 +94,7 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 }
 
 func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error {
-	glog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.SubnetValidationControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
+	klog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.SubnetValidationControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
 	kosClientset, err := kosclientset.NewForConfig(kosClientCfg)
 	if err != nil {

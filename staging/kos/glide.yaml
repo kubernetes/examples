@@ -1,10 +1,12 @@
 package: k8s.io/examples/staging/kos
 import:
 - package: github.com/go-openapi/spec
-  version: ~0.17.0
+# Something, I am not sure what, specifically requests commit 5bae59e25b21498baea7f9d46e9c147ec106a42e
+  version: ~0.17
 - package: github.com/golang/glog
 - package: github.com/prometheus/client_golang
-  version: ^0.9.2
+# k8s.io/apiserver 1.14 wants version 0.9.2
+  version: 0.9.2
   subpackages:
   - api
   - prometheus
@@ -13,11 +15,11 @@ import:
   version: ^0.0.3
 - package: github.com/wangjia184/sortedset
 - package: k8s.io/api
-  version: release-1.12
+  version: release-1.14
   subpackages:
   - core/v1
 - package: k8s.io/apimachinery
-  version: release-1.12
+  version: release-1.14
   subpackages:
   - pkg/api/errors
   - pkg/apis/meta/v1
@@ -35,9 +37,9 @@ import:
   - pkg/version
   - pkg/watch
 - package: k8s.io/code-generator
-  version: release-1.12
+  version: release-1.14
 - package: k8s.io/apiserver
-  version: release-1.12
+  version: release-1.14
   subpackages:
   - pkg/endpoints/request
   - pkg/registry/generic
@@ -47,9 +49,8 @@ import:
   - pkg/server/options
   - pkg/storage
   - pkg/storage/names
-  - pkg/util/logs
 - package: k8s.io/client-go
-  version: release-9.0
+  version: release-11.0
   subpackages:
   - discovery
   - discovery/fake
@@ -70,6 +71,17 @@ import:
   - args
 - package: k8s.io/klog
   version: ~0.3.0
+
+# sample-apiserver main now use k8s.io/component-base, and we follow suit
+
+- package: k8s.io/component-base
+  version: release-1.14
+
+# prometheus/client_golang 0.9.2 and later uses GO111MODULE only and requests prometheus/procfs v0.0.2
+
+- package: github.com/prometheus/procfs
+  version: 0.0.2
+
 testImport:
 - package: github.com/onsi/ginkgo
   version: ^1.7.0

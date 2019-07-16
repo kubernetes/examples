@@ -119,7 +119,7 @@ func (c *FakeIPLocks) DeleteCollection(options *v1.DeleteOptions, listOptions v1
 // Patch applies the patch and returns the patched iPLock.
 func (c *FakeIPLocks) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *network.IPLock, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(iplocksResource, c.ns, name, data, subresources...), &network.IPLock{})
+		Invokes(testing.NewPatchSubresourceAction(iplocksResource, c.ns, name, pt, data, subresources...), &network.IPLock{})
 
 	if obj == nil {
 		return nil, err

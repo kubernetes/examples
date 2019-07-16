@@ -21,14 +21,15 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/golang/glog"
-
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog"
+
 	"k8s.io/examples/staging/kos/pkg/cmd/server"
 )
 
 func main() {
+	flag.Set("alsologtostderr", "true")
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
@@ -41,6 +42,6 @@ func main() {
 	cmd := server.NewCommandStartNetworkAPIServer(options, stopCh)
 	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	if err := cmd.Execute(); err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 }

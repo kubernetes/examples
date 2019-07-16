@@ -497,6 +497,10 @@ building and operations.
 There is a `Makefile` in the `kos` directory and it supports some of
 the following steps.
 
+### Dependency Management
+
+Dependencies are managed via [Glide](https://github.com/Masterminds/glide).
+
 ### Pre-Requisites
 
 You will need the following installed on your build/ops machine.

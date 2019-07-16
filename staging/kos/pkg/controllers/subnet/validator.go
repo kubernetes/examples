@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
-
 	k8scorev1api "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +33,7 @@ import (
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
 	k8scache "k8s.io/client-go/tools/cache"
 	k8sworkqueue "k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	kosclientv1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
@@ -121,21 +120,21 @@ func (v *Validator) Run(stop <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer v.queue.ShutDown()
 
-	glog.Info("Starting subnet validation controller.")
-	defer glog.Info("Shutting down subnet validation controller.")
+	klog.Info("Starting subnet validation controller.")
+	defer klog.Info("Shutting down subnet validation controller.")
 
 	v.subnetInformer.AddEventHandler(v)
 
 	if !k8scache.WaitForCacheSync(stop, v.subnetInformer.HasSynced) {
 		return errors.New("informer cache failed to sync")
 	}
-	glog.V(2).Infof("Informer cache synced.")
+	klog.V(2).Infof("Informer cache synced.")
 
 	// Start workers.
 	for i := 0; i < v.workers; i++ {
 		go k8swait.Until(v.processQueue, time.Second, stop)
 	}
-	glog.V(2).Infof("Launched %d workers.", v.workers)
+	klog.V(2).Infof("Launched %d workers.", v.workers)
 
 	<-stop
 
@@ -144,7 +143,7 @@ func (v *Validator) Run(stop <-chan struct{}) error {
 
 func (v *Validator) OnAdd(obj interface{}) {
 	s := obj.(*netv1a1.Subnet)
-	glog.V(5).Infof("Notified of creation of %#+v.", s)
+	klog.V(5).Infof("Notified of creation of %#+v.", s)
 	v.queue.Add(k8stypes.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.Name,
@@ -153,7 +152,7 @@ func (v *Validator) OnAdd(obj interface{}) {
 
 func (v *Validator) OnUpdate(oldObj, newObj interface{}) {
 	oldS, newS := oldObj.(*netv1a1.Subnet), newObj.(*netv1a1.Subnet)
-	glog.V(5).Infof("Notified of update from %#+v to %#+v.", oldS, newS)
+	klog.V(5).Infof("Notified of update from %#+v to %#+v.", oldS, newS)
 
 	nsn := k8stypes.NamespacedName{
 		Namespace: newS.Namespace,
@@ -183,7 +182,7 @@ func (v *Validator) subnetIsStaleNoMore(subnet k8stypes.NamespacedName, rv strin
 
 func (v *Validator) OnDelete(obj interface{}) {
 	s := parse.Peel(obj).(*netv1a1.Subnet)
-	glog.V(5).Infof("Notified of deletion of %#+v.", s)
+	klog.V(5).Infof("Notified of deletion of %#+v.", s)
 	v.queue.Add(k8stypes.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.Name,
@@ -204,11 +203,11 @@ func (v *Validator) processQueueItem(subnet k8stypes.NamespacedName) {
 	defer v.queue.Done(subnet)
 	requeues := v.queue.NumRequeues(subnet)
 	if err := v.processSubnet(subnet); err != nil {
-		glog.Warningf("Failed processing %s, requeuing (%d earlier requeues): %s.", subnet, requeues, err.Error())
+		klog.Warningf("Failed processing %s, requeuing (%d earlier requeues): %s.", subnet, requeues, err.Error())
 		v.queue.AddRateLimited(subnet)
 		return
 	}
-	glog.V(4).Infof("Finished %s with %d requeues.", subnet, requeues)
+	klog.V(4).Infof("Finished %s with %d requeues.", subnet, requeues)
 	v.queue.Forget(subnet)
 }
 
@@ -216,7 +215,7 @@ func (v *Validator) processSubnet(subnetNSN k8stypes.NamespacedName) error {
 	subnet, err := v.subnetLister.Subnets(subnetNSN.Namespace).Get(subnetNSN.Name)
 
 	if err != nil && !k8serrors.IsNotFound(err) {
-		glog.Errorf("Subnet lister failed to lookup %s: %s.", subnetNSN, err.Error())
+		klog.Errorf("Subnet lister failed to lookup %s: %s.", subnetNSN, err.Error())
 		// This should never happen. No point in retrying.
 		return nil
 	}
@@ -244,12 +243,12 @@ func (v *Validator) processDeletedSubnet(s k8stypes.NamespacedName) {
 func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	ss, parsingErrs := subnet.NewSummary(s)
 	if len(parsingErrs) > 0 {
-		glog.Errorf("Subnet %s/%s is malformed: %s. This should never happen.", s.Namespace, s.Name, parsingErrs.Error())
+		klog.Errorf("Subnet %s/%s is malformed: %s. This should never happen.", s.Namespace, s.Name, parsingErrs.Error())
 		return nil
 	}
 
 	if v.subnetIsStale(ss.NamespacedName, s.ResourceVersion) {
-		glog.V(5).Infof("Stopping processing of %s because it's stale. Processing will be restarted upon receiving the fresh version.", ss.NamespacedName)
+		klog.V(5).Infof("Stopping processing of %s because it's stale. Processing will be restarted upon receiving the fresh version.", ss.NamespacedName)
 		return nil
 	}
 
@@ -276,7 +275,7 @@ func (v *Validator) processExistingSubnet(s *netv1a1.Subnet) error {
 	})
 	if err != nil {
 		if malformedRequest(err) {
-			glog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", ss.NamespacedName, err.Error())
+			klog.Errorf("live list of all subnets against API server failed while validating %s: %s. There will be no retry because of the nature of the error", ss.NamespacedName, err.Error())
 			// This should never happen, no point in retrying.
 			return nil
 		}
@@ -370,7 +369,7 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 	for _, pr := range potentialRivals {
 		potentialRival, parsingErrs := subnet.NewSummary(&pr)
 		if len(parsingErrs) > 0 {
-			glog.Errorf("Found malformed subnet %s/%s while validating %s: %s. This should never happen.", pr.Namespace, pr.Name, candidate.NamespacedName, parsingErrs.Error())
+			klog.Errorf("Found malformed subnet %s/%s while validating %s: %s. This should never happen.", pr.Namespace, pr.Name, candidate.NamespacedName, parsingErrs.Error())
 			continue
 		}
 
@@ -383,11 +382,11 @@ func (v *Validator) recordConflicts(candidate *subnet.Summary, potentialRivals [
 		// If we're here the two subnets represented by potentialRival and
 		// candidate are in conflict, that is, they are rivals.
 		if potentialRival.CIDRConflict(candidate) {
-			glog.V(2).Infof("CIDR conflict found between %s (%d, %d) and %s (%d, %d).", candidate.NamespacedName, candidate.BaseU, candidate.LastU, potentialRival.NamespacedName, potentialRival.BaseU, potentialRival.LastU)
+			klog.V(2).Infof("CIDR conflict found between %s (%d, %d) and %s (%d, %d).", candidate.NamespacedName, candidate.BaseU, candidate.LastU, potentialRival.NamespacedName, potentialRival.BaseU, potentialRival.LastU)
 			conflictsMsgs = append(conflictsMsgs, fmt.Sprintf("CIDR overlaps with %s's (%s)", potentialRival.NamespacedName, pr.Spec.IPv4))
 		}
 		if potentialRival.NSConflict(candidate) {
-			glog.V(2).Infof("Namespace conflict found between %s and %s.", candidate.NamespacedName, potentialRival.NamespacedName)
+			klog.V(2).Infof("Namespace conflict found between %s and %s.", candidate.NamespacedName, potentialRival.NamespacedName)
 			conflictsMsgs = append(conflictsMsgs, fmt.Sprintf("same VNI but different namespace wrt %s", potentialRival.NamespacedName))
 		}
 
@@ -405,7 +404,7 @@ func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validationErrors []s
 	sort.Strings(validationErrors)
 	validated := len(validationErrors) == 0
 	if s.Status.Validated == validated && equal(s.Status.Errors, validationErrors) {
-		glog.V(4).Infof("%s/%s's status was not updated because it is already up to date.", s.Namespace, s.Name)
+		klog.V(4).Infof("%s/%s's status was not updated because it is already up to date.", s.Namespace, s.Name)
 		return nil
 	}
 
@@ -420,10 +419,10 @@ func (v *Validator) updateSubnetValidity(s *netv1a1.Subnet, validationErrors []s
 			Namespace: s.Namespace,
 			Name:      s.Name,
 		}
-		glog.V(4).Infof("Recorded errors=%s and validated=%t into %s's status.", validationErrors, sCopy.Status.Validated, nsn)
+		klog.V(4).Infof("Recorded errors=%s and validated=%t into %s's status.", validationErrors, sCopy.Status.Validated, nsn)
 		v.updateStaleRV(nsn, s.ResourceVersion)
 	case malformedRequest(err):
-		glog.Errorf("Failed update from %#+v to %#+v: %s; there will be no retry because of the nature of the error.", s, sCopy, err.Error())
+		klog.Errorf("Failed update from %#+v to %#+v: %s; there will be no retry because of the nature of the error.", s, sCopy, err.Error())
 	default:
 		return fmt.Errorf("failed update from %#+v to %#+v: %s", s, sCopy, err.Error())
 	}

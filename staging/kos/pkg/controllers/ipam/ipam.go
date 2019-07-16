@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -40,6 +39,7 @@ import (
 	k8scache "k8s.io/client-go/tools/cache"
 	k8seventrecord "k8s.io/client-go/tools/record"
 	k8sworkqueue "k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	kosscheme "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/scheme"
@@ -198,7 +198,7 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	prometheus.MustRegister(attachmentCreateToLockHistogram, lockOpHistograms, attachmentCreateToAddressHistogram, attachmentUpdateHistograms, anticipationUsedHistogram, statusUsedHistogram)
 
 	eventBroadcaster := k8seventrecord.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.V(3).Infof)
+	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&k8scorev1client.EventSinkImpl{eventIfc})
 	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "ipam", Host: hostname})
 
@@ -231,13 +231,13 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer ctlr.queue.ShutDown()
 
-	glog.Info("Starting IPAM controller.")
-	defer glog.Info("Shutting down IPAM controller.")
+	klog.Info("Starting IPAM controller.")
+	defer klog.Info("Shutting down IPAM controller.")
 
 	// Serve Prometheus metrics
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		glog.Errorf("In-process HTTP server crashed: %s\n", http.ListenAndServe(MetricsAddr, nil).Error())
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
 	}()
 
 	ctlr.subnetInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
@@ -256,11 +256,11 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 	if !k8scache.WaitForCacheSync(stopCh, ctlr.subnetInformer.HasSynced, ctlr.lockInformer.HasSynced, ctlr.netattInformer.HasSynced) {
 		return errors.New("informers' caches failed to sync")
 	}
-	glog.V(2).Info("Informers' caches synced.")
+	klog.V(2).Info("Informers' caches synced.")
 	for i := 0; i < ctlr.workers; i++ {
 		go k8swait.Until(ctlr.processQueue, time.Second, stopCh)
 	}
-	glog.V(4).Infof("Launched %d workers\n", ctlr.workers)
+	klog.V(4).Infof("Launched %d workers", ctlr.workers)
 
 	<-stopCh
 
@@ -287,40 +287,40 @@ func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
 		// subnet has not been processed by the subent validator yet, soon a new
 		// notification with the outcome of the validation will arrive, hence we
 		// can ignore this one.
-		glog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because it has not been examined for validity yet.", op, subnet.Namespace, subnet.Name)
+		klog.V(4).Infof("Notified of %s of Subnet %s/%s, taking no action because it has not been examined for validity yet.", op, subnet.Namespace, subnet.Name)
 		return
 	}
 	subnetNSN := subnet.Namespace + "/" + subnet.Name
 	indexer := ctlr.netattInformer.GetIndexer()
 	subnetAttachments, err := indexer.ByIndex(attachmentSubnetIdxName, subnetNSN)
 	if err != nil {
-		glog.Errorf("NetworkAttachment indexer .ByIndex(%q, %q) failed: %s\n", attachmentSubnetIdxName, subnetNSN, err.Error())
+		klog.Errorf("NetworkAttachment indexer .ByIndex(%q, %q) failed: %s", attachmentSubnetIdxName, subnetNSN, err.Error())
 		return
 	}
-	glog.V(4).Infof("Notified of %s of Subnet %s/%s, queuing %d attachments\n", op, subnet.Namespace, subnet.Name, len(subnetAttachments))
+	klog.V(4).Infof("Notified of %s of Subnet %s/%s, queuing %d attachments", op, subnet.Namespace, subnet.Name, len(subnetAttachments))
 	for _, attObj := range subnetAttachments {
 		att := attObj.(*netv1a1.NetworkAttachment)
-		glog.V(5).Infof("Queuing %s/%s due to notification of %s of Subnet %s/%s\n", att.Namespace, att.Name, op, subnet.Namespace, subnet.Name)
+		klog.V(5).Infof("Queuing %s/%s due to notification of %s of Subnet %s/%s", att.Namespace, att.Name, op, subnet.Namespace, subnet.Name)
 		ctlr.queue.Add(parse.AttNSN(att))
 	}
 }
 
 func (ctlr *IPAMController) OnAttachmentCreate(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Notified of creation of NetworkAttachment %#+v\n", att)
+	klog.V(5).Infof("Notified of creation of NetworkAttachment %#+v", att)
 	ctlr.queue.Add(parse.AttNSN(att))
 }
 
 func (ctlr *IPAMController) OnAttachmentUpdate(oldObj, newObj interface{}) {
 	oldAtt := oldObj.(*netv1a1.NetworkAttachment)
 	newAtt := newObj.(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Notified of update of NetworkAttachment from %#+v to %#+v\n", oldAtt, newAtt)
+	klog.V(5).Infof("Notified of update of NetworkAttachment from %#+v to %#+v", oldAtt, newAtt)
 	ctlr.queue.Add(parse.AttNSN(newAtt))
 }
 
 func (ctlr *IPAMController) OnAttachmentDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
-	glog.V(5).Infof("Notified of deletion of NetworkAttachment %#+v\n", att)
+	klog.V(5).Infof("Notified of deletion of NetworkAttachment %#+v", att)
 	ctlr.queue.Add(parse.AttNSN(att))
 }
 
@@ -340,10 +340,10 @@ func (ctlr *IPAMController) OnLockDelete(obj interface{}) {
 }
 
 func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists bool) {
-	glog.V(4).Infof("Notified of %s of IPLock %s/%s=%s\n", op, ipl.Namespace, ipl.Name, string(ipl.UID))
+	klog.V(4).Infof("Notified of %s of IPLock %s/%s=%s", op, ipl.Namespace, ipl.Name, string(ipl.UID))
 	vni, addrU, err := parseIPLockName(ipl.Name)
 	if err != nil {
-		glog.Errorf("Error parsing IPLock name %q: %s\n", ipl.Name, err.Error())
+		klog.Errorf("Error parsing IPLock name %q: %s", ipl.Name, err.Error())
 		return
 	}
 	var changed bool
@@ -356,9 +356,9 @@ func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists 
 		changed = ctlr.ReleaseAddress(vni, addrU)
 	}
 	ownerNSNs, _ := OwningAttachments(ipl)
-	glog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d\n", op, ipl.Namespace, ipl.Name, addrOp, convert.Uint32ToIPv4(addrU), changed, len(ownerNSNs))
+	klog.V(4).Infof("At notify of %s of IPLock %s/%s, %s %s, changed=%v, numOwners=%d", op, ipl.Namespace, ipl.Name, addrOp, convert.Uint32ToIPv4(addrU), changed, len(ownerNSNs))
 	for _, ownerNSN := range ownerNSNs {
-		glog.V(5).Infof("Queuing NetworkAttachment %s due to notification about IPLock %s\n", ownerNSN, ipl.Name)
+		klog.V(5).Infof("Queuing NetworkAttachment %s due to notification about IPLock %s", ownerNSN, ipl.Name)
 		ctlr.queue.Add(k8stypes.NamespacedName{ipl.Namespace, strings.Split(ownerNSN, "/")[1]})
 	}
 }
@@ -415,11 +415,11 @@ func (ctlr *IPAMController) processQueueItem(nsn k8stypes.NamespacedName) {
 	err := ctlr.processNetworkAttachment(nsn.Namespace, nsn.Name)
 	requeues := ctlr.queue.NumRequeues(nsn)
 	if err == nil {
-		glog.V(4).Infof("Finished %s with %d requeues\n", nsn, requeues)
+		klog.V(4).Infof("Finished %s with %d requeues", nsn, requeues)
 		ctlr.queue.Forget(nsn)
 		return
 	}
-	glog.Warningf("Failed processing %s, requeuing (%d earlier requeues): %s\n", nsn, requeues, err.Error())
+	klog.Warningf("Failed processing %s, requeuing (%d earlier requeues): %s", nsn, requeues, err.Error())
 	ctlr.queue.AddRateLimited(nsn)
 }
 
@@ -427,7 +427,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 	att, err := ctlr.netattLister.NetworkAttachments(ns).Get(name)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		// This should never happen.  No point in retrying.
-		glog.Errorf("NetworkAttachment Lister failed to lookup %s/%s: %s\n",
+		klog.Errorf("NetworkAttachment Lister failed to lookup %s/%s: %s",
 			ns, name, err.Error())
 		return nil
 	}
@@ -455,7 +455,7 @@ func (ctlr *IPAMController) processNetworkAttachment(ns, name string) error {
 			} else {
 				ctlr.anticipationUsedHistogram.Observe(2)
 			}
-			glog.V(5).Infof("Anticipation used withClue=%v for attachment=%s/%s, resourceVersion=%s\n", withClue, ns, name, att.ResourceVersion)
+			klog.V(5).Infof("Anticipation used withClue=%v for attachment=%s/%s, resourceVersion=%s", withClue, ns, name, att.ResourceVersion)
 		} else {
 			ctlr.anticipationUsedHistogram.Observe(0)
 		}
@@ -519,7 +519,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 		attUID = string(att.UID)
 		subnet, err = ctlr.subnetLister.Subnets(ns).Get(subnetName)
 		if err != nil && !k8serrors.IsNotFound(err) {
-			glog.Errorf("Subnet Lister failed to lookup %s, referenced from attachment %s/%s: %s\n", subnetName, ns, name, err.Error())
+			klog.Errorf("Subnet Lister failed to lookup %s, referenced from attachment %s/%s: %s", subnetName, ns, name, err.Error())
 			err = nil
 			return
 		}
@@ -529,7 +529,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			var ipNet *gonet.IPNet
 			_, ipNet, err = gonet.ParseCIDR(subnet.Spec.IPv4)
 			if err != nil {
-				glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has malformed Spec.IPv4 %q: %s\n", ns, name, subnetName, subnet.Spec.IPv4, err.Error())
+				klog.Warningf("NetworkAttachment %s/%s references subnet %s, which has malformed Spec.IPv4 %q: %s", ns, name, subnetName, subnet.Spec.IPv4, err.Error())
 				// Subnet update should trigger reconsideration of this attachment
 				statusErrs = []string{fmt.Sprintf("Subnet %s has malformed IPv4 CIDR block (%s)", subnetName, subnet.Spec.IPv4)}
 				err = nil
@@ -539,18 +539,18 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			desiredBaseU, desiredLastU = convert.IPNetToBoundsU(ipNet)
 		} else {
 			if subnet == nil {
-				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
+				klog.Warningf("NetworkAttachment %s/%s references Subnet %s, which does not exist now", ns, name, subnetName)
 				// This attachment will be requeued upon notification of subnet creation
 				statusErrs = []string{fmt.Sprintf("Subnet %s does not exist", subnetName)}
 			} else {
 				if len(subnet.Status.Errors) == 0 {
-					glog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
+					klog.Warningf("NetworkAttachment %s/%s references subnet %s, which has not been examined for validity yet.", ns, name, subnetName)
 					// In the future the subnet will undergo validation and a
 					// notification carrying the outcome will trigger
 					// re-processing of the attachment.
 					return
 				}
-				glog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation.", ns, name, subnetName)
+				klog.Warningf("NetworkAttachment %s/%s references Subnet %s, which has not passed validation.", ns, name, subnetName)
 				// If the subnet passes validation in the future the attachment
 				// will be requeued upon notification of subnet validation
 				statusErrs = []string{fmt.Sprintf("Subnet %s has not passed validation", subnetName)}
@@ -565,7 +565,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 	iplIndexer := ctlr.lockInformer.GetIndexer()
 	ownedObjs, err = iplIndexer.ByIndex(owningAttachmentIdxName, attNSN)
 	if err != nil {
-		glog.Errorf("iplIndexer.ByIndex(%s, %s) failed: %s\n", owningAttachmentIdxName, attNSN, err.Error())
+		klog.Errorf("iplIndexer.ByIndex(%s, %s) failed: %s", owningAttachmentIdxName, attNSN, err.Error())
 		// Retry unlikely to help
 		err = nil
 		return
@@ -608,7 +608,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 			antName := makeIPLockName2(desiredVNI, statusIP)
 			ipl, err := ctlr.netIfc.IPLocks(ns).Get(antName, k8smetav1.GetOptions{})
 			if err != nil {
-				glog.Infof("For NetworkAttachment %s/%s failed to fetch lock %s for IP in Status: %s\n", ns, name, antName, err.Error())
+				klog.Infof("For NetworkAttachment %s/%s failed to fetch lock %s for IP in Status: %s", ns, name, antName, err.Error())
 			} else {
 				on, _ := GetOwner(ipl, "NetworkAttachment")
 				if on == name {
@@ -641,7 +641,7 @@ func (ctlr *IPAMController) analyzeAndRelease(ns, name string, att *netv1a1.Netw
 	if nadat != nil && nadat.anticipatedIPv4 != nil {
 		anticipatedIPStr = nadat.anticipatedIPv4.String()
 	}
-	glog.V(4).Infof("processNetworkAttachment analyzed; na=%s/%s=%s, naRV=%s, subnet=%s, shouldExist=%v, desiredVNI=%x, desiredBaseU=%x, desiredLastU=%x, lockInStatus=%s, lockForStatus=%s, locksToRelease=%s, timeSlippers=%s, Status.IPv4=%q, anticipatedIP=%s", ns, name, attUID, attRV, subnetName, att != nil, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, locksToRelease, timeSlippers, ipInStatus, anticipatedIPStr)
+	klog.V(4).Infof("processNetworkAttachment analyzed; na=%s/%s=%s, naRV=%s, subnet=%s, shouldExist=%v, desiredVNI=%x, desiredBaseU=%x, desiredLastU=%x, lockInStatus=%s, lockForStatus=%s, locksToRelease=%s, timeSlippers=%s, Status.IPv4=%q, anticipatedIP=%s", ns, name, attUID, attRV, subnetName, att != nil, desiredVNI, desiredBaseU, desiredLastU, lockInStatus, lockForStatus, locksToRelease, timeSlippers, ipInStatus, anticipatedIPStr)
 	for _, lockToRelease := range locksToRelease {
 		err = ctlr.deleteIPLockObject(lockToRelease)
 		if err != nil {
@@ -662,9 +662,9 @@ func (ctlr *IPAMController) deleteIPLockObject(parsed ParsedLock) error {
 	tAfter := time.Now()
 	ctlr.lockOpHistograms.With(prometheus.Labels{"op": "delete", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
-		glog.V(4).Infof("Deleted IPLock %s/%s=%s\n", parsed.ns, parsed.name, string(parsed.UID))
+		klog.V(4).Infof("Deleted IPLock %s/%s=%s", parsed.ns, parsed.name, string(parsed.UID))
 	} else if k8serrors.IsNotFound(err) {
-		glog.V(4).Infof("IPLock %s/%s=%s is undesired and already gone\n", parsed.ns, parsed.name, string(parsed.UID))
+		klog.V(4).Infof("IPLock %s/%s=%s is undesired and already gone", parsed.ns, parsed.name, string(parsed.UID))
 	} else {
 		return err
 	}
@@ -682,7 +682,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 		return
 	}
 	ipForStatus = convert.Uint32ToIPv4(ipForStatusU)
-	glog.V(4).Infof("Picked address %s from %x/%x--%x for %s/%s\n", ipForStatus, vni, subnetBaseU, subnetLastU, ns, name)
+	klog.V(4).Infof("Picked address %s from %x/%x--%x for %s/%s", ipForStatus, vni, subnetBaseU, subnetLastU, ns, name)
 
 	// Now, try to lock that address
 
@@ -713,7 +713,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 		ctlr.lockOpHistograms.With(prometheus.Labels{"op": "create", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 		if err == nil {
 			ctlr.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "AddressAssigned", "Assigned IPv4 address %s", ipForStatus)
-			glog.V(4).Infof("Locked IP address %s for %s/%s=%s, lockName=%s, lockUID=%s\n", ipForStatus, ns, name, string(att.UID), lockName, string(ipl2.UID))
+			klog.V(4).Infof("Locked IP address %s for %s/%s=%s, lockName=%s, lockUID=%s", ipForStatus, ns, name, string(att.UID), lockName, string(ipl2.UID))
 			ctlr.attachmentCreateToLockHistogram.Observe(ipl2.CreationTimestamp.Sub(att.CreationTimestamp.Time).Seconds())
 			break
 		} else if k8serrors.IsAlreadyExists(err) {
@@ -726,7 +726,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 				ownerName, ownerUID = GetOwner(ipl2, "NetworkAttachment")
 			} else if k8serrors.IsNotFound(err2) {
 				// It was just there, now it is gone; try again to create
-				glog.Warningf("IPLock %s disappeared before our eyes\n", lockName)
+				klog.Warningf("IPLock %s disappeared before our eyes", lockName)
 				continue
 			} else {
 				err = fmt.Errorf("failed to fetch allegedly existing IPLock %s for %s/%s: %s", lockName, ns, name, err2.Error())
@@ -734,11 +734,11 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 			}
 			if ownerName == name && ownerUID == att.UID {
 				// Yes, it's ours!
-				glog.V(4).Infof("Recovered lockName=%s, lockUID=%s on address %s for %s/%s=%s\n", lockName, string(ipl2.UID), ipForStatus, ns, name, string(att.UID))
+				klog.V(4).Infof("Recovered lockName=%s, lockUID=%s on address %s for %s/%s=%s", lockName, string(ipl2.UID), ipForStatus, ns, name, string(att.UID))
 				err = nil
 				break
 			} else {
-				glog.V(4).Infof("Collision at IPLock %s for %s/%s=%s, owner is %s=%s\n", lockName, ns, name, string(att.UID), ownerName, string(ownerUID))
+				klog.V(4).Infof("Collision at IPLock %s for %s/%s=%s, owner is %s=%s", lockName, ns, name, string(att.UID), ownerName, string(ownerUID))
 				// The cache in snd failed to avoid this collision.
 				// Leave the bit set it the cache, something else is holding it.
 				// Retry in a while
@@ -748,10 +748,10 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 		}
 		releaseOK := ctlr.ReleaseAddress(vni, ipForStatusU)
 		if k8serrors.IsInvalid(err) || strings.Contains(strings.ToLower(err.Error()), "invalid") {
-			glog.Errorf("Permanent error creating IPLock %s for %s/%s (releaseOK=%v): %s\n", lockName, ns, name, releaseOK, err.Error())
+			klog.Errorf("Permanent error creating IPLock %s for %s/%s (releaseOK=%v): %s", lockName, ns, name, releaseOK, err.Error())
 			err = nil
 		} else {
-			glog.Warningf("Transient error creating IPLock %s for %s/%s (releaseOK=%v): %s\n", lockName, ns, name, releaseOK, err.Error())
+			klog.Warningf("Transient error creating IPLock %s for %s/%s (releaseOK=%v): %s", lockName, ns, name, releaseOK, err.Error())
 			err = fmt.Errorf("Create of IPLock %s for %s/%s failed: %s", lockName, ns, name, err.Error())
 		}
 		return
@@ -783,9 +783,9 @@ func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.Network
 		deltaS := t2.Sub(t1).Seconds()
 		ctlr.attachmentCreateToAddressHistogram.Observe(deltaS)
 		if len(statusErrs) > 0 {
-			glog.V(4).Infof("Recorded errors %v in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s\n", statusErrs, ns, name, att.ResourceVersion, att3.ResourceVersion)
+			klog.V(4).Infof("Recorded errors %v in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s", statusErrs, ns, name, att.ResourceVersion, att3.ResourceVersion)
 		} else {
-			glog.V(4).Infof("Recorded locked address %s in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s, subnetUID=%s\n", ipForStatus, ns, name, att.ResourceVersion, att3.ResourceVersion, subnetUID)
+			klog.V(4).Infof("Recorded locked address %s in status of %s/%s, old ResourceVersion=%s, new ResourceVersion=%s, subnetUID=%s", ipForStatus, ns, name, att.ResourceVersion, att3.ResourceVersion, subnetUID)
 			nadat.anticipatingResourceVersion = att.ResourceVersion
 			nadat.anticipatedResourceVersion = att3.ResourceVersion
 			nadat.anticipationSubnetUID = subnetUID
@@ -800,7 +800,7 @@ func (ctlr *IPAMController) updateNAStatus(ns, name string, att *netv1a1.Network
 		errMsg = fmt.Sprintf("%s allocated address %s", errMsg, ipForStatus)
 	}
 	if k8serrors.IsNotFound(err) {
-		glog.V(4).Infof("%s: NetworkAttachment was deleted.", errMsg)
+		klog.V(4).Infof("%s: NetworkAttachment was deleted.", errMsg)
 		return nil
 	}
 	return fmt.Errorf("%s: %s", errMsg, err.Error())
@@ -812,7 +812,7 @@ func (ctlr *IPAMController) getNetworkAttachmentData(ns, name string, addIfMissi
 	defer func() {
 		ctlr.attsMutex.Unlock()
 		if added {
-			glog.V(4).Infof("Created NetworkAttachmentData for %s/%s\n", ns, name)
+			klog.V(4).Infof("Created NetworkAttachmentData for %s/%s", ns, name)
 		}
 	}()
 	nadata := ctlr.atts[k8stypes.NamespacedName{ns, name}]
@@ -833,7 +833,7 @@ func (ctlr *IPAMController) clearNetworkAttachmentData(ns, name string) {
 	defer func() {
 		ctlr.attsMutex.Unlock()
 		if had {
-			glog.V(4).Infof("Deleted NetworkAttachmentData for %s/%s\n", ns, name)
+			klog.V(4).Infof("Deleted NetworkAttachmentData for %s/%s", ns, name)
 		}
 	}()
 	_, had = ctlr.atts[k8stypes.NamespacedName{ns, name}]

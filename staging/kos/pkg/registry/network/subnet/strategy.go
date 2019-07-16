@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/golang/glog"
-
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 
 	"k8s.io/examples/staging/kos/pkg/apis/network"
 	"k8s.io/examples/staging/kos/pkg/util/parse/network/subnet"
@@ -51,14 +50,14 @@ func NewStrategy(typer runtime.ObjectTyper, checkConflicts bool, subnetInformer 
 		subnetIndexer}
 }
 
-// GetAttrs returns labels.Set, fields.Set, the presence of Initializers if any
+// GetAttrs returns labels.Set, fields.Set,
 // and error in case the given runtime.Object is not a Subnet.
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	subnet, ok := obj.(*network.Subnet)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a Subnet")
+		return nil, nil, fmt.Errorf("given object is not a Subnet")
 	}
-	return labels.Set(subnet.ObjectMeta.Labels), SelectableFields(subnet), subnet.Initializers != nil, nil
+	return labels.Set(subnet.ObjectMeta.Labels), SelectableFields(subnet), nil
 }
 
 // MatchSubnet is the filter used by the generic etcd backend to watch events
@@ -130,20 +129,20 @@ func (ss *subnetStrategy) Validate(ctx context.Context, obj runtime.Object) fiel
 func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary) (errs field.ErrorList) {
 	potentialRivals, err := ss.subnetIndexer.ByIndex(subnetVNIIndex, strconv.FormatUint(uint64(candidate.VNI), 10))
 	if err != nil {
-		glog.Errorf("subnetIndexer.ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
+		klog.Errorf("subnetIndexer.ByIndex failed for index %s and vni %d: %s", subnetVNIIndex, candidate.VNI, err.Error())
 		errs = field.ErrorList{field.InternalError(field.NewPath("spec", "vni"), errors.New("failed to retrieve other subnets with same vni"))}
 		return
 	}
-	glog.V(5).Infof("Found %d subnets with vni %d", len(potentialRivals), candidate.VNI)
+	klog.V(5).Infof("Found %d subnets with vni %d", len(potentialRivals), candidate.VNI)
 	// Check whether there are Namespace and CIDR conflicts with other subnets.
 	for _, potentialRival := range potentialRivals {
 		pr, err := subnet.NewSummary(potentialRival)
 		if err != nil {
 			prMeta := potentialRival.(k8smetav1.Object)
-			glog.V(6).Infof("Skipping %s/%s while validating %s because parsing failed: %s.", prMeta.GetNamespace(), prMeta.GetName(), candidate.NamespacedName, err.Error())
+			klog.V(6).Infof("Skipping %s/%s while validating %s because parsing failed: %s.", prMeta.GetNamespace(), prMeta.GetName(), candidate.NamespacedName, err.Error())
 			continue
 		}
-		glog.V(2).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
+		klog.V(2).Infof("Validating %s against %s", candidate.NamespacedName, pr.NamespacedName)
 		if candidate.NSConflict(pr) {
 			errs = append(errs, field.Forbidden(field.NewPath("spec", "vni"), fmt.Sprintf("subnets with same VNI must be within same namespace, but %s has the same VNI and a different namespace", pr.NamespacedName)))
 		}

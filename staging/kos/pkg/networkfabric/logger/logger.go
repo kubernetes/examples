@@ -26,7 +26,7 @@ package logger
 import (
 	"sync"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/examples/staging/kos/pkg/networkfabric"
 	"k8s.io/examples/staging/kos/pkg/networkfabric/factory"
@@ -64,7 +64,7 @@ func (l *logger) CreateLocalIfc(ifc networkfabric.LocalNetIfc) error {
 	l.localIfcsMutex.Lock()
 	l.localIfcs[ifc.Name] = ifc
 	l.localIfcsMutex.Unlock()
-	glog.Infof("Created local interface %#+v", ifc)
+	klog.Infof("Created local interface %#+v", ifc)
 	return nil
 }
 
@@ -72,7 +72,7 @@ func (l *logger) DeleteLocalIfc(ifc networkfabric.LocalNetIfc) error {
 	l.localIfcsMutex.Lock()
 	delete(l.localIfcs, ifc.Name)
 	l.localIfcsMutex.Unlock()
-	glog.Infof("Deleted local interface %#+v", ifc)
+	klog.Infof("Deleted local interface %#+v", ifc)
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (l *logger) CreateRemoteIfc(ifc networkfabric.RemoteNetIfc) error {
 	l.remoteIfcsMutex.Lock()
 	l.remoteIfcs[ifc.GuestMAC.String()] = ifc
 	l.remoteIfcsMutex.Unlock()
-	glog.Infof("Created remote interface %#+v", ifc)
+	klog.Infof("Created remote interface %#+v", ifc)
 	return nil
 }
 
@@ -88,7 +88,7 @@ func (l *logger) DeleteRemoteIfc(ifc networkfabric.RemoteNetIfc) error {
 	l.remoteIfcsMutex.Lock()
 	delete(l.remoteIfcs, ifc.GuestMAC.String())
 	l.remoteIfcsMutex.Unlock()
-	glog.Infof("Deleted remote interface %#+v", ifc)
+	klog.Infof("Deleted remote interface %#+v", ifc)
 	return nil
 }
 

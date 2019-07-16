@@ -17,11 +17,10 @@ limitations under the License.
 package parse
 
 import (
-	"github.com/golang/glog"
-
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8scache "k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 )
@@ -42,7 +41,7 @@ func Peel(obj interface{}) k8sruntime.Object {
 	case k8sruntime.Object:
 		return o
 	default:
-		glog.Errorf("Peel: object of unexpected type %T: %#+v\n", obj, obj)
+		klog.Errorf("Peel: object of unexpected type %T: %#+v", obj, obj)
 		panic(obj)
 	}
 }
