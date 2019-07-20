@@ -501,13 +501,13 @@ the following steps.
 
 Dependencies are managed via [Glide](https://github.com/Masterminds/glide).
 
-This example builds against release 1.14 of Kubernetes.
+This example builds against release 1.15 of Kubernetes.
 
 ### Pre-Requisites
 
 You will need the following installed on your build/ops machine.
 
-- Go, release 1.12.1 or later
+- Go, release 1.12.5 or later
 
 - Docker
 
