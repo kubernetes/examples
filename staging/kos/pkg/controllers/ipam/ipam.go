@@ -20,14 +20,12 @@ import (
 	"errors"
 	"fmt"
 	gonet "net"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	k8scorev1api "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,13 +56,6 @@ const (
 	opCreation = "creation"
 	opUpdate   = "update"
 	opDeletion = "deletion"
-
-	// The HTTP port under which the scraping endpoint ("/metrics") is served.
-	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
-	MetricsAddr = ":9295"
-
-	// The HTTP path under which the scraping endpoint ("/metrics") is served.
-	MetricsPath = "/metrics"
 
 	// The namespace and subsystem of the Prometheus metrics produced here
 	MetricsNamespace = "kos"
@@ -233,12 +224,6 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 
 	klog.Info("Starting IPAM controller.")
 	defer klog.Info("Shutting down IPAM controller.")
-
-	// Serve Prometheus metrics
-	http.Handle("/metrics", promhttp.Handler())
-	go func() {
-		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
-	}()
 
 	ctlr.subnetInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		ctlr.OnSubnetCreate,

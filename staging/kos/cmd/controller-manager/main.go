@@ -20,11 +20,14 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -33,6 +36,14 @@ import (
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
+
+	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
+)
+
+const (
+	// The HTTP port under which the scraping endpoint ("/metrics") is served.
+	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
+	MetricsAddr = ":9295"
 )
 
 func main() {
@@ -77,6 +88,12 @@ func main() {
 		}
 	}
 	klog.Info("All controllers started.")
+
+	// Serve Prometheus metrics
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
+	}()
 
 	ctx.sharedInformers.Start(ctx.stop)
 	klog.V(2).Info("Informers started.")
