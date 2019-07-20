@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 7,
   "links": [],
   "panels": [
     {
@@ -237,6 +237,13 @@
           "intervalFactor": 1,
           "legendFormat": "ipam @ {{ instance }}",
           "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_retries[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "snval @ {{ instance }}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -329,6 +336,13 @@
           "intervalFactor": 1,
           "legendFormat": "ipam @ {{ instance }}",
           "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_adds[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "snval @ {{ instance }}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -421,6 +435,13 @@
           "intervalFactor": 1,
           "legendFormat": "ipam @ {{ instance }}",
           "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_queue_latency_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "snval @ {{ instance }}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -513,6 +534,13 @@
           "intervalFactor": 1,
           "legendFormat": "ipam @ {{ instance }}",
           "refId": "B"
+        },
+        {
+          "expr": "kos_subnet_validator_queue_depth",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "snval @ {{ instance }}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -561,6 +589,90 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 34,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_queue_work_duration_sum[1m])/1.0e6",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Subnet Validator Worker Utilization",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "prometheus",
       "description": "Sum, over workers, of utilization of that worker",
       "fill": 1,
@@ -568,7 +680,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 41
       },
       "id": 25,
       "legend": {
@@ -653,7 +765,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 48
       },
       "id": 27,
       "legend": {
@@ -745,7 +857,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 55
       },
       "id": 28,
       "legend": {
@@ -837,7 +949,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 62
       },
       "id": 30,
       "legend": {
@@ -929,7 +1041,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 69
       },
       "id": 32,
       "legend": {
@@ -1021,7 +1133,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 76
       },
       "id": 4,
       "legend": {
@@ -1106,7 +1218,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 83
       },
       "id": 29,
       "legend": {
@@ -1191,7 +1303,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 90
       },
       "id": 31,
       "legend": {
@@ -1276,7 +1388,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 97
       },
       "id": 5,
       "legend": {
@@ -1361,7 +1473,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 104
       },
       "id": 6,
       "legend": {
@@ -1446,7 +1558,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 105
+        "y": 111
       },
       "id": 12,
       "legend": {
@@ -1531,7 +1643,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 118
       },
       "id": 14,
       "legend": {
@@ -1616,7 +1728,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 119
+        "y": 125
       },
       "id": 15,
       "legend": {
@@ -1701,7 +1813,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 126
+        "y": 132
       },
       "id": 16,
       "legend": {
@@ -1786,7 +1898,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 133
+        "y": 139
       },
       "id": 17,
       "legend": {
@@ -1871,7 +1983,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 140
+        "y": 146
       },
       "id": 7,
       "legend": {
@@ -1970,7 +2082,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 147
+        "y": 153
       },
       "id": 18,
       "legend": {
@@ -2055,7 +2167,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 154
+        "y": 160
       },
       "id": 19,
       "legend": {
@@ -2169,5 +2281,5 @@
   "timezone": "",
   "title": "KOS Internals",
   "uid": "39Dk0_Qik",
-  "version": 2
+  "version": 1
 }
