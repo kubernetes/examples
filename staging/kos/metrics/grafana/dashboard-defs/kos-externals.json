@@ -15,9 +15,107 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
   "links": [],
   "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 11,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket{statusErr=\"ok\"}[1m]))",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "99%ile valid subnets ",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket{statusErr=\"err\"}[1m]))",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "99%ile conflicting subnets",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket[1m])) by (le))",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "99%ile total",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "99th Percentile Subnet Create-to-Validated Latency secs",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -29,7 +127,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 2,
       "legend": {
@@ -121,7 +219,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 15
       },
       "id": 1,
       "legend": {
@@ -159,7 +257,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "99th Percentile Create-To-Interface Latency secs",
+      "title": "99th Percentile Create-To-Local-Interface Latency secs",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -207,7 +305,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 22
       },
       "id": 4,
       "legend": {
@@ -244,7 +342,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "99th Percentile Create-to-Ready Latency secs",
+      "title": "99th Percentile Attachment Create-to-Ready Latency secs",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -292,7 +390,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 29
       },
       "id": 9,
       "legend": {
@@ -377,7 +475,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "id": 8,
       "legend": {
@@ -462,7 +560,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "id": 7,
       "legend": {
@@ -574,7 +672,7 @@
     ]
   },
   "timezone": "",
-  "title": "KOS External",
+  "title": "KOS Externals",
   "uid": "AlvkAlwik",
   "version": 1
 }

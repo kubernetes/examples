@@ -29,6 +29,7 @@ const (
 // KOS controllers.
 type KOSControllerManagerOptions struct {
 	KubeconfigFilename string
+	Hostname           string
 	QPS                int
 	Burst              int
 	IndirectRequests   bool
@@ -41,6 +42,7 @@ type KOSControllerManagerOptions struct {
 // controllers.
 func (o *KOSControllerManagerOptions) AddFlags() {
 	flag.StringVar(&o.KubeconfigFilename, "kubeconfig", "", "kubeconfig filename")
+	flag.StringVar(&o.Hostname, "hostname", "", "name of the host")
 	flag.IntVar(&o.QPS, "qps", defaultQPS, "QPS to use while talking to the api-servers")
 	flag.IntVar(&o.Burst, "burst", defaultBurst, "Burst to use while talking to the api-servers")
 	flag.BoolVar(&o.IndirectRequests, "indirect-requests", defaultIndirectRequests, "requests go through main api-servers instead of directly to network api-servers")

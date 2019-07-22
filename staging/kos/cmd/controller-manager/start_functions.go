@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	k8scorev1api "k8s.io/api/core/v1"
@@ -31,6 +30,12 @@ import (
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 	"k8s.io/examples/staging/kos/pkg/controllers/ipam"
 	"k8s.io/examples/staging/kos/pkg/controllers/subnet"
+	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
+)
+
+const (
+	ipamMetricsSubsystem            = "ipam"
+	subnetValidatorMetricsSubsystem = "subnet_validator"
 )
 
 var managedControllers map[string]startFunction
@@ -43,9 +48,10 @@ func init() {
 }
 
 type controllerContext struct {
-	options         *KOSControllerManagerOptions
-	sharedInformers kosinformers.SharedInformerFactory
-	stop            <-chan struct{}
+	options          *KOSControllerManagerOptions
+	metricsNamespace string
+	sharedInformers  kosinformers.SharedInformerFactory
+	stop             <-chan struct{}
 }
 
 type startFunction func(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error
@@ -64,11 +70,6 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return fmt.Errorf("failed to get local hostname: %s", err.Error())
-	}
-
 	kosInformers := ctx.sharedInformers.Network().V1alpha1()
 	ctlr := ipam.NewController(kosClientset.NetworkV1alpha1(),
 		kosInformers.Subnets().Informer(),
@@ -80,7 +81,9 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 		eventIfc,
 		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue"),
 		ctx.options.IPAMControllerWorkers,
-		hostname,
+		ctx.options.Hostname,
+		ctx.metricsNamespace,
+		ipamMetricsSubsystem,
 	)
 
 	// Start the controller.
@@ -96,6 +99,12 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error {
 	klog.Infof("Subnet validation controller config: kubeconfig=%q, workers=%d, QPS=%d, burst=%d, indirect-requests=%t", ctx.options.KubeconfigFilename, ctx.options.SubnetValidationControllerWorkers, ctx.options.QPS, ctx.options.Burst, ctx.options.IndirectRequests)
 
+	k8sClientset, err := k8sclient.NewForConfig(k8sClientCfg)
+	if err != nil {
+		return fmt.Errorf("failed to configure k8s clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
+	}
+	eventIfc := k8sClientset.CoreV1().Events(k8scorev1api.NamespaceAll)
+
 	kosClientset, err := kosclientset.NewForConfig(kosClientCfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure KOS clientset for kubeconfig=%q: %s", ctx.options.KubeconfigFilename, err.Error())
@@ -105,8 +114,12 @@ func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosCli
 	ctlr := subnet.NewValidationController(kosClientset.NetworkV1alpha1(),
 		subnets.Informer(),
 		subnets.Lister(),
+		eventIfc,
 		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue"),
 		ctx.options.SubnetValidationControllerWorkers,
+		ctx.options.Hostname,
+		ctx.metricsNamespace,
+		subnetValidatorMetricsSubsystem,
 	)
 
 	// Start the controller.

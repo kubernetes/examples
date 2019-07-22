@@ -53,13 +53,9 @@ const (
 	owningAttachmentIdxName = "owningAttachment"
 	attachmentSubnetIdxName = "subnet"
 
-	opCreation = "creation"
-	opUpdate   = "update"
-	opDeletion = "deletion"
-
-	// The namespace and subsystem of the Prometheus metrics produced here
-	MetricsNamespace = "kos"
-	MetricsSubsystem = "ipam"
+	opCreate = "create"
+	opUpdate = "update"
+	opDelete = "delete"
 
 	fullSubnetErrMsgPrefix = "no IP address available in subnet"
 	fullSubnetStatusMsg    = "Referenced subnet has run out of IPs"
@@ -128,12 +124,14 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	eventIfc k8scorev1client.EventInterface,
 	queue k8sworkqueue.RateLimitingInterface,
 	workers int,
-	hostname string) *IPAMController {
+	hostname string,
+	metricsNamespace string,
+	metricsSubsystem string) *IPAMController {
 
 	attachmentCreateToLockHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "attachment_create_to_lock_latency_seconds",
 			Help:      "Latency from Attachment CreationTimestamp to IPLock CreationTimestamp, in seconds",
 			Buckets:   []float64{-1, 0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 64},
@@ -141,18 +139,23 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 
 	lockOpHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "ip_lock_latency_seconds",
 			Help:      "Round trip latency to create/delete IPLock object, in seconds",
 			Buckets:   []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64},
 		},
 		[]string{"op", "err"})
+	errValT, errValF := FormatErrVal(true), FormatErrVal(false)
+	lockOpHistograms.With(prometheus.Labels{"op": opCreate, "err": errValT})
+	lockOpHistograms.With(prometheus.Labels{"op": opCreate, "err": errValF})
+	lockOpHistograms.With(prometheus.Labels{"op": opDelete, "err": errValT})
+	lockOpHistograms.With(prometheus.Labels{"op": opDelete, "err": errValF})
 
 	attachmentCreateToAddressHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "attachment_create_to_address_latency_seconds",
 			Help:      "Latency from attachment CreationTimestamp to return from status update, in seconds",
 			Buckets:   []float64{-1, 0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 64},
@@ -160,18 +163,22 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 
 	attachmentUpdateHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "attachment_update_latency_seconds",
 			Help:      "Round trip latency to set attachment address, in seconds",
 			Buckets:   []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64},
 		},
 		[]string{"statusErr", "err"})
+	attachmentUpdateHistograms.With(prometheus.Labels{"statusErr": errValT, "err": errValT})
+	attachmentUpdateHistograms.With(prometheus.Labels{"statusErr": errValF, "err": errValF})
+	attachmentUpdateHistograms.With(prometheus.Labels{"statusErr": errValT, "err": errValF})
+	attachmentUpdateHistograms.With(prometheus.Labels{"statusErr": errValF, "err": errValT})
 
 	anticipationUsedHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "anticipation_used",
 			Help:      "Kind of anticipation use",
 			Buckets:   []float64{0, 1, 2},
@@ -179,14 +186,24 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 
 	statusUsedHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: MetricsNamespace,
-			Subsystem: MetricsSubsystem,
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "status_used",
 			Help:      "Was the IP address in Status used?",
 			Buckets:   []float64{0, 1},
 		})
 
-	prometheus.MustRegister(attachmentCreateToLockHistogram, lockOpHistograms, attachmentCreateToAddressHistogram, attachmentUpdateHistograms, anticipationUsedHistogram, statusUsedHistogram)
+	workerCount := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
+			Name:      "worker_count",
+			Help:      "Number of queue worker threads",
+		})
+
+	prometheus.MustRegister(attachmentCreateToLockHistogram, lockOpHistograms, attachmentCreateToAddressHistogram, attachmentUpdateHistograms, anticipationUsedHistogram, statusUsedHistogram, workerCount)
+
+	workerCount.Add(float64(workers))
 
 	eventBroadcaster := k8seventrecord.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
@@ -254,7 +271,7 @@ func (ctlr *IPAMController) Run(stopCh <-chan struct{}) error {
 
 func (ctlr *IPAMController) OnSubnetCreate(obj interface{}) {
 	subnet := obj.(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, opCreation)
+	ctlr.OnSubnetNotify(subnet, opCreate)
 }
 
 func (ctlr *IPAMController) OnSubnetUpdate(oldObj, newObj interface{}) {
@@ -264,11 +281,11 @@ func (ctlr *IPAMController) OnSubnetUpdate(oldObj, newObj interface{}) {
 
 func (ctlr *IPAMController) OnSubnetDelete(obj interface{}) {
 	subnet := parse.Peel(obj).(*netv1a1.Subnet)
-	ctlr.OnSubnetNotify(subnet, opDeletion)
+	ctlr.OnSubnetNotify(subnet, opDelete)
 }
 
 func (ctlr *IPAMController) OnSubnetNotify(subnet *netv1a1.Subnet, op string) {
-	if op != opDeletion && !subnet.Status.Validated && len(subnet.Status.Errors) == 0 {
+	if op != opDelete && !subnet.Status.Validated && len(subnet.Status.Errors) == 0 {
 		// subnet has not been processed by the subent validator yet, soon a new
 		// notification with the outcome of the validation will arrive, hence we
 		// can ignore this one.
@@ -311,7 +328,7 @@ func (ctlr *IPAMController) OnAttachmentDelete(obj interface{}) {
 
 func (ctlr *IPAMController) OnLockCreate(obj interface{}) {
 	ipl := obj.(*netv1a1.IPLock)
-	ctlr.OnLockNotify(ipl, opCreation, true)
+	ctlr.OnLockNotify(ipl, opCreate, true)
 }
 
 func (ctlr *IPAMController) OnLockUpdate(old, new interface{}) {
@@ -321,7 +338,7 @@ func (ctlr *IPAMController) OnLockUpdate(old, new interface{}) {
 
 func (ctlr *IPAMController) OnLockDelete(obj interface{}) {
 	ipl := parse.Peel(obj).(*netv1a1.IPLock)
-	ctlr.OnLockNotify(ipl, opDeletion, false)
+	ctlr.OnLockNotify(ipl, opDelete, false)
 }
 
 func (ctlr *IPAMController) OnLockNotify(ipl *netv1a1.IPLock, op string, exists bool) {
@@ -645,7 +662,7 @@ func (ctlr *IPAMController) deleteIPLockObject(parsed ParsedLock) error {
 	tBefore := time.Now()
 	err := lockOps.Delete(parsed.name, &delOpts)
 	tAfter := time.Now()
-	ctlr.lockOpHistograms.With(prometheus.Labels{"op": "delete", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	ctlr.lockOpHistograms.With(prometheus.Labels{"op": opDelete, "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
 		klog.V(4).Infof("Deleted IPLock %s/%s=%s", parsed.ns, parsed.name, string(parsed.UID))
 	} else if k8serrors.IsNotFound(err) {
@@ -695,7 +712,7 @@ func (ctlr *IPAMController) pickAndLockAddress(ns, name string, att *netv1a1.Net
 		tBefore := time.Now()
 		ipl2, err = lockOps.Create(ipl)
 		tAfter := time.Now()
-		ctlr.lockOpHistograms.With(prometheus.Labels{"op": "create", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+		ctlr.lockOpHistograms.With(prometheus.Labels{"op": opCreate, "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 		if err == nil {
 			ctlr.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "AddressAssigned", "Assigned IPv4 address %s", ipForStatus)
 			klog.V(4).Infof("Locked IP address %s for %s/%s=%s, lockName=%s, lockUID=%s", ipForStatus, ns, name, string(att.UID), lockName, string(ipl2.UID))

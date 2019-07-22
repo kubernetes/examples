@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 7,
   "links": [],
   "panels": [
     {
@@ -142,16 +141,32 @@
         {
           "expr": "kos_agent_worker_count",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{ node }}",
+          "legendFormat": "ca @ {{ instance }}",
           "refId": "A"
+        },
+        {
+          "expr": "kos_ipam_worker_count",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "ipam @ {{ instance }}",
+          "refId": "B"
+        },
+        {
+          "expr": "kos_subnet_validator_worker_count ",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Number of CA Workers",
+      "title": "Number of Workers",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -201,7 +216,7 @@
         "x": 0,
         "y": 7
       },
-      "id": 2,
+      "id": 54,
       "legend": {
         "avg": false,
         "current": false,
@@ -225,32 +240,27 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(kos_agent_queue_retries[1m])",
+          "expr": "rate(kos_subnet_validator_subnet_live_vs_conflict_cache_count[1m]) / ignoring (mismatch_type) group_left rate(kos_subnet_validator_queue_work_duration_count[1m])",
           "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "ca @ {{ instance }}",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ mismatch_type }} mismatch / subnets processed",
           "refId": "A"
         },
         {
-          "expr": "rate(kos_ipam_controller_queue_retries[1m])",
+          "expr": "sum(rate(kos_subnet_validator_subnet_live_vs_conflict_cache_count[1m])) without (mismatch_type) / rate(kos_subnet_validator_queue_work_duration_count[1m])",
           "format": "time_series",
+          "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "ipam @ {{ instance }}",
+          "legendFormat": "total mismatches / subnets processed",
           "refId": "B"
-        },
-        {
-          "expr": "rate(kos_subnet_validator_queue_retries[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "snval @ {{ instance }}",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Requeue Rate",
+      "title": "Subnet Validator Conflicts Cache Mismatches to Subnets Processed",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -295,12 +305,12 @@
       "datasource": "prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 24,
         "x": 0,
         "y": 14
       },
-      "id": 1,
+      "id": 52,
       "legend": {
         "avg": false,
         "current": false,
@@ -324,32 +334,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(kos_agent_queue_adds[1m])",
+          "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_number_of_subnets_returned_by_live_list_bucket[1m]))",
           "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "ca @ {{ instance }}",
+          "intervalFactor": 1,
+          "legendFormat": "99%ile live list result length",
           "refId": "A"
-        },
-        {
-          "expr": "rate(kos_ipam_controller_queue_adds[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "ipam @ {{ instance }}",
-          "refId": "B"
-        },
-        {
-          "expr": "rate(kos_subnet_validator_queue_adds[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "snval @ {{ instance }}",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Enqueue Rate",
+      "title": "Subnet Validator 99th Percentile Nbr of Subnets in Live Lists results",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -392,14 +388,15 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "",
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 23
       },
-      "id": 3,
+      "id": 50,
       "legend": {
         "avg": false,
         "current": false,
@@ -423,32 +420,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(kos_agent_queue_queue_latency_count[1m])",
+          "expr": "rate(kos_subnet_validator_number_of_subnets_returned_by_live_list_sum[1m]) / rate(kos_subnet_validator_number_of_subnets_returned_by_live_list_count[1m])",
           "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "ca @ {{ instance }}",
+          "intervalFactor": 1,
+          "legendFormat": "subnet / live list",
           "refId": "A"
-        },
-        {
-          "expr": "rate(kos_ipam_controller_queue_queue_latency_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "ipam @ {{ instance }}",
-          "refId": "B"
-        },
-        {
-          "expr": "rate(kos_subnet_validator_queue_queue_latency_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "snval @ {{ instance }}",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Dequeue Rate",
+      "title": "Subnet Validator Avg Nbr of Subnets in Live Lists Results",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -464,6 +447,7 @@
       },
       "yaxes": [
         {
+          "decimals": 1,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -472,6 +456,7 @@
           "show": true
         },
         {
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -491,14 +476,15 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "Ratio of subnets for whom a status update was not needed because the status was already up-to-date to subnets processed.",
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 10,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 32
       },
-      "id": 13,
+      "id": 48,
       "legend": {
         "avg": false,
         "current": false,
@@ -522,32 +508,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "kos_agent_queue_depth",
+          "expr": "rate(kos_subnet_validator_duplicate_work_count[1m]) / rate(kos_subnet_validator_queue_work_duration_count[1m])",
           "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "ca @ {{ instance }}",
+          "intervalFactor": 1,
+          "legendFormat": "up to date / processed",
           "refId": "A"
-        },
-        {
-          "expr": "kos_ipam_controller_queue_depth",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "ipam @ {{ instance }}",
-          "refId": "B"
-        },
-        {
-          "expr": "kos_subnet_validator_queue_depth",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "snval @ {{ instance }}",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Queue Length",
+      "title": "Subnet Validator Up to date Subnets to Processed Subnets",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -674,13 +646,1033 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 36,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(kos_subnet_validator_subnet_update_latency_seconds_sum[1m])) without (err, statusErr)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "updates @ {{ instance }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(kos_subnet_validator_live_list_latency_seconds_sum[1m])) without (err)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "lists @ {{ instance }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Subnet Validator Worker Utilization for Calls Out, Summed over Workers",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "id": 34,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_queue_work_duration_sum[1m])/1.0e6",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Subnet Validator Worker Utilization, Summed over Workers",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "id": 46,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_stale_subnet_work_suppression_count[1m]) / rate(kos_subnet_validator_queue_work_duration_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "stale  / processed",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Subnet Validator Stale Subnets Suppressions to Processed Subnets",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_agent_queue_retries[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ca @ {{ instance }}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kos_ipam_controller_queue_retries[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ipam @ {{ instance }}",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_retries[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Requeue Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "id": 1,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_agent_queue_adds[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ca @ {{ instance }}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kos_ipam_controller_queue_adds[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ipam @ {{ instance }}",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_adds[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Enqueue Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "id": 3,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_agent_queue_queue_latency_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ca @ {{ instance }}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kos_ipam_controller_queue_queue_latency_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ipam @ {{ instance }}",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_queue_queue_latency_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Dequeue Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 93
+      },
+      "id": 13,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "kos_agent_queue_depth",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ca @ {{ instance }}",
+          "refId": "A"
+        },
+        {
+          "expr": "kos_ipam_controller_queue_depth",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "ipam @ {{ instance }}",
+          "refId": "B"
+        },
+        {
+          "expr": "kos_subnet_validator_queue_depth",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "sv @ {{ instance }}",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Queue Length",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 100
+      },
+      "id": 40,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_subnet_update_latency_seconds_bucket[1m]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }}  status update {{ statusErr }} {{ err }}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_live_list_latency_seconds_bucket[1m]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }} live list {{ err }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "99th Percentile Subnet Validator Call Out Latency",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 109
+      },
+      "id": 38,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_subnet_update_latency_seconds_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }} status update subnet={{ statusErr }} result={{ err }}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_live_list_latency_seconds_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }} live list {{ err }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Rate of Subnet Validator Call Outs",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "description": "When validating a subnet X, the Subnet Validator uses live lists to retrieve potentially conflicting subnets. Sometimes X's status is already up to date hence all processing including the live list was useless. This graph plots the ratio between useless live lists to the total of live lists.",
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 118
+      },
+      "id": 44,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_duplicate_work_count[1m]) + sum(rate(kos_subnet_validator_subnet_live_vs_conflict_cache_count[1m])) without (mismatch_type) / ignoring (err) rate(kos_subnet_validator_live_list_latency_seconds_count{err=\"ok\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "useless / total successful @ {{ instance }} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Subnet Validator Useless Live Lists to Live Lists",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 128
+      },
+      "id": 42,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(kos_subnet_validator_subnet_update_latency_seconds_sum[1m]) / rate(kos_subnet_validator_subnet_update_latency_seconds_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }} status update {{ statusErr }} {{ err }}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kos_subnet_validator_live_list_latency_seconds_sum[1m]) / rate(kos_subnet_validator_live_list_latency_seconds_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ instance }} live list {{ err }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Average Subnet Validator Call Out Latency",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
       "description": "Sum, over workers, of utilization of that worker",
       "fill": 1,
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 137
       },
       "id": 25,
       "legend": {
@@ -765,7 +1757,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 144
       },
       "id": 27,
       "legend": {
@@ -857,7 +1849,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 151
       },
       "id": 28,
       "legend": {
@@ -949,7 +1941,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 158
       },
       "id": 30,
       "legend": {
@@ -1041,7 +2033,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 69
+        "y": 165
       },
       "id": 32,
       "legend": {
@@ -1133,7 +2125,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 76
+        "y": 172
       },
       "id": 4,
       "legend": {
@@ -1218,7 +2210,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 179
       },
       "id": 29,
       "legend": {
@@ -1303,7 +2295,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 186
       },
       "id": 31,
       "legend": {
@@ -1388,7 +2380,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 97
+        "y": 193
       },
       "id": 5,
       "legend": {
@@ -1473,7 +2465,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 200
       },
       "id": 6,
       "legend": {
@@ -1558,7 +2550,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 111
+        "y": 207
       },
       "id": 12,
       "legend": {
@@ -1643,7 +2635,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 118
+        "y": 214
       },
       "id": 14,
       "legend": {
@@ -1728,7 +2720,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 125
+        "y": 221
       },
       "id": 15,
       "legend": {
@@ -1813,7 +2805,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 132
+        "y": 228
       },
       "id": 16,
       "legend": {
@@ -1898,7 +2890,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 139
+        "y": 235
       },
       "id": 17,
       "legend": {
@@ -1983,7 +2975,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 146
+        "y": 242
       },
       "id": 7,
       "legend": {
@@ -2082,7 +3074,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 153
+        "y": 249
       },
       "id": 18,
       "legend": {
@@ -2167,7 +3159,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 160
+        "y": 256
       },
       "id": 19,
       "legend": {
