@@ -5,21 +5,21 @@ import:
   version: ~0.17
 - package: github.com/golang/glog
 - package: github.com/prometheus/client_golang
-# k8s.io/apiserver 1.14 wants version 0.9.2
+# k8s.io/apiserver 1.15 wants version 0.9.2
   version: 0.9.2
   subpackages:
   - api
   - prometheus
   - prometheus/promhttp
 - package: github.com/spf13/cobra
-  version: ^0.0.3
+  version: ^0.0.5
 - package: github.com/wangjia184/sortedset
 - package: k8s.io/api
-  version: release-1.14
+  version: release-1.15
   subpackages:
   - core/v1
 - package: k8s.io/apimachinery
-  version: release-1.14
+  version: release-1.15
   subpackages:
   - pkg/api/errors
   - pkg/apis/meta/v1
@@ -37,9 +37,9 @@ import:
   - pkg/version
   - pkg/watch
 - package: k8s.io/code-generator
-  version: release-1.14
+  version: release-1.15
 - package: k8s.io/apiserver
-  version: release-1.14
+  version: release-1.15
   subpackages:
   - pkg/endpoints/request
   - pkg/registry/generic
@@ -50,7 +50,7 @@ import:
   - pkg/storage
   - pkg/storage/names
 - package: k8s.io/client-go
-  version: release-11.0
+  version: release-12.0
   subpackages:
   - discovery
   - discovery/fake
@@ -70,12 +70,12 @@ import:
   subpackages:
   - args
 - package: k8s.io/klog
-  version: ~0.3.0
+  version: ~0.3.3
 
 # sample-apiserver main now use k8s.io/component-base, and we follow suit
 
 - package: k8s.io/component-base
-  version: release-1.14
+  version: release-1.15
 
 # prometheus/client_golang 0.9.2 and later uses GO111MODULE only and requests prometheus/procfs v0.0.2
 
