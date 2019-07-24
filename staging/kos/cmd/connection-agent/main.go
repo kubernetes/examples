@@ -26,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-
 	k8scorev1api "k8s.io/api/core/v1"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
@@ -51,7 +50,7 @@ const (
 	defaultClientQPS   = 100
 	defaultClientBurst = 200
 
-	queueName = "kos_agent_queue"
+	queueName = "ca"
 )
 
 func main() {

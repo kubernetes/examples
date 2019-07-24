@@ -30,8 +30,9 @@ import (
 // Package prometheus sets the workqueue DefaultMetricsFactory to produce
 // prometheus metrics. To use this package, you just have to import it.
 
-// Metrics subsystem and keys used by the workqueue.
+// Metrics namespace, subsystem and keys used by the workqueue.
 const (
+	WorkQueueNamespace         = "kos"
 	WorkQueueSubsystem         = "workqueue"
 	DepthKey                   = "depth"
 	AddsKey                    = "adds_total"
@@ -50,6 +51,7 @@ type prometheusMetricsProvider struct{}
 
 func (prometheusMetricsProvider) NewDepthMetric(name string) workqueue.GaugeMetric {
 	depth := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace:   WorkQueueNamespace,
 		Subsystem:   WorkQueueSubsystem,
 		Name:        DepthKey,
 		Help:        "Current depth of workqueue",
@@ -61,6 +63,7 @@ func (prometheusMetricsProvider) NewDepthMetric(name string) workqueue.GaugeMetr
 
 func (prometheusMetricsProvider) NewAddsMetric(name string) workqueue.CounterMetric {
 	adds := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace:   WorkQueueNamespace,
 		Subsystem:   WorkQueueSubsystem,
 		Name:        AddsKey,
 		Help:        "Total number of adds handled by workqueue",
@@ -72,6 +75,7 @@ func (prometheusMetricsProvider) NewAddsMetric(name string) workqueue.CounterMet
 
 func (prometheusMetricsProvider) NewLatencyMetric(name string) workqueue.HistogramMetric {
 	latency := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace:   WorkQueueNamespace,
 		Subsystem:   WorkQueueSubsystem,
 		Name:        QueueLatencyKey,
 		Help:        "How long in seconds an item stays in workqueue before being requested.",
@@ -84,6 +88,7 @@ func (prometheusMetricsProvider) NewLatencyMetric(name string) workqueue.Histogr
 
 func (prometheusMetricsProvider) NewWorkDurationMetric(name string) workqueue.HistogramMetric {
 	workDuration := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace:   WorkQueueNamespace,
 		Subsystem:   WorkQueueSubsystem,
 		Name:        WorkDurationKey,
 		Help:        "How long in seconds processing an item from workqueue takes.",
@@ -96,6 +101,7 @@ func (prometheusMetricsProvider) NewWorkDurationMetric(name string) workqueue.Hi
 
 func (prometheusMetricsProvider) NewUnfinishedWorkSecondsMetric(name string) workqueue.SettableGaugeMetric {
 	unfinished := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: WorkQueueNamespace,
 		Subsystem: WorkQueueSubsystem,
 		Name:      UnfinishedWorkKey,
 		Help: "How many seconds of work has done that " +
@@ -110,6 +116,7 @@ func (prometheusMetricsProvider) NewUnfinishedWorkSecondsMetric(name string) wor
 
 func (prometheusMetricsProvider) NewLongestRunningProcessorSecondsMetric(name string) workqueue.SettableGaugeMetric {
 	unfinished := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: WorkQueueNamespace,
 		Subsystem: WorkQueueSubsystem,
 		Name:      LongestRunningProcessorKey,
 		Help: "How many seconds has the longest running " +
@@ -122,6 +129,7 @@ func (prometheusMetricsProvider) NewLongestRunningProcessorSecondsMetric(name st
 
 func (prometheusMetricsProvider) NewRetriesMetric(name string) workqueue.CounterMetric {
 	retries := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace:   WorkQueueNamespace,
 		Subsystem:   WorkQueueSubsystem,
 		Name:        RetriesKey,
 		Help:        "Total number of retries handled by workqueue",

@@ -73,7 +73,7 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 		kosInformers.IPLocks().Informer(),
 		kosInformers.IPLocks().Lister(),
 		eventIfc,
-		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue"),
+		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "ipam"),
 		ctx.options.IPAMControllerWorkers,
 		ctx.options.Hostname,
 	)
@@ -107,7 +107,7 @@ func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosCli
 		subnets.Informer(),
 		subnets.Lister(),
 		eventIfc,
-		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue"),
+		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "sv"),
 		ctx.options.SubnetValidationControllerWorkers,
 		ctx.options.Hostname,
 	)
