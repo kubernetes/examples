@@ -33,11 +33,6 @@ import (
 	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
 )
 
-const (
-	ipamMetricsSubsystem            = "ipam"
-	subnetValidatorMetricsSubsystem = "subnet_validator"
-)
-
 var managedControllers map[string]startFunction
 
 func init() {
@@ -48,10 +43,9 @@ func init() {
 }
 
 type controllerContext struct {
-	options          *KOSControllerManagerOptions
-	metricsNamespace string
-	sharedInformers  kosinformers.SharedInformerFactory
-	stop             <-chan struct{}
+	options         *KOSControllerManagerOptions
+	sharedInformers kosinformers.SharedInformerFactory
+	stop            <-chan struct{}
 }
 
 type startFunction func(ctx controllerContext, k8sClientCfg, kosClientCfg *rest.Config) error
@@ -82,8 +76,6 @@ func startIPAMController(ctx controllerContext, k8sClientCfg, kosClientCfg *rest
 		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_ipam_controller_queue"),
 		ctx.options.IPAMControllerWorkers,
 		ctx.options.Hostname,
-		ctx.metricsNamespace,
-		ipamMetricsSubsystem,
 	)
 
 	// Start the controller.
@@ -118,8 +110,6 @@ func startSubnetValidationController(ctx controllerContext, k8sClientCfg, kosCli
 		workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), "kos_subnet_validator_queue"),
 		ctx.options.SubnetValidationControllerWorkers,
 		ctx.options.Hostname,
-		ctx.metricsNamespace,
-		subnetValidatorMetricsSubsystem,
 	)
 
 	// Start the controller.

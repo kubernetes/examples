@@ -59,6 +59,9 @@ const (
 
 	fullSubnetErrMsgPrefix = "no IP address available in subnet"
 	fullSubnetStatusMsg    = "Referenced subnet has run out of IPs"
+
+	metricsNamespace = "kos"
+	metricsSubsystem = "ipam"
 )
 
 type IPAMController struct {
@@ -124,9 +127,7 @@ func NewController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	eventIfc k8scorev1client.EventInterface,
 	queue k8sworkqueue.RateLimitingInterface,
 	workers int,
-	hostname string,
-	metricsNamespace string,
-	metricsSubsystem string) *IPAMController {
+	hostname string) *IPAMController {
 
 	attachmentCreateToLockHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{

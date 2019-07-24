@@ -57,21 +57,22 @@
           "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket{statusErr=\"ok\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "99%ile valid subnets ",
+          "legendFormat": "valid ",
           "refId": "A"
         },
         {
           "expr": "histogram_quantile(0.99, rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket{statusErr=\"err\"}[1m]))",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "99%ile conflicting subnets",
+          "legendFormat": "conflicting",
           "refId": "B"
         },
         {
           "expr": "histogram_quantile(0.99, sum(rate(kos_subnet_validator_subnet_create_to_validated_latency_seconds_bucket[1m])) by (le))",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "99%ile total",
+          "legendFormat": "total",
           "refId": "C"
         }
       ],

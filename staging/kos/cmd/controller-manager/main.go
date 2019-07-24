@@ -43,19 +43,10 @@ import (
 const (
 	// The HTTP port under which the scraping endpoint ("/metrics") is served.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
-	MetricsAddr = ":9295"
-)
-
-const (
-	// The HTTP port under which the scraping endpoint ("/metrics") is served.
-	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
 	metricsAddr = ":9295"
 
 	// The HTTP path under which the scraping endpoint ("/metrics") is served.
 	metricsPath = "/metrics"
-
-	// The namespace and subsystem of the Prometheus metrics produced here
-	metricsNamespace = "kos"
 )
 
 func main() {
@@ -94,10 +85,9 @@ func main() {
 	}
 
 	ctx := controllerContext{
-		options:          ctlrOpts,
-		metricsNamespace: metricsNamespace,
-		sharedInformers:  kosinformers.NewSharedInformerFactory(kosInformersClientset, 0),
-		stop:             stopOnSignals(),
+		options:         ctlrOpts,
+		sharedInformers: kosinformers.NewSharedInformerFactory(kosInformersClientset, 0),
+		stop:            stopOnSignals(),
 	}
 	for controller, startController := range managedControllers {
 		k8sCC := addUserAgent(k8sClientCfg, controller)

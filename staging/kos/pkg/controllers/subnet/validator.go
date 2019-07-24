@@ -55,6 +55,9 @@ const (
 	// live lists results.
 	missingCacheMismatch = "missing cache"
 	cacheOwnerMismatch   = "cache owner"
+
+	metricsNamespace = "kos"
+	metricsSubsystem = "subnet_validator"
 )
 
 // conflictsCache holds information for one subnet regarding conflicts with
@@ -141,9 +144,7 @@ func NewValidationController(netIfc kosclientv1a1.NetworkV1alpha1Interface,
 	eventIfc k8scorev1client.EventInterface,
 	queue k8sworkqueue.RateLimitingInterface,
 	workers int,
-	hostname string,
-	metricsNamespace string,
-	metricsSubsystem string) *Validator {
+	hostname string) *Validator {
 
 	subnetCreateToValidatedHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
