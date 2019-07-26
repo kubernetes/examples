@@ -43,7 +43,10 @@ import (
 const (
 	// The HTTP port under which the scraping endpoint ("/metrics") is served.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
-	MetricsAddr = ":9295"
+	metricsAddr = ":9295"
+
+	// The HTTP path under which the scraping endpoint ("/metrics") is served.
+	metricsPath = "/metrics"
 )
 
 func main() {
@@ -74,6 +77,13 @@ func main() {
 		os.Exit(3)
 	}
 
+	if ctlrOpts.Hostname == "" {
+		if ctlrOpts.Hostname, err = os.Hostname(); err != nil {
+			klog.Errorf("Failed to get hostname: %s", err.Error())
+			os.Exit(4)
+		}
+	}
+
 	ctx := controllerContext{
 		options:         ctlrOpts,
 		sharedInformers: kosinformers.NewSharedInformerFactory(kosInformersClientset, 0),
@@ -84,15 +94,15 @@ func main() {
 		kosCC := addUserAgent(kosClientCfg, controller)
 		if err := startController(ctx, k8sCC, kosCC); err != nil {
 			klog.Errorf("Failed to start %s: %s", controller, err.Error())
-			os.Exit(4)
+			os.Exit(5)
 		}
 	}
 	klog.Info("All controllers started.")
 
-	// Serve Prometheus metrics
-	http.Handle("/metrics", promhttp.Handler())
+	// Serve Prometheus metrics.
+	http.Handle(metricsPath, promhttp.Handler())
 	go func() {
-		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(metricsAddr, nil).Error())
 	}()
 
 	ctx.sharedInformers.Start(ctx.stop)

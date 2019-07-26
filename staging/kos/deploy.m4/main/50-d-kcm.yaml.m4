@@ -23,9 +23,15 @@ spec:
       - name: kos-controller-manager
         image: DOCKER_PREFIX/kos-controller-manager:latest
         imagePullPolicy: Always
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         command:
         - /controller-manager
         - -v=5
+        - --hostname=$(HOSTNAME)
         - --qps=100
         - --burst=200
         - --indirect-requests=true

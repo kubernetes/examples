@@ -12,3 +12,10 @@ rules:
   - list
   - watch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
