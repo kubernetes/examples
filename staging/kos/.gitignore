@@ -5,7 +5,7 @@ images/*/*[!e]
 local-binaries
 
 # The generated manifests
-deploy/main/50-*.yaml
+deploy/main/[57]0-*.yaml
 
 # Do not need vendor, see glide.lock
 vendor

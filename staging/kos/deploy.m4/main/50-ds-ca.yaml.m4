@@ -19,6 +19,7 @@ spec:
       nodeSelector:
         role.kos.example.com/workload: "true"
       hostNetwork: true
+      dnsPolicy: "ClusterFirstWithHostNet"
       containers:
       - name: connection-agent
         image: DOCKER_PREFIX/kos-connection-agent:latest
@@ -29,6 +30,9 @@ spec:
         - name: netns-dir
           mountPath: /var/run/netns
           mountPropagation: Bidirectional
+        - name: network-api-ca
+          mountPath: /network-api
+          readOnly: true
         securityContext:
           privileged: true
         env:
@@ -46,6 +50,7 @@ spec:
         - -nodename=$(NODE_NAME)
         - -hostip=$(HOST_IP)
         - -allowed-programs=/usr/local/kos/bin/TestByPing,/usr/local/kos/bin/RemoveNetNS
+        - -network-api-ca=/network-api/ca.crt
         - -netfabric=ovs
       volumes:
       - name: ovs-socks-dir
@@ -56,3 +61,6 @@ spec:
         hostPath:
           path: /var/run/netns
           type: DirectoryOrCreate
+      - name: network-api-ca
+        secret:
+          secretName: network-api-ca

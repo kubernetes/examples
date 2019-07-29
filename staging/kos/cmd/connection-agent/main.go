@@ -27,7 +27,6 @@ import (
 	"time"
 
 	k8scorev1api "k8s.io/api/core/v1"
-	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	k8scorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -51,6 +50,9 @@ const (
 	defaultClientBurst = 200
 
 	queueName = "ca"
+
+	networkAPIHost = "network-api"
+	networkAPIPort = "443"
 )
 
 func main() {
@@ -58,6 +60,7 @@ func main() {
 		nodeName               string
 		hostIP                 string
 		netFabricName          string
+		caFile                 string
 		allowedPrograms        string
 		kubeconfigFilename     string
 		workers                int
@@ -68,6 +71,7 @@ func main() {
 	flag.StringVar(&nodeName, "nodename", "", "node name")
 	flag.StringVar(&hostIP, "hostip", "", "host IP")
 	flag.StringVar(&netFabricName, "netfabric", "", "network fabric name")
+	flag.StringVar(&caFile, "network-api-ca", "", "file path to the CA's certificate for the Network API")
 	flag.StringVar(&allowedPrograms, "allowed-programs", "", "comma-separated list of allowed pathnames for post-create and post-delete execs")
 	flag.StringVar(&kubeconfigFilename, "kubeconfig", "", "kubeconfig filename")
 	flag.IntVar(&workers, "workers", defaultNumWorkers, "number of worker threads")
@@ -123,25 +127,11 @@ func main() {
 	pause := time.Second
 	for {
 		k8sclientset, err := k8sclient.NewForConfig(clientCfg)
-		var svc *k8scorev1api.Service
-		if err != nil {
-			klog.Errorf("Failed to create Kubernetes clientset: %s", err.Error())
-			goto TryAgain
+		if err == nil {
+			eventIfc = k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
+			break
 		}
-		eventIfc = k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
-		svc, err = k8sclientset.CoreV1().Services("example-com").Get("network-api", k8smetav1.GetOptions{})
-		if err != nil {
-			klog.Errorf("Failed to fetch network-api service: %s", err.Error())
-			goto TryAgain
-		}
-		if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
-			klog.Errorf("The network-api service has a useless Cluster IP (%q).", svc.Spec.ClusterIP)
-			goto TryAgain
-		}
-		klog.Infof("Found Cluster IP address %q for the network-api service.", svc.Spec.ClusterIP)
-		clientCfg.Host = svc.Spec.ClusterIP + ":443"
-		break
-	TryAgain:
+		klog.Errorf("Failed to create Kubernetes clientset: %s", err.Error())
 		time.Sleep(pause)
 		pause = 2 * pause
 		if pause > time.Minute {
@@ -149,8 +139,10 @@ func main() {
 		}
 	}
 
-	// TODO: give our apiservers verifiable identities
-	clientCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
+	clientCfg.Host = networkAPIHost + ":" + networkAPIPort
+	if caFile != "" {
+		clientCfg.TLSClientConfig = rest.TLSClientConfig{CAFile: caFile}
+	}
 
 	allowedProgramsSlice := strings.Split(allowedPrograms, ",")
 	allowedProgramsSet := make(map[string]struct{})

@@ -23,6 +23,11 @@ spec:
       - name: kos-controller-manager
         image: DOCKER_PREFIX/kos-controller-manager:latest
         imagePullPolicy: Always
+# Uncomment the following lines if --indirect-requests is set to false
+        # volumeMounts:
+        # - name: network-api-ca
+        #   mountPath: /network-api
+        #   readOnly: true
         env:
         - name: HOSTNAME
           valueFrom:
@@ -35,5 +40,12 @@ spec:
         - --qps=100
         - --burst=200
         - --indirect-requests=true
+# Uncomment the following line if --indirect-requests is set to false
+#        - --network-api-ca=/network-api/ca.crt
         - --ipam-workers=2
         - --subnet-validator-workers=2
+# Uncomment the following lines if --indirect-requests is set to false
+      # volumes:
+      # - name: network-api-ca
+      #   secret:
+      #     secretName: network-api-ca
