@@ -137,6 +137,10 @@ func (ss *subnetStrategy) checkNSAndCIDRConflicts(candidate *subnet.Summary) (er
 	// Check whether there are Namespace and CIDR conflicts with other subnets.
 	for _, potentialRival := range potentialRivals {
 		pr, err := subnet.NewSummary(potentialRival)
+		// Make sure potentialRival is well formed. The code in this file makes
+		// it impossible to create a malformed subnet, but the check is done in
+		// case this version of strategy is rolled out after a more lenient one
+		// which let malformed subnets through.
 		if err != nil {
 			prMeta := potentialRival.(k8smetav1.Object)
 			klog.V(6).Infof("Skipping %s/%s while validating %s because parsing failed: %s.", prMeta.GetNamespace(), prMeta.GetName(), candidate.NamespacedName, err.Error())
