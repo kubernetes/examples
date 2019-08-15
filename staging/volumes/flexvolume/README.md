@@ -1,1 +1,1 @@
-Please refer to https://github.com/kubernetes/community/tree/master/contributors/devel/flexvolume.md for documentation.
+Please refer to https://github.com/kubernetes/community/blob/master/contributors/devel/sig-storage/flexvolume.md for documentation.
