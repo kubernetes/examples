@@ -47,13 +47,19 @@ deploy/main/50-ds-ca.yaml: deploy.m4/main/50-ds-ca.yaml.m4
 deploy/main/50-d-kcm.yaml: deploy.m4/main/50-d-kcm.yaml.m4
 	m4 -DDOCKER_PREFIX=${DOCKER_PREFIX} deploy.m4/main/50-d-kcm.yaml.m4 > deploy/main/50-d-kcm.yaml
 
-deploy/main/70-apiservice.yaml: deploy.m4/main/70-apiservice.yaml.m4 ${KOS_PERSIST}/tls/ca.pem
-	m4 -DCA_CRT=$$(base64 -i ${KOS_PERSIST}/tls/ca.pem) \
+deploy/main/70-apiservice.yaml: deploy.m4/main/70-apiservice.yaml.m4 ${KOS_PERSIST}/tls/ca.pem.b64
+	m4 -DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		deploy.m4/main/70-apiservice.yaml.m4 > deploy/main/70-apiservice.yaml
 
 %.key:
 	mkdir -p $$(dirname $@)
 	openssl genrsa -out $@ 4096
+
+# Carefully engineered to work on both MacOS X and Linux,
+# which differ in their interpretation of `-i` and vary
+# in default and arguments regarding line wrapping.
+%.b64: %
+	( base64 -i "$<" | while read line; do echo -n "$$line"; done ) > "$@"
 
 ${KOS_PERSIST}/tls/ca.pem: ${KOS_PERSIST}/tls/ca.key
 	cd "${KOS_PERSIST}/tls" && \
@@ -116,31 +122,31 @@ ${KOS_PERSIST}/tls/network-api/server.crt: ${KOS_PERSIST}/tls/ca.key ${KOS_PERSI
 		-extfile tls/network-api/cnf/server.cnf && \
 	rm "${KOS_PERSIST}/tls/network-api/server.csr"
 
-${KOS_PERSIST}/tls/etcd/peer-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/etcd/peer.key ${KOS_PERSIST}/tls/etcd/peer.crt tls/etcd/peer-secret.yaml.m4
-	m4	-DPEER_CRT=$$(base64 -i ${KOS_PERSIST}/tls/etcd/peer.crt) \
-		-DPEER_KEY=$$(base64 -i ${KOS_PERSIST}/tls/etcd/peer.key) \
-		-DCA_CRT=$$(base64 -i ${KOS_PERSIST}/tls/ca.pem) \
+${KOS_PERSIST}/tls/etcd/peer-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem.b64 ${KOS_PERSIST}/tls/etcd/peer.key.b64 ${KOS_PERSIST}/tls/etcd/peer.crt.b64 tls/etcd/peer-secret.yaml.m4
+	m4	-DPEER_CRT=$$(cat ${KOS_PERSIST}/tls/etcd/peer.crt.b64) \
+		-DPEER_KEY=$$(cat ${KOS_PERSIST}/tls/etcd/peer.key.b64) \
+		-DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		tls/etcd/peer-secret.yaml.m4 > ${KOS_PERSIST}/tls/etcd/peer-secret.yaml
 
-${KOS_PERSIST}/tls/etcd/server-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/etcd/server.key ${KOS_PERSIST}/tls/etcd/server.crt tls/etcd/server-secret.yaml.m4
-	m4	-DSERVER_CRT=$$(base64 -i ${KOS_PERSIST}/tls/etcd/server.crt) \
-		-DSERVER_KEY=$$(base64 -i ${KOS_PERSIST}/tls/etcd/server.key) \
-		-DCA_CRT=$$(base64 -i ${KOS_PERSIST}/tls/ca.pem) \
+${KOS_PERSIST}/tls/etcd/server-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem.b64 ${KOS_PERSIST}/tls/etcd/server.key.b64 ${KOS_PERSIST}/tls/etcd/server.crt.b64 tls/etcd/server-secret.yaml.m4
+	m4	-DSERVER_CRT=$$(cat ${KOS_PERSIST}/tls/etcd/server.crt.b64) \
+		-DSERVER_KEY=$$(cat ${KOS_PERSIST}/tls/etcd/server.key.b64) \
+		-DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		tls/etcd/server-secret.yaml.m4 > ${KOS_PERSIST}/tls/etcd/server-secret.yaml
 
-${KOS_PERSIST}/tls/etcd/client-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/etcd/client.key ${KOS_PERSIST}/tls/etcd/client.crt tls/etcd/client-secret.yaml.m4
-	m4	-DCLIENT_CRT=$$(base64 -i ${KOS_PERSIST}/tls/etcd/client.crt) \
-		-DCLIENT_KEY=$$(base64 -i ${KOS_PERSIST}/tls/etcd/client.key) \
-		-DCA_CRT=$$(base64 -i ${KOS_PERSIST}/tls/ca.pem) \
+${KOS_PERSIST}/tls/etcd/client-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem.b64 ${KOS_PERSIST}/tls/etcd/client.key.b64 ${KOS_PERSIST}/tls/etcd/client.crt.b64 tls/etcd/client-secret.yaml.m4
+	m4	-DCLIENT_CRT=$$(cat ${KOS_PERSIST}/tls/etcd/client.crt.b64) \
+		-DCLIENT_KEY=$$(cat ${KOS_PERSIST}/tls/etcd/client.key.b64) \
+		-DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		tls/etcd/client-secret.yaml.m4 > ${KOS_PERSIST}/tls/etcd/client-secret.yaml
 
-${KOS_PERSIST}/tls/network-api/server-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/network-api/server.key ${KOS_PERSIST}/tls/network-api/server.crt tls/network-api/server-secret.yaml.m4
-	m4	-DSERVER_AND_CA_CRTS=$$(cat ${KOS_PERSIST}/tls/network-api/server.crt ${KOS_PERSIST}/tls/ca.pem | base64) \
-		-DSERVER_KEY=$$(base64 -i ${KOS_PERSIST}/tls/network-api/server.key) \
+${KOS_PERSIST}/tls/network-api/server-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/network-api/server.key.b64 ${KOS_PERSIST}/tls/network-api/server.crt tls/network-api/server-secret.yaml.m4
+	m4	-DSERVER_AND_CA_CRTS=$$(cat ${KOS_PERSIST}/tls/network-api/server.crt ${KOS_PERSIST}/tls/ca.pem | base64 | while read line; do echo -n "$$line"; done) \
+		-DSERVER_KEY=$$(cat ${KOS_PERSIST}/tls/network-api/server.key.b64) \
 		tls/network-api/server-secret.yaml.m4 > ${KOS_PERSIST}/tls/network-api/server-secret.yaml
 
-${KOS_PERSIST}/tls/network-api/client-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem tls/network-api/client-secret.yaml.m4
-	m4 -DCA_CRT=$$(base64 -i ${KOS_PERSIST}/tls/ca.pem) \
+${KOS_PERSIST}/tls/network-api/client-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem.b64 tls/network-api/client-secret.yaml.m4
+	m4 -DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		tls/network-api/client-secret.yaml.m4 > ${KOS_PERSIST}/tls/network-api/client-secret.yaml
 
 .PHONY: deploy
