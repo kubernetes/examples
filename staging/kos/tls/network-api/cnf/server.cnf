@@ -10,3 +10,4 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = network-api
 DNS.2 = network-api.example-com.svc
+DNS.3 = network-api.example-com.svc.cluster.local
