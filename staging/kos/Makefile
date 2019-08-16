@@ -59,7 +59,7 @@ deploy/main/70-apiservice.yaml: deploy.m4/main/70-apiservice.yaml.m4 ${KOS_PERSI
 # which differ in their interpretation of `-i` and vary
 # in default and arguments regarding line wrapping.
 %.b64: %
-	( base64 -i "$<" | while read line; do echo -n "$$line"; done ) > "$@"
+	[ $$(uname) = Darwin ] && base64 -i "$<" -o "$@" || base64 -w 0 "$<" > "$@"
 
 ${KOS_PERSIST}/tls/ca.pem: ${KOS_PERSIST}/tls/ca.key
 	cd "${KOS_PERSIST}/tls" && \
@@ -140,8 +140,11 @@ ${KOS_PERSIST}/tls/etcd/client-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem.b64 ${KOS
 		-DCA_CRT=$$(cat ${KOS_PERSIST}/tls/ca.pem.b64) \
 		tls/etcd/client-secret.yaml.m4 > ${KOS_PERSIST}/tls/etcd/client-secret.yaml
 
-${KOS_PERSIST}/tls/network-api/server-secret.yaml:  ${KOS_PERSIST}/tls/ca.pem ${KOS_PERSIST}/tls/network-api/server.key.b64 ${KOS_PERSIST}/tls/network-api/server.crt tls/network-api/server-secret.yaml.m4
-	m4	-DSERVER_AND_CA_CRTS=$$(cat ${KOS_PERSIST}/tls/network-api/server.crt ${KOS_PERSIST}/tls/ca.pem | base64 | while read line; do echo -n "$$line"; done) \
+${KOS_PERSIST}/tls/network-api/server-bundle: ${KOS_PERSIST}/tls/network-api/server.crt ${KOS_PERSIST}/tls/ca.pem
+	cat ${KOS_PERSIST}/tls/network-api/server.crt ${KOS_PERSIST}/tls/ca.pem > ${KOS_PERSIST}/tls/network-api/server-bundle
+
+${KOS_PERSIST}/tls/network-api/server-secret.yaml: ${KOS_PERSIST}/tls/network-api/server.key.b64 ${KOS_PERSIST}/tls/network-api/server-bundle.b64 tls/network-api/server-secret.yaml.m4
+	m4	-DSERVER_AND_CA_CRTS=$$(cat ${KOS_PERSIST}/tls/network-api/server-bundle.b64) \
 		-DSERVER_KEY=$$(cat ${KOS_PERSIST}/tls/network-api/server.key.b64) \
 		tls/network-api/server-secret.yaml.m4 > ${KOS_PERSIST}/tls/network-api/server-secret.yaml
 
