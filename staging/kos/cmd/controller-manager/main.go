@@ -127,10 +127,11 @@ func buildClientConfigs(opts *KOSControllerManagerOptions) (k8sCfg, kosCfg *rest
 	k8sCfg.Burst = opts.Burst
 	kosCfgStruct := *k8sCfg
 	kosCfg = &kosCfgStruct
-	// TODO: Give our API servers verifiable identities.
-	kosCfg.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
 	if !opts.IndirectRequests {
 		kosCfg.Host = "network-api:443"
+		if opts.CAFile != "" {
+			kosCfg.TLSClientConfig = rest.TLSClientConfig{CAFile: opts.CAFile}
+		}
 	}
 	return
 }

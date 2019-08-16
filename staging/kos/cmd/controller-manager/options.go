@@ -33,6 +33,7 @@ type KOSControllerManagerOptions struct {
 	QPS                int
 	Burst              int
 	IndirectRequests   bool
+	CAFile             string
 
 	IPAMControllerWorkers             int
 	SubnetValidationControllerWorkers int
@@ -46,6 +47,7 @@ func (o *KOSControllerManagerOptions) AddFlags() {
 	flag.IntVar(&o.QPS, "qps", defaultQPS, "QPS to use while talking to the api-servers")
 	flag.IntVar(&o.Burst, "burst", defaultBurst, "Burst to use while talking to the api-servers")
 	flag.BoolVar(&o.IndirectRequests, "indirect-requests", defaultIndirectRequests, "requests go through main api-servers instead of directly to network api-servers")
+	flag.StringVar(&o.CAFile, "network-api-ca", "", "file path to the CA's certificate to use for the Network API if indirect-requests=false")
 	flag.IntVar(&o.IPAMControllerWorkers, "ipam-workers", defaultWorkers, "number of worker threads for the IPAM controller")
 	flag.IntVar(&o.SubnetValidationControllerWorkers, "subnet-validator-workers", defaultWorkers, "number of worker threads for the subnet validator")
 }
