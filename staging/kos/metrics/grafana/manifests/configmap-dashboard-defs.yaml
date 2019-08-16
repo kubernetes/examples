@@ -5073,8 +5073,8 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
-            "w": 24,
+            "h": 10,
+            "w": 12,
             "x": 0,
             "y": 0
           },
@@ -5174,10 +5174,95 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 8,
+            "h": 10,
             "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 21,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(kos_agent_fabric_count) by (fabric)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{ fabric }}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Number of CA, By Fabric Name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "prometheus",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 24,
             "x": 0,
-            "y": 7
+            "y": 10
           },
           "id": 1,
           "legend": {
@@ -5259,10 +5344,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 7
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 19
           },
           "id": 3,
           "legend": {
@@ -5344,10 +5429,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 8,
-            "w": 12,
+            "h": 10,
+            "w": 24,
             "x": 0,
-            "y": 15
+            "y": 28
           },
           "id": 2,
           "legend": {
@@ -5429,10 +5514,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 15
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 38
           },
           "id": 13,
           "legend": {
@@ -5512,13 +5597,13 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": "prometheus",
-          "description": "Sum, over workers, of utilization of that worker",
+          "description": "",
           "fill": 1,
           "gridPos": {
-            "h": 9,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 23
+            "y": 47
           },
           "id": 56,
           "legend": {
@@ -5547,108 +5632,29 @@ data:
               "expr": "rate(kos_workqueue_work_duration_seconds_sum{name=\"sv\"}[1m])",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{ instance  }}",
+              "legendFormat": "total",
               "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Subnet Validator Worker Utilization",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
             },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "description": "Sum, over workers, of utilization of that worker spent on calls out.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 24,
-            "x": 0,
-            "y": 32
-          },
-          "id": 36,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
             {
               "expr": "sum(rate(kos_subnet_validator_subnet_update_latency_seconds_sum[1m])) without (err, statusErr)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "updates @ {{ instance }}",
-              "refId": "A"
+              "legendFormat": "spent on updates",
+              "refId": "B"
             },
             {
               "expr": "sum(rate(kos_subnet_validator_live_list_latency_seconds_sum[1m])) without (err)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "lists @ {{ instance }}",
-              "refId": "B"
+              "legendFormat": "spent on live lists",
+              "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Subnet Validator Worker Utilization for Calls Out",
+          "title": "Subnet Validator Worker Utilization, Summed Over Workers",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -5696,7 +5702,7 @@ data:
             "h": 11,
             "w": 24,
             "x": 0,
-            "y": 41
+            "y": 57
           },
           "id": 40,
           "legend": {
@@ -5788,7 +5794,7 @@ data:
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 52
+            "y": 68
           },
           "id": 42,
           "legend": {
@@ -5880,7 +5886,7 @@ data:
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 61
+            "y": 77
           },
           "id": 38,
           "legend": {
@@ -5973,7 +5979,7 @@ data:
             "h": 10,
             "w": 24,
             "x": 0,
-            "y": 70
+            "y": 86
           },
           "id": 44,
           "legend": {
@@ -6079,7 +6085,7 @@ data:
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 80
+            "y": 96
           },
           "id": 46,
           "legend": {
@@ -6164,7 +6170,7 @@ data:
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 89
+            "y": 105
           },
           "id": 52,
           "legend": {
@@ -6250,7 +6256,7 @@ data:
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 98
+            "y": 114
           },
           "id": 50,
           "legend": {
@@ -6332,13 +6338,13 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": "prometheus",
-          "description": "Sum, over workers, of utilization of that worker",
+          "description": "",
           "fill": 1,
           "gridPos": {
-            "h": 8,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 107
+            "y": 123
           },
           "id": 25,
           "legend": {
@@ -6367,108 +6373,29 @@ data:
               "expr": "rate(kos_workqueue_work_duration_seconds_sum{name=\"ipam\"}[1m])",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{ instance }}",
+              "legendFormat": "total",
               "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "IPAM Worker Utilization Sum",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
             },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "description": "Sum, over workers, of utilization of that worker spent on calls out.",
-          "fill": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 115
-          },
-          "id": 27,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
             {
               "expr": "sum(rate(kos_ipam_attachment_update_latency_seconds_sum[1m])) without (err, statusErr)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "attachments @ {{ instance }}",
-              "refId": "A"
+              "legendFormat": "spent on attachment updates",
+              "refId": "B"
             },
             {
               "expr": "sum(rate(kos_ipam_ip_lock_latency_seconds_sum[1m])) without (op, err)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "locks @ {{ instance }}",
-              "refId": "B"
+              "legendFormat": "spent on lock ops",
+              "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "IPAM Worker Utilization Sum For Calls Out",
+          "title": "IPAM Worker Utilization, Summed Over Workers",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -6513,10 +6440,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 122
+            "y": 132
           },
           "id": 28,
           "legend": {
@@ -6605,10 +6532,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 8,
             "w": 24,
             "x": 0,
-            "y": 129
+            "y": 141
           },
           "id": 32,
           "legend": {
@@ -6697,10 +6624,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 136
+            "y": 149
           },
           "id": 30,
           "legend": {
@@ -6789,10 +6716,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 8,
             "w": 24,
             "x": 0,
-            "y": 143
+            "y": 158
           },
           "id": 7,
           "legend": {
@@ -6886,98 +6813,13 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": "prometheus",
+          "description": "",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 150
-          },
-          "id": 21,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(kos_agent_fabric_count) by (fabric)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ fabric }}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Number of CA, By Fabric Name",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "description": "Sum, over workers, of utilization of that worker",
-          "fill": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 157
+            "y": 166
           },
           "id": 4,
           "legend": {
@@ -7014,7 +6856,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Connection Agent Worker Utilization",
+          "title": "Connection Agent Worker Utilization, Summed Over Workers",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -7059,10 +6901,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 164
+            "y": 176
           },
           "id": 5,
           "legend": {
@@ -7144,10 +6986,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 171
+            "y": 186
           },
           "id": 29,
           "legend": {
@@ -7229,10 +7071,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 178
+            "y": 195
           },
           "id": 31,
           "legend": {
@@ -7314,10 +7156,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 185
+            "y": 205
           },
           "id": 6,
           "legend": {
@@ -7399,10 +7241,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 192
+            "y": 214
           },
           "id": 12,
           "legend": {
@@ -7484,10 +7326,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 199
+            "y": 223
           },
           "id": 14,
           "legend": {
@@ -7569,10 +7411,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 206
+            "y": 232
           },
           "id": 15,
           "legend": {
@@ -7654,10 +7496,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 213
+            "y": 241
           },
           "id": 16,
           "legend": {
@@ -7739,10 +7581,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 9,
             "w": 24,
             "x": 0,
-            "y": 220
+            "y": 250
           },
           "id": 17,
           "legend": {
@@ -7824,10 +7666,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 227
+            "y": 259
           },
           "id": 18,
           "legend": {
@@ -7909,10 +7751,10 @@ data:
           "datasource": "prometheus",
           "fill": 1,
           "gridPos": {
-            "h": 7,
+            "h": 10,
             "w": 24,
             "x": 0,
-            "y": 234
+            "y": 269
           },
           "id": 19,
           "legend": {
