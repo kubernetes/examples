@@ -61,12 +61,12 @@ const (
 	// start-up.
 	attVNIAndIPIndexerName = "attachmentVNIAndIP"
 
-	// NetworkAttachments in network.example.com/v1alpha1
-	// fields names. Used to build field selectors.
-	attNode   = "spec.node"
-	attIPv4   = "status.ipv4"
-	attHostIP = "status.hostIP"
-	attVNI    = "status.addressVNI"
+	// NetworkAttachments in network.example.com/v1alpha1 fields names. Used to
+	// build field selectors.
+	attNodeField   = "spec.node"
+	attIPv4Field   = "status.ipv4"
+	attHostIPField = "status.hostIP"
+	attVNIField    = "status.addressVNI"
 
 	// resync period for Informers caches. Set
 	// to 0 because we don't want resyncs.
@@ -139,7 +139,7 @@ type vnState struct {
 // also updates the status of such attachment with its host IP and the name of
 // the interface which was created.
 type ConnectionAgent struct {
-	localNodeName string
+	nodeName      string
 	hostIP        gonet.IP
 	kcs           *kosclientset.Clientset
 	netv1a1Ifc    netvifc1a1.NetworkV1alpha1Interface
@@ -228,7 +228,7 @@ type LocalAttachmentState struct {
 
 // New returns a deactivated instance of a ConnectionAgent (neither the workers
 // goroutines nor any Informer have been started). Invoke Run to activate.
-func New(localNodeName string,
+func New(nodeName string,
 	hostIP gonet.IP,
 	kcs *kosclientset.Clientset,
 	eventIfc k8scorev1client.EventInterface,
@@ -244,7 +244,7 @@ func New(localNodeName string,
 			Name:        "attachment_create_to_local_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating local interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	attachmentCreateToRemoteIfcHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
@@ -253,7 +253,7 @@ func New(localNodeName string,
 			Name:        "attachment_create_to_remote_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating remote interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	fabricLatencyHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -262,7 +262,7 @@ func New(localNodeName string,
 			Name:        "fabric_latency_seconds",
 			Help:        "Network fabric operation time in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		},
 		[]string{"op", "err"})
 	attachmentCreateToStatusHistogram := prometheus.NewHistogram(
@@ -272,7 +272,7 @@ func New(localNodeName string,
 			Name:        "attachment_create_to_status_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to return from successful status update",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	attachmentStatusHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -281,7 +281,7 @@ func New(localNodeName string,
 			Name:        "attachment_status_latency_seconds",
 			Help:        "Round trip latency to update attachment status, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		},
 		[]string{"statusErr", "err"})
 	localAttachmentsGauge := prometheus.NewGauge(
@@ -290,7 +290,7 @@ func New(localNodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "local_attachments",
 			Help:        "Number of local attachments in network fabric",
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	remoteAttachmentsGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -298,7 +298,7 @@ func New(localNodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "remote_attachments",
 			Help:        "Number of remote attachments in network fabric",
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	attachmentExecDurationHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -307,7 +307,7 @@ func New(localNodeName string,
 			Name:        "attachment_exec_duration_secs",
 			Help:        "Time to run attachment commands, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		},
 		[]string{"what"})
 	attachmentExecStatusCounts := prometheus.NewCounterVec(
@@ -316,7 +316,7 @@ func New(localNodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "attachment_exec_status_count",
 			Help:        "Counts of commands by what and exit status",
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		},
 		[]string{"what", "exitStatus"})
 	fabricNameCounts := prometheus.NewCounterVec(
@@ -325,7 +325,7 @@ func New(localNodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "fabric_count",
 			Help:        "Indicator of chosen fabric implementation",
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		},
 		[]string{"fabric"})
 	workerCount := prometheus.NewCounter(
@@ -334,7 +334,7 @@ func New(localNodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "worker_count",
 			Help:        "Number of queue worker threads",
-			ConstLabels: map[string]string{"node": localNodeName},
+			ConstLabels: map[string]string{"node": nodeName},
 		})
 	prometheus.MustRegister(attachmentCreateToLocalIfcHistogram, attachmentCreateToRemoteIfcHistogram, fabricLatencyHistograms, attachmentCreateToStatusHistogram, attachmentStatusHistograms, localAttachmentsGauge, remoteAttachmentsGauge, attachmentExecDurationHistograms, attachmentExecStatusCounts, fabricNameCounts, workerCount)
 
@@ -343,10 +343,10 @@ func New(localNodeName string,
 	eventBroadcaster := k8seventrecord.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&k8scorev1client.EventSinkImpl{eventIfc})
-	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "connection-agent", Host: localNodeName})
+	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "connection-agent", Host: nodeName})
 
 	return &ConnectionAgent{
-		localNodeName:                        localNodeName,
+		nodeName:                             nodeName,
 		hostIP:                               hostIP,
 		kcs:                                  kcs,
 		netv1a1Ifc:                           kcs.NetworkV1alpha1(),
@@ -748,7 +748,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 
 	// Create or update the interface associated with the attachment.
 	var attHostIP gonet.IP
-	if attNode == ca.localNodeName {
+	if attNode == ca.nodeName {
 		attHostIP = ca.hostIP
 	} else {
 		attHostIP = gonet.ParseIP(att.Status.HostIP)
@@ -763,7 +763,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 	}
 
 	// If the attachment is not local then we are done.
-	if attNode != ca.localNodeName {
+	if attNode != ca.nodeName {
 		return nil
 	}
 	// The attachment is local, so make sure its status reflects the
@@ -843,7 +843,7 @@ func (ca *ConnectionAgent) updateVNState(attNewVNI uint32,
 		ca.unsetVNStateVNI(attNSN)
 	}
 
-	return ca.updateVNStateForExistingAtt(attNSN, attNode == ca.localNodeName, attNewVNI)
+	return ca.updateVNStateForExistingAtt(attNSN, attNode == ca.nodeName, attNewVNI)
 }
 
 // updateVNStateForExistingAtt adds the attachment to the vnState associated with
@@ -1270,11 +1270,11 @@ func (ca *ConnectionAgent) getRemoteAttsInformerForVNI(vni uint32) (k8scache.Sha
 func (ca *ConnectionAgent) localAttWithAnIPSelector() k8sfields.Selector {
 	// localAtt is a selector that expresses the constraint that the
 	// NetworkAttachment runs on the same node as the connection agent.
-	localAtt := k8sfields.OneTermEqualSelector(attNode, ca.localNodeName)
+	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.nodeName)
 
 	// attWithAnIP is a selector that expresses the constraint that the
 	// NetworkAttachment has a virtual IP.
-	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4, "")
+	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4Field, "")
 
 	// Return a selector that is a logical AND between attWithAnIP and localAtt
 	return k8sfields.AndSelectors(localAtt, attWithAnIP)
@@ -1287,17 +1287,17 @@ func (ca *ConnectionAgent) localAttWithAnIPSelector() k8sfields.Selector {
 func (ca *ConnectionAgent) remoteAttInVNWithVirtualIPHostIPSelector(vni uint32) k8sfields.Selector {
 	// remoteAtt expresses the constraint that the NetworkAttachment runs on a
 	// remote node.
-	remoteAtt := k8sfields.OneTermNotEqualSelector(attNode, ca.localNodeName)
+	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.nodeName)
 
 	// attWithAnIP and attWithHostIP express the constraints that the
 	// NetworkAttachment has the fields storing virtual IP and host IP set, by
 	// saying that such fields must not be equal to the empty string.
-	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4, "")
-	attWithHostIP := k8sfields.OneTermNotEqualSelector(attHostIP, "")
+	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4Field, "")
+	attWithHostIP := k8sfields.OneTermNotEqualSelector(attHostIPField, "")
 
 	// attInSpecificVN expresses the constraint that the NetworkAttachment
 	// is in the Virtual Network identified by vni.
-	attInSpecificVN := k8sfields.OneTermEqualSelector(attVNI, fmt.Sprint(vni))
+	attInSpecificVN := k8sfields.OneTermEqualSelector(attVNIField, fmt.Sprint(vni))
 
 	// Build and return a selector which is a logical AND between all the selectors
 	// defined above.
