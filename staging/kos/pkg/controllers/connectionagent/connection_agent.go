@@ -426,9 +426,14 @@ func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v", oldAtt, att)
-	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.AddressVNI != att.Status.AddressVNI {
-		// The only fields affecting local network interfaces handling that can
-		// be seen changing by this function are Status.IPv4 and Status.AddressVNI.
+
+	// Enqueue if the UID changed because if a local NetworkAttachment is
+	// deleted and replaced the status.hostIP field of the newer attachment is
+	// set to "", and the connection agent has to write back the correct value.
+	// Also, the only fields affecting local network interfaces handling that
+	// can be seen changing by this function are status.ipv4 and
+	// status.addressVNI, so enqueue if they changed.
+	if oldAtt.UID != att.UID || oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.AddressVNI != att.Status.AddressVNI {
 		ca.queue.Add(parse.AttNSN(att))
 	}
 }
@@ -1105,9 +1110,11 @@ func (ca *ConnectionAgent) onRemoteAttAdd(obj interface{}) {
 func (ca *ConnectionAgent) onRemoteAttUpdate(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of update from %#+v to %#+v.", att.Status.AddressVNI, oldAtt, att)
+
+	// The only fields affecting remote network interfaces handling that can be
+	// seen changing by this function are status.ipv4 and status.hostIP, so
+	// enqueue only if they changed.
 	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.HostIP != att.Status.HostIP {
-		// The only fields affecting remote network interfaces handling that can
-		// be seen changing by this function are Status.IPv4 and Status.HostIP.
 		ca.queue.Add(parse.AttNSN(att))
 	}
 }
