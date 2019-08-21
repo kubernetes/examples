@@ -311,14 +311,15 @@ information.
 ## tl;dr
 
 ```console
-kubectl create -f examples/staging/spark
+kubectl create ns spark-cluster
+kubectl create -f examples/staging/spark -n spark-cluster
 ```
 
 After it's setup:
 
 ```console
-kubectl get pods # Make sure everything is running
-kubectl get svc -o wide # Get the Loadbalancer endpoints for spark-ui-proxy and zeppelin
+kubectl get pods -n spark-cluster # Make sure everything is running
+kubectl get svc -o wide -n spark-cluster # Get the Loadbalancer endpoints for spark-ui-proxy and zeppelin
 ```
 
 At which point the Master UI and Zeppelin will be available at the URLs under the `EXTERNAL-IP` field.
