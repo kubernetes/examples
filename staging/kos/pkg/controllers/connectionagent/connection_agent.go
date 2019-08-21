@@ -411,11 +411,11 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 }
 
 func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
-	localAttWithAnIPSelector := ca.localAttWithAnIPSelector()
+	localAttSelector := ca.localAttSelector()
 
 	ca.localAttsInformer, ca.localAttsLister = v1a1AttsCustomInformerAndLister(ca.kcs,
 		resyncPeriod,
-		fromFieldsSelectorToTweakListOptionsFunc(localAttWithAnIPSelector.String()))
+		fromFieldsSelectorToTweakListOptionsFunc(localAttSelector.String()))
 
 	ca.localAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
@@ -1085,7 +1085,7 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	remoteAttsInformer, remoteAttsLister := v1a1AttsCustomNamespaceInformerAndLister(ca.kcs,
 		resyncPeriod,
 		namespace,
-		fromFieldsSelectorToTweakListOptionsFunc(ca.remoteAttInVNWithVirtualIPHostIPSelector(vni).String()))
+		fromFieldsSelectorToTweakListOptionsFunc(ca.remoteAttSelector(vni).String()))
 
 	remoteAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
@@ -1265,43 +1265,40 @@ func (ca *ConnectionAgent) getRemoteAttsInformerForVNI(vni uint32) (k8scache.Sha
 	return vnState.remoteAttsInformer, vnState.remoteAttsInformerStopCh
 }
 
-// localAttWithAnIPSelector returns a field selector that matches
-// NetworkAttachments that run on the local node and have a virtual IP.
-func (ca *ConnectionAgent) localAttWithAnIPSelector() k8sfields.Selector {
-	// localAtt is a selector that expresses the constraint that the
-	// NetworkAttachment runs on the same node as the connection agent.
+// localAttSelector returns a field selector that matches local
+// NetworkAttachments for whom a network interface can be created.
+func (ca *ConnectionAgent) localAttSelector() k8sfields.Selector {
+	// The NetworkAttachment must be local.
 	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.nodeName)
 
-	// attWithAnIP is a selector that expresses the constraint that the
-	// NetworkAttachment has a virtual IP.
+	// The NetworkAttachment must have a virtual IP to create an Interface.
 	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4Field, "")
 
-	// Return a selector that is a logical AND between attWithAnIP and localAtt
+	// Return a selector given by the logical AND between localAtt and
+	// attWithAnIP.
 	return k8sfields.AndSelectors(localAtt, attWithAnIP)
 }
 
-// remoteAttInVNWithVirtualIPHostIPSelector returns a string representing a
-// field selector that matches NetworkAttachments that run on a remote node on
-// the Virtual Network identified by the given VNI and have a virtual IP and the
-// host IP fields set.
-func (ca *ConnectionAgent) remoteAttInVNWithVirtualIPHostIPSelector(vni uint32) k8sfields.Selector {
-	// remoteAtt expresses the constraint that the NetworkAttachment runs on a
-	// remote node.
+// remoteAttSelector returns a field selector that matches remote
+// NetworkAttachments in the virtual network identified by `vni` for whom a
+// network interface can be created.
+func (ca *ConnectionAgent) remoteAttSelector(vni uint32) k8sfields.Selector {
+	// The NetworkAttachment must be remote.
 	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.nodeName)
 
-	// attWithAnIP and attWithHostIP express the constraints that the
-	// NetworkAttachment has the fields storing virtual IP and host IP set, by
-	// saying that such fields must not be equal to the empty string.
+	// The NetworkAttachment must be in the Virtual Network identified by vni.
+	attInSpecificVN := k8sfields.OneTermEqualSelector(attVNIField, strconv.FormatUint(uint64(vni), 10))
+
+	// The NetworkAttachment must have a virtual IP.
 	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4Field, "")
+
+	// The NetworkAttachment's host IP must be known so that packets can be sent
+	// to that host.
 	attWithHostIP := k8sfields.OneTermNotEqualSelector(attHostIPField, "")
 
-	// attInSpecificVN expresses the constraint that the NetworkAttachment
-	// is in the Virtual Network identified by vni.
-	attInSpecificVN := k8sfields.OneTermEqualSelector(attVNIField, fmt.Sprint(vni))
-
-	// Build and return a selector which is a logical AND between all the selectors
+	// Return a selector given by the logical AND between all the selectors
 	// defined above.
-	return k8sfields.AndSelectors(remoteAtt, attWithAnIP, attWithHostIP, attInSpecificVN)
+	return k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)
 }
 
 func fromFieldsSelectorToTweakListOptionsFunc(customFieldSelector string) kosinternalifcs.TweakListOptionsFunc {
