@@ -30,9 +30,9 @@ import (
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
 )
 
-type SliceOfString []string
+type sliceOfString []string
 
-func (x SliceOfString) Equal(y SliceOfString) bool {
+func (x sliceOfString) Equal(y sliceOfString) bool {
 	if len(x) != len(y) {
 		return false
 	}
@@ -132,7 +132,7 @@ func aggregateErrors(sep string, errs ...error) error {
 	return nil
 }
 
-func FormatErrVal(err bool) string {
+func formatErrVal(err bool) string {
 	if err {
 		return "err"
 	}

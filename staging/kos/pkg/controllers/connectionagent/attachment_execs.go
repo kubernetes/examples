@@ -35,8 +35,8 @@ import (
 )
 
 const (
-	FailErrNotExit        = -2
-	FailSysUnexpectedType = -3
+	failErrNotExit        = -2
+	failSysUnexpectedType = -3
 )
 
 // LaunchCommand normally forks a goroutine to exec the given command.
@@ -49,13 +49,13 @@ const (
 // attachment's status iff it still should be.  If `!saveReport` then
 // the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, cmd []string, what string, doit, saveReport bool) (statusErrs SliceOfString) {
+func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
 	if len(cmd) == 0 {
 		return nil
 	}
 	if _, allowed := c.allowedPrograms[cmd[0]]; !allowed {
 		klog.V(4).Infof("Non-allowed attachment command spec: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
-		return SliceOfString{fmt.Sprintf("%s specifies non-allowed path %s", what, cmd[0])}
+		return sliceOfString{fmt.Sprintf("%s specifies non-allowed path %s", what, cmd[0])}
 	}
 	if !doit {
 		return nil
@@ -97,11 +97,11 @@ func (c *ConnectionAgent) RunCommand(attNSN k8stypes.NamespacedName, localIfc *n
 				cr.ExitStatus = int32(esyst.ExitStatus())
 			default:
 				klog.Warningf("et.Sys has unexpected type: vni=%06x, att=%s, what=%s, type=%T, esys=%#+v", localIfc.VNI, attNSN, what, esys, esys)
-				cr.ExitStatus = FailSysUnexpectedType
+				cr.ExitStatus = failSysUnexpectedType
 			}
 		default:
 			klog.Warningf("err is not a *exec.ExitError: vni=%06x, att=%s, what=%s, type=%T, err=%#+v", localIfc.VNI, attNSN, what, err, err)
-			cr.ExitStatus = FailErrNotExit
+			cr.ExitStatus = failErrNotExit
 		}
 	}
 	c.attachmentExecDurationHistograms.With(prometheus.Labels{"what": what}).Observe(stopTime.Sub(startTime).Seconds())

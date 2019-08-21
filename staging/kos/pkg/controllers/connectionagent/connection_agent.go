@@ -764,7 +764,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 		ifcName != att.Status.IfcName ||
 		macAddrS != att.Status.MACAddress ||
 		!pcer.Equiv(att.Status.PostCreateExecReport) ||
-		!statusErrs.Equal(SliceOfString(att.Status.Errors.Host)) {
+		!statusErrs.Equal(sliceOfString(att.Status.Errors.Host)) {
 
 		klog.V(5).Infof("Attempting update of %s from resourceVersion=%s because host IP %q != %q or ifcName %q != %q or MAC address %q != %q or PCER %#+v != %#+v or statusErrs %#+v != %#+v", attNSN, att.ResourceVersion, localHostIPStr, att.Status.HostIP, ifcName, att.Status.IfcName, macAddrS, att.Status.MACAddress, pcer, att.Status.PostCreateExecReport, statusErrs, att.Status.Errors.Host)
 		updatedAtt, err := ca.setAttStatus(att, macAddrS, ifcName, statusErrs, pcer)
@@ -932,7 +932,7 @@ func (ca *ConnectionAgent) updateVNStateAfterAttDeparture(attName string, vni ui
 
 // createOrUpdateIfc returns the MAC address, Linux interface name,
 // post-create exec report, and possibly an error
-func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, attVNI uint32, att *netv1a1.NetworkAttachment) (attMACStr, ifcName string, statusErrs SliceOfString, pcer *netv1a1.ExecReport, err error) {
+func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, attVNI uint32, att *netv1a1.NetworkAttachment) (attMACStr, ifcName string, statusErrs sliceOfString, pcer *netv1a1.ExecReport, err error) {
 	attNSN := parse.AttNSN(att)
 	attMAC := generateMACAddr(attVNI, attGuestIP)
 	attMACStr = attMAC.String()
@@ -977,7 +977,7 @@ func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, att
 			tBeforeFabric := time.Now()
 			err := ca.netFabric.CreateLocalIfc(newLocalState.LocalNetIfc)
 			tAfterFabric := time.Now()
-			ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": FormatErrVal(err != nil)}).Observe(tAfterFabric.Sub(tBeforeFabric).Seconds())
+			ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfterFabric.Sub(tBeforeFabric).Seconds())
 			if err != nil {
 				return "", "", nil, nil, fmt.Errorf("creation of local network interface of attachment %s failed, interface %#+v could not be created: %s",
 					attNSN,
@@ -998,7 +998,7 @@ func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, att
 			tBefore := time.Now()
 			err := ca.netFabric.CreateRemoteIfc(newRemoteIfc)
 			tAfter := time.Now()
-			ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateRemoteIfc", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+			ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 			if err != nil {
 				return "", "", nil, nil, fmt.Errorf("creation of remote network interface of attachment %s failed, interface %#+v could not be created: %s",
 					attNSN,
@@ -1016,7 +1016,7 @@ func (ca *ConnectionAgent) createOrUpdateIfc(attGuestIP, attHostIP gonet.IP, att
 	return
 }
 
-func (ca *ConnectionAgent) setAttStatus(att *netv1a1.NetworkAttachment, macAddrS, ifcName string, statusErrs SliceOfString, pcer *netv1a1.ExecReport) (*netv1a1.NetworkAttachment, error) {
+func (ca *ConnectionAgent) setAttStatus(att *netv1a1.NetworkAttachment, macAddrS, ifcName string, statusErrs sliceOfString, pcer *netv1a1.ExecReport) (*netv1a1.NetworkAttachment, error) {
 	att2 := att.DeepCopy()
 	att2.Status.Errors.Host = statusErrs
 	att2.Status.MACAddress = macAddrS
@@ -1026,7 +1026,7 @@ func (ca *ConnectionAgent) setAttStatus(att *netv1a1.NetworkAttachment, macAddrS
 	tBeforeStatus := time.Now()
 	updatedAtt, err := ca.netv1a1Ifc.NetworkAttachments(att2.Namespace).Update(att2)
 	tAfterStatus := time.Now()
-	ca.attachmentStatusHistograms.With(prometheus.Labels{"statusErr": FormatErrVal(len(statusErrs) > 0), "err": FormatErrVal(err != nil)}).Observe(tAfterStatus.Sub(tBeforeStatus).Seconds())
+	ca.attachmentStatusHistograms.With(prometheus.Labels{"statusErr": formatErrVal(len(statusErrs) > 0), "err": formatErrVal(err != nil)}).Observe(tAfterStatus.Sub(tBeforeStatus).Seconds())
 	if err == nil && att.Status.IfcName == "" {
 		ca.attachmentCreateToStatusHistogram.Observe(tAfterStatus.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
 	}
@@ -1310,7 +1310,7 @@ func (ca *ConnectionAgent) DeleteLocalIfc(ifc netfabric.LocalNetIfc) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteLocalIfc(ifc)
 	tAfter := time.Now()
-	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	return err
 }
 
@@ -1318,6 +1318,6 @@ func (ca *ConnectionAgent) DeleteRemoteIfc(ifc netfabric.RemoteNetIfc) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteRemoteIfc(ifc)
 	tAfter := time.Now()
-	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	return err
 }
