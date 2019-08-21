@@ -226,9 +226,9 @@ type LocalAttachmentState struct {
 	PostCreateExecReport *netv1a1.ExecReport
 }
 
-// NewConnectionAgent returns a deactivated instance of a ConnectionAgent (neither
-// the workers goroutines nor any Informer have been started). Invoke Run to activate.
-func NewConnectionAgent(localNodeName string,
+// New returns a deactivated instance of a ConnectionAgent (neither the workers
+// goroutines nor any Informer have been started). Invoke Run to activate.
+func New(localNodeName string,
 	hostIP gonet.IP,
 	kcs *kosclientset.Clientset,
 	eventIfc k8scorev1client.EventInterface,

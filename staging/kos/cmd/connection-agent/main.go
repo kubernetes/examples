@@ -36,7 +36,7 @@ import (
 	"k8s.io/klog"
 
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
-	cactlr "k8s.io/examples/staging/kos/pkg/controllers/connectionagent"
+	"k8s.io/examples/staging/kos/pkg/controllers/connectionagent"
 	_ "k8s.io/examples/staging/kos/pkg/controllers/workqueue_prometheus"
 	netfactory "k8s.io/examples/staging/kos/pkg/networkfabric/factory"
 
@@ -159,7 +159,7 @@ func main() {
 	// TODO think whether the rate limiter parameters make sense
 	queue := workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 8*time.Hour), queueName)
 
-	ca := cactlr.NewConnectionAgent(nodeName, gonet.ParseIP(hostIP), kcs, eventIfc, queue, workers, netFabric, allowedProgramsSet)
+	ca := connectionagent.New(nodeName, gonet.ParseIP(hostIP), kcs, eventIfc, queue, workers, netFabric, allowedProgramsSet)
 
 	klog.Infof("Connection Agent start, nodeName=%s, hostIP=%s, netFabric=%s, allowedProgramsSlice=%v, kubeconfig=%q, workers=%d, QPS=%d, burst=%d, blockProfileRate=%d, mutexProfileFraction=%d",
 		nodeName,
