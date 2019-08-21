@@ -391,10 +391,10 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	go ca.localAttsInformer.Run(stopCh)
 	klog.V(2).Infoln("Local NetworkAttachments informer started")
 
-	if err := ca.waitForLocalAttsCacheSync(stopCh); err != nil {
-		return err
+	if !k8scache.WaitForCacheSync(stopCh, ca.localAttsInformer.HasSynced) {
+		return fmt.Errorf("Local NetworkAttachments informer failed to sync")
 	}
-	klog.V(2).Infoln("Local NetworkAttachments cache synced")
+	klog.V(2).Infoln("Local NetworkAttachments informer synced")
 
 	if err := ca.syncPreExistingIfcs(); err != nil {
 		return err
@@ -447,13 +447,6 @@ func (ca *ConnectionAgent) onLocalAttRemoved(obj interface{}) {
 	att := peeledObj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
-}
-
-func (ca *ConnectionAgent) waitForLocalAttsCacheSync(stopCh <-chan struct{}) error {
-	if !k8scache.WaitForCacheSync(stopCh, ca.localAttsInformer.HasSynced) {
-		return fmt.Errorf("caches failed to sync")
-	}
-	return nil
 }
 
 func (ca *ConnectionAgent) syncPreExistingIfcs() error {
