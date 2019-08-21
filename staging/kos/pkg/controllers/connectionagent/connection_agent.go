@@ -17,12 +17,10 @@ limitations under the License.
 package connectionagent
 
 import (
-	"bytes"
 	"fmt"
 	gonet "net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -1308,76 +1306,6 @@ func attVNIAndIPIndexer(obj interface{}) ([]string, error) {
 	return []string{attVNIAndIP(att.Status.AddressVNI, att.Status.IPv4)}, nil
 }
 
-func attVNIAndIP(vni uint32, ipv4 string) string {
-	return strconv.FormatUint(uint64(vni), 16) + "/" + ipv4
-}
-
-func localIfcVNIAndIP(ifc *netfabric.LocalNetIfc) string {
-	return ifcVNIAndIP(ifc.VNI, ifc.GuestIP)
-}
-
-func remoteIfcVNIAndIP(ifc *netfabric.RemoteNetIfc) string {
-	return ifcVNIAndIP(ifc.VNI, ifc.GuestIP)
-}
-
-func ifcVNIAndIP(vni uint32, ipv4 gonet.IP) string {
-	return strconv.FormatUint(uint64(vni), 16) + "/" + ipv4.String()
-}
-
-func generateMACAddr(vni uint32, guestIPv4 gonet.IP) gonet.HardwareAddr {
-	guestIPBytes := guestIPv4.To4()
-	mac := make([]byte, 6, 6)
-	mac[5] = byte(vni)
-	mac[4] = byte(vni >> 8)
-	mac[3] = guestIPBytes[3]
-	mac[2] = guestIPBytes[2]
-	mac[1] = guestIPBytes[1]
-	mac[0] = (byte(vni>>13) & 0xF8) | ((guestIPBytes[0] & 0x02) << 1) | 2
-	return mac
-}
-
-func generateIfcName(macAddr gonet.HardwareAddr) string {
-	return "kos" + strings.Replace(macAddr.String(), ":", "", -1)
-}
-
-// aggregateStopChannels returns a channel which
-// is closed when either ch1 or ch2 is closed
-func aggregateTwoStopChannels(ch1, ch2 <-chan struct{}) chan struct{} {
-	aggregateStopCh := make(chan struct{})
-	go func() {
-		select {
-		case _, ch1Open := <-ch1:
-			if !ch1Open {
-				close(aggregateStopCh)
-				return
-			}
-		case _, ch2Open := <-ch2:
-			if !ch2Open {
-				close(aggregateStopCh)
-				return
-			}
-		}
-	}()
-	return aggregateStopCh
-}
-
-func aggregateErrors(sep string, errs ...error) error {
-	aggregateErrsSlice := make([]string, 0, len(errs))
-	for i, err := range errs {
-		if err != nil && strings.Trim(err.Error(), " ") != "" {
-			aggregateErrsSlice = append(aggregateErrsSlice, fmt.Sprintf("error nbr. %d ", i)+err.Error())
-		}
-	}
-	if len(aggregateErrsSlice) > 0 {
-		return fmt.Errorf("%s", strings.Join(aggregateErrsSlice, sep))
-	}
-	return nil
-}
-
-func ifcNeedsUpdate(ifcHostIP, newHostIP gonet.IP, ifcMAC, newMAC gonet.HardwareAddr) bool {
-	return !ifcHostIP.Equal(newHostIP) || !bytes.Equal(ifcMAC, newMAC)
-}
-
 func (ca *ConnectionAgent) DeleteLocalIfc(ifc netfabric.LocalNetIfc) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteLocalIfc(ifc)
@@ -1392,11 +1320,4 @@ func (ca *ConnectionAgent) DeleteRemoteIfc(ifc netfabric.RemoteNetIfc) error {
 	tAfter := time.Now()
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": FormatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	return err
-}
-
-func FormatErrVal(err bool) string {
-	if err {
-		return "err"
-	}
-	return "ok"
 }
