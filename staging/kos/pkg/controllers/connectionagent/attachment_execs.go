@@ -35,7 +35,6 @@ import (
 )
 
 const (
-	FailProgramForbidden  = -1
 	FailErrNotExit        = -2
 	FailSysUnexpectedType = -3
 )
