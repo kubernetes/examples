@@ -420,19 +420,19 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 	ca.localAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
 	ca.localAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
-		AddFunc:    ca.onLocalAttAdded,
-		UpdateFunc: ca.onLocalAttUpdated,
-		DeleteFunc: ca.onLocalAttRemoved,
+		AddFunc:    ca.onLocalAttAdd,
+		UpdateFunc: ca.onLocalAttUpdate,
+		DeleteFunc: ca.onLocalAttRemove,
 	})
 }
 
-func (ca *ConnectionAgent) onLocalAttAdded(obj interface{}) {
+func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
 }
 
-func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, obj interface{}) {
+func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v", oldAtt, att)
 	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.AddressVNI != att.Status.AddressVNI {
@@ -442,9 +442,8 @@ func (ca *ConnectionAgent) onLocalAttUpdated(oldObj, obj interface{}) {
 	}
 }
 
-func (ca *ConnectionAgent) onLocalAttRemoved(obj interface{}) {
-	peeledObj := parse.Peel(obj)
-	att := peeledObj.(*netv1a1.NetworkAttachment)
+func (ca *ConnectionAgent) onLocalAttRemove(obj interface{}) {
+	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
 }
@@ -1091,9 +1090,9 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	remoteAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
 	remoteAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
-		AddFunc:    ca.onRemoteAttAdded,
-		UpdateFunc: ca.onRemoteAttUpdated,
-		DeleteFunc: ca.onRemoteAttRemoved,
+		AddFunc:    ca.onRemoteAttAdd,
+		UpdateFunc: ca.onRemoteAttUpdate,
+		DeleteFunc: ca.onRemoteAttRemove,
 	})
 
 	remoteAttsInformerStopCh := make(chan struct{})
@@ -1109,17 +1108,15 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	}
 }
 
-func (ca *ConnectionAgent) onRemoteAttAdded(obj interface{}) {
+func (ca *ConnectionAgent) onRemoteAttAdd(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v",
-		att.Status.AddressVNI,
-		att)
+	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 	attNSN := parse.AttNSN(att)
 	ca.addVNI(attNSN, att.Status.AddressVNI)
 	ca.queue.Add(attNSN)
 }
 
-func (ca *ConnectionAgent) onRemoteAttUpdated(oldObj, obj interface{}) {
+func (ca *ConnectionAgent) onRemoteAttUpdate(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of update from %#+v to %#+v.", att.Status.AddressVNI, oldAtt, att)
 	if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.HostIP != att.Status.HostIP {
@@ -1129,12 +1126,9 @@ func (ca *ConnectionAgent) onRemoteAttUpdated(oldObj, obj interface{}) {
 	}
 }
 
-func (ca *ConnectionAgent) onRemoteAttRemoved(obj interface{}) {
-	peeledObj := parse.Peel(obj)
-	att := peeledObj.(*netv1a1.NetworkAttachment)
-	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v",
-		att.Status.AddressVNI,
-		att)
+func (ca *ConnectionAgent) onRemoteAttRemove(obj interface{}) {
+	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
+	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 	attNSN := parse.AttNSN(att)
 	ca.removeSeenInVNI(attNSN, att.Status.AddressVNI)
 	ca.queue.Add(attNSN)
