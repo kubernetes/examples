@@ -152,20 +152,20 @@ type ConnectionAgent struct {
 
 	// Map from vni to vnState associated with that vni. Accessed only while
 	// holding vniToVnStateMutex
-	vniToVnStateMutex sync.RWMutex
 	vniToVnState      map[uint32]*vnState
+	vniToVnStateMutex sync.RWMutex
 
 	// nsnToVNStateVNI maps local attachments namespaced names to the VNI of the
 	// vnState they're stored in. Accessed only while holding nsnToVNStateVNIMutex.
-	nsnToVNStateVNIMutex sync.RWMutex
 	nsnToVNStateVNI      map[k8stypes.NamespacedName]uint32
+	nsnToVNStateVNIMutex sync.RWMutex
 
-	nsnToLocalStateMutex      sync.RWMutex
 	nsnToLocalMainState       map[k8stypes.NamespacedName]LocalAttachmentMainState
 	nsnToPostCreateExecReport map[k8stypes.NamespacedName]*netv1a1.ExecReport
+	nsnToLocalStateMutex      sync.RWMutex
 
-	nsnToRemoteIfcMutex sync.RWMutex
 	nsnToRemoteIfc      map[k8stypes.NamespacedName]netfabric.RemoteNetIfc
+	nsnToRemoteIfcMutex sync.RWMutex
 
 	// nsnToVNIs maps attachments (both local and remote) namespaced names
 	// to set of vnis where the attachments have been seen. It is accessed by the
@@ -179,8 +179,8 @@ type ConnectionAgent struct {
 	// and hopefully by the time it is dequeued again the ambiguity as for the
 	// current attachment state has been resolved. Accessed only while holding
 	// nsnToVNIsMutex.
-	nsnToVNIsMutex sync.RWMutex
 	nsnToVNIs      map[k8stypes.NamespacedName]map[uint32]struct{}
+	nsnToVNIsMutex sync.RWMutex
 
 	// allowedPrograms is the values allowed to appear in the [0] of a
 	// slice to exec post-create or -delete.
