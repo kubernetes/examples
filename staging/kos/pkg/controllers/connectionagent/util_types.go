@@ -16,6 +16,14 @@ limitations under the License.
 
 package connectionagent
 
+import (
+	"strings"
+
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sfields "k8s.io/apimachinery/pkg/fields"
+	kosinternalifcs "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/internalinterfaces"
+)
+
 type SliceOfString []string
 
 func (x SliceOfString) Equal(y SliceOfString) bool {
@@ -28,4 +36,22 @@ func (x SliceOfString) Equal(y SliceOfString) bool {
 		}
 	}
 	return true
+}
+
+type fieldsSelector struct {
+	k8sfields.Selector
+}
+
+func (fs fieldsSelector) toTweakListOptionsFunc() kosinternalifcs.TweakListOptionsFunc {
+	return func(options *k8smetav1.ListOptions) {
+		optionsFieldSelector := options.FieldSelector
+
+		allSelectors := make([]string, 0, 2)
+		if strings.Trim(optionsFieldSelector, " ") != "" {
+			allSelectors = append(allSelectors, optionsFieldSelector)
+		}
+		allSelectors = append(allSelectors, fs.String())
+
+		options.FieldSelector = strings.Join(allSelectors, ",")
+	}
 }

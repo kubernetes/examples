@@ -48,7 +48,6 @@ import (
 	kosscheme "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/scheme"
 	netvifc1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
-	kosinternalifcs "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/internalinterfaces"
 	koslisterv1a1 "k8s.io/examples/staging/kos/pkg/client/listers/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
 	"k8s.io/examples/staging/kos/pkg/util/parse"
@@ -1254,9 +1253,9 @@ func (ca *ConnectionAgent) getRemoteAttsInformerForVNI(vni uint32) (k8scache.Sha
 	return vnState.remoteAttsInformer, vnState.remoteAttsInformerStopCh
 }
 
-// localAttSelector returns a field selector that matches local
+// localAttSelector returns a fields selector that matches local
 // NetworkAttachments for whom a network interface can be created.
-func (ca *ConnectionAgent) localAttSelector() k8sfields.Selector {
+func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
 	// The NetworkAttachment must be local.
 	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.nodeName)
 
@@ -1265,13 +1264,13 @@ func (ca *ConnectionAgent) localAttSelector() k8sfields.Selector {
 
 	// Return a selector given by the logical AND between localAtt and
 	// attWithAnIP.
-	return k8sfields.AndSelectors(localAtt, attWithAnIP)
+	return fieldsSelector{k8sfields.AndSelectors(localAtt, attWithAnIP)}
 }
 
-// remoteAttSelector returns a field selector that matches remote
+// remoteAttSelector returns a fields selector that matches remote
 // NetworkAttachments in the virtual network identified by `vni` for whom a
 // network interface can be created.
-func (ca *ConnectionAgent) remoteAttSelector(vni uint32) k8sfields.Selector {
+func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
 	// The NetworkAttachment must be remote.
 	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.nodeName)
 
@@ -1287,11 +1286,11 @@ func (ca *ConnectionAgent) remoteAttSelector(vni uint32) k8sfields.Selector {
 
 	// Return a selector given by the logical AND between all the selectors
 	// defined above.
-	return k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)
+	return fieldsSelector{k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)}
 }
 
-func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs k8sfields.Selector) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
-	tloFunc := fromFieldsSelectorToTweakListOptionsFunc(fs.String())
+func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs fieldsSelector) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
+	tloFunc := fs.toTweakListOptionsFunc()
 	networkAttachments := kosinformers.NewFilteredSharedInformerFactory(ca.kcs, resyncPeriod, ns, tloFunc).Network().V1alpha1().NetworkAttachments()
 
 	// Add indexer used at start up to match pre-existing network interfaces to
@@ -1299,18 +1298,6 @@ func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns s
 	networkAttachments.Informer().AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
 	return networkAttachments.Informer(), networkAttachments.Lister()
-}
-
-func fromFieldsSelectorToTweakListOptionsFunc(customFieldSelector string) kosinternalifcs.TweakListOptionsFunc {
-	return func(options *k8smetav1.ListOptions) {
-		optionsFieldSelector := options.FieldSelector
-		allSelectors := make([]string, 0, 2)
-		if strings.Trim(optionsFieldSelector, " ") != "" {
-			allSelectors = append(allSelectors, optionsFieldSelector)
-		}
-		allSelectors = append(allSelectors, customFieldSelector)
-		options.FieldSelector = strings.Join(allSelectors, ",")
-	}
 }
 
 // attVNIAndIPIndexer is an Index function that computes a string made up by vni
