@@ -1082,7 +1082,7 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	})
 
 	remoteAttsInformerStopCh := make(chan struct{})
-	go remoteAttsInformer.Run(aggregateTwoStopChannels(ca.stopCh, remoteAttsInformerStopCh))
+	go remoteAttsInformer.Run(mergeStopChannels(ca.stopCh, remoteAttsInformerStopCh))
 
 	return &vnState{
 		remoteAttsInformer:       remoteAttsInformer,

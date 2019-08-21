@@ -98,9 +98,9 @@ func generateIfcName(macAddr gonet.HardwareAddr) string {
 	return "kos" + strings.Replace(macAddr.String(), ":", "", -1)
 }
 
-// aggregateStopChannels returns a channel which
-// is closed when either ch1 or ch2 is closed
-func aggregateTwoStopChannels(ch1, ch2 <-chan struct{}) chan struct{} {
+// mergeStopChannels returns a channel which is closed when either ch1 or ch2 is
+// closed.
+func mergeStopChannels(ch1, ch2 <-chan struct{}) chan struct{} {
 	aggregateStopCh := make(chan struct{})
 	go func() {
 		select {
