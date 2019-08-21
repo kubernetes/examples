@@ -49,7 +49,6 @@ import (
 	netvifc1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 	kosinternalifcs "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/internalinterfaces"
-	kosinformersv1a1 "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/network/v1alpha1"
 	koslisterv1a1 "k8s.io/examples/staging/kos/pkg/client/listers/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
 	"k8s.io/examples/staging/kos/pkg/util/parse"
@@ -387,6 +386,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	}()
 
 	ca.stopCh = stopCh
+
 	ca.initLocalAttsInformerAndLister()
 	go ca.localAttsInformer.Run(stopCh)
 	klog.V(2).Infoln("Local NetworkAttachments informer started")
@@ -411,13 +411,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 }
 
 func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
-	localAttSelector := ca.localAttSelector()
-
-	ca.localAttsInformer, ca.localAttsLister = v1a1AttsCustomInformerAndLister(ca.kcs,
-		resyncPeriod,
-		fromFieldsSelectorToTweakListOptionsFunc(localAttSelector.String()))
-
-	ca.localAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
+	ca.localAttsInformer, ca.localAttsLister = ca.newInformerAndLister(resyncPeriod, k8smetav1.NamespaceAll, ca.localAttSelector())
 
 	ca.localAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onLocalAttAdd,
@@ -1082,12 +1076,7 @@ func (ca *ConnectionAgent) clearVNResources(vnState *vnState, lastAttName string
 }
 
 func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
-	remoteAttsInformer, remoteAttsLister := v1a1AttsCustomNamespaceInformerAndLister(ca.kcs,
-		resyncPeriod,
-		namespace,
-		fromFieldsSelectorToTweakListOptionsFunc(ca.remoteAttSelector(vni).String()))
-
-	remoteAttsInformer.AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
+	remoteAttsInformer, remoteAttsLister := ca.newInformerAndLister(resyncPeriod, namespace, ca.remoteAttSelector(vni))
 
 	remoteAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onRemoteAttAdd,
@@ -1101,7 +1090,7 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	return &vnState{
 		remoteAttsInformer:       remoteAttsInformer,
 		remoteAttsInformerStopCh: remoteAttsInformerStopCh,
-		remoteAttsLister:         remoteAttsLister,
+		remoteAttsLister:         remoteAttsLister.NetworkAttachments(namespace),
 		namespace:                namespace,
 		localAtts:                make(map[string]struct{}),
 		remoteAtts:               make(map[string]struct{}),
@@ -1301,6 +1290,17 @@ func (ca *ConnectionAgent) remoteAttSelector(vni uint32) k8sfields.Selector {
 	return k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)
 }
 
+func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs k8sfields.Selector) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
+	tloFunc := fromFieldsSelectorToTweakListOptionsFunc(fs.String())
+	networkAttachments := kosinformers.NewFilteredSharedInformerFactory(ca.kcs, resyncPeriod, ns, tloFunc).Network().V1alpha1().NetworkAttachments()
+
+	// Add indexer used at start up to match pre-existing network interfaces to
+	// owning NetworkAttachment.
+	networkAttachments.Informer().AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
+
+	return networkAttachments.Informer(), networkAttachments.Lister()
+}
+
 func fromFieldsSelectorToTweakListOptionsFunc(customFieldSelector string) kosinternalifcs.TweakListOptionsFunc {
 	return func(options *k8smetav1.ListOptions) {
 		optionsFieldSelector := options.FieldSelector
@@ -1311,42 +1311,6 @@ func fromFieldsSelectorToTweakListOptionsFunc(customFieldSelector string) kosint
 		allSelectors = append(allSelectors, customFieldSelector)
 		options.FieldSelector = strings.Join(allSelectors, ",")
 	}
-}
-
-func v1a1AttsCustomInformerAndLister(kcs *kosclientset.Clientset,
-	resyncPeriod time.Duration,
-	tweakListOptionsFunc kosinternalifcs.TweakListOptionsFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
-
-	attv1a1Informer := createAttsv1a1Informer(kcs,
-		resyncPeriod,
-		k8smetav1.NamespaceAll,
-		tweakListOptionsFunc)
-	return attv1a1Informer.Informer(), attv1a1Informer.Lister()
-}
-
-func v1a1AttsCustomNamespaceInformerAndLister(kcs *kosclientset.Clientset,
-	resyncPeriod time.Duration,
-	namespace string,
-	tweakListOptionsFunc kosinternalifcs.TweakListOptionsFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentNamespaceLister) {
-
-	attv1a1Informer := createAttsv1a1Informer(kcs,
-		resyncPeriod,
-		namespace,
-		tweakListOptionsFunc)
-	return attv1a1Informer.Informer(), attv1a1Informer.Lister().NetworkAttachments(namespace)
-}
-
-func createAttsv1a1Informer(kcs *kosclientset.Clientset,
-	resyncPeriod time.Duration,
-	namespace string,
-	tweakListOptionsFunc kosinternalifcs.TweakListOptionsFunc) kosinformersv1a1.NetworkAttachmentInformer {
-
-	localAttsInformerFactory := kosinformers.NewFilteredSharedInformerFactory(kcs,
-		resyncPeriod,
-		namespace,
-		tweakListOptionsFunc)
-	netv1a1Ifc := localAttsInformerFactory.Network().V1alpha1()
-	return netv1a1Ifc.NetworkAttachments()
 }
 
 // attVNIAndIPIndexer is an Index function that computes a string made up by vni
