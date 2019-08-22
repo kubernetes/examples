@@ -52,6 +52,13 @@ import (
 )
 
 const (
+	// localAttsCacheID is the ID for the local NetworkAttachments informer's
+	// cache. Remote NetworkAttachments informers are partitioned by VNI so
+	// their VNI can be used as the ID, but the local NetworkAttachments
+	// informer is not associated to a single VNI. Pick 0 because it's not a
+	// valid VNI value: there's no overlapping with the other IDs.
+	localAttsCacheID cacheID = 0
+
 	// Name of the indexer which computes a string concatenating the VNI and IP
 	// of a network attachment. Used for syncing pre-existing interfaces at
 	// start-up.
@@ -84,6 +91,10 @@ const (
 	MetricsNamespace = "kos"
 	MetricsSubsystem = "agent"
 )
+
+// cacheID models the ID of an informer's cache. Used to keep track of which
+// informer's cache NetworkAttachments were seen in and should be looked up in.
+type cacheID uint32
 
 // vnState stores all the state needed for a Virtual Network for
 // which there is at least one NetworkAttachment local to this node.
@@ -167,20 +178,13 @@ type ConnectionAgent struct {
 	nsnToRemoteIfc      map[k8stypes.NamespacedName]netfabric.RemoteNetIfc
 	nsnToRemoteIfcMutex sync.RWMutex
 
-	// nsnToVNIs maps attachments (both local and remote) namespaced names
-	// to set of vnis where the attachments have been seen. It is accessed by the
-	// notification handlers for remote attachments, which add/remove the vni
-	// with which they see the attachment upon creation/deletion of the attachment
-	// respectively. When a worker processes an attachment reference, it reads
-	// from nsnToVNIs the vnis with which the attachment has been seen. If there's
-	// more than one vni, the current state of the attachment is ambiguous and
-	// the worker stops the processing. The deletion notification handler for one
-	// of the VNIs of the attachment will cause the reference to be requeued
-	// and hopefully by the time it is dequeued again the ambiguity as for the
-	// current attachment state has been resolved. Accessed only while holding
-	// nsnToVNIsMutex.
-	nsnToVNIs      map[k8stypes.NamespacedName]map[uint32]struct{}
-	nsnToVNIsMutex sync.RWMutex
+	// nsnToSeenInCaches maps NetworkAttachments namespaced names to the IDs
+	// of the Informer's caches where they have been seen. It tells workers
+	// where to look up attachments after dequeuing references and it's
+	// populated by informers' notification handlers.
+	// Access only while holding nsnToSeenInCachesMutex.
+	nsnToSeenInCaches      map[k8stypes.NamespacedName]map[cacheID]struct{}
+	nsnToSeenInCachesMutex sync.RWMutex
 
 	// allowedPrograms is the values allowed to appear in the [0] of a
 	// slice to exec post-create or -delete.
@@ -355,7 +359,7 @@ func New(nodeName string,
 		nsnToLocalMainState:                  make(map[k8stypes.NamespacedName]LocalAttachmentMainState),
 		nsnToPostCreateExecReport:            make(map[k8stypes.NamespacedName]*netv1a1.ExecReport),
 		nsnToRemoteIfc:                       make(map[k8stypes.NamespacedName]netfabric.RemoteNetIfc),
-		nsnToVNIs:                            make(map[k8stypes.NamespacedName]map[uint32]struct{}),
+		nsnToSeenInCaches:                    make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
 		allowedPrograms:                      allowedPrograms,
 		attachmentCreateToLocalIfcHistogram:  attachmentCreateToLocalIfcHistogram,
 		attachmentCreateToRemoteIfcHistogram: attachmentCreateToRemoteIfcHistogram,
@@ -420,7 +424,9 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
-	ca.queue.Add(parse.AttNSN(att))
+	attNSN := parse.AttNSN(att)
+	ca.addSeenInCache(attNSN, localAttsCacheID)
+	ca.queue.Add(attNSN)
 }
 
 func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
@@ -441,7 +447,9 @@ func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
-	ca.queue.Add(parse.AttNSN(att))
+	attNSN := parse.AttNSN(att)
+	ca.removeSeenInCache(attNSN, localAttsCacheID)
+	ca.queue.Add(attNSN)
 }
 
 func (ca *ConnectionAgent) syncPreExistingIfcs() error {
@@ -629,89 +637,71 @@ func (ca *ConnectionAgent) processQueueItem(attNSN k8stypes.NamespacedName) {
 }
 
 func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedName) error {
-	att, deleted := ca.getAttachment(attNSN)
-	if att != nil {
-		// If we are here the attachment exists and it's current state is univocal
-		return ca.processExistingAtt(att)
-	} else if deleted {
-		// If we are here the attachment has been deleted
-		return ca.processDeletedAtt(attNSN)
+	att, haltProcessing := ca.getNetworkAttachment(attNSN)
+	if haltProcessing {
+		return nil
 	}
-	return nil
+
+	if att != nil {
+		// The NetworkAttachment exists and it's current state is univocal.
+		return ca.processExistingAtt(att)
+	}
+
+	// The NetworkAttachment has been deleted.
+	return ca.processDeletedAtt(attNSN)
 }
 
-// getAttachment attempts to determine the univocal version of the NetworkAttachment
-// with namespaced name attNSN. If it succeeds it returns the attachment if it is
-// found in an Informer cache or a boolean flag set to true if it could not be found
-// in any cache (e.g. because it has been deleted). If the current attachment
-// version cannot be determined without ambiguity, the attachment return value is nil,
-// and the deleted flag is set to false. An attachment is considered amibguous if
-// it either has been seen with more than one vni in a remote attachments cache,
-// or if it is found both in the local attachments cache and a remote attachments
-// cache.
-func (ca *ConnectionAgent) getAttachment(attNSN k8stypes.NamespacedName) (*netv1a1.NetworkAttachment, bool) {
-	// Retrieve the number of VN(I)s where the attachment could be as a remote
-	// attachment, or, if it could be only in one VN(I), return that VNI.
-	vni, nbrOfVNIs := ca.getAttSeenInVNI(attNSN)
-	if nbrOfVNIs > 1 {
-		// If the attachment could be a remote one in more than one VNI, we
-		// return immediately. When a deletion notification handler removes the
-		// VNI with which it's seeing the attachment the attachment state will be
-		// "less ambiguous" (one less potential VNI) and a reference will be enqueued
-		// again triggering reconsideration of the attachment.
-		klog.V(4).Infof("Attachment %s has inconsistent state, found in %d VN(I)s",
-			attNSN,
-			nbrOfVNIs)
-		return nil, false
+// getNetworkAttachment attempts to determine the univocal version of the
+// NetworkAttachment with namespaced name `attNSN`. If it succeeds it returns
+// the attachment (nil if it was deleted). The second return argument tells
+// clients whether they should stop working on the NetworkAttachment. It is set
+// to true if an unexpected error occurs or if the current state of the
+// NetworkAttachment cannot be unambiguously determined.
+func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) (att *netv1a1.NetworkAttachment, haltProcessing bool) {
+	// Get the ID of the cache where the NetworkAttachment was seen. There
+	// could be more than one.
+	attCacheID, nbrOfSeenInCaches := ca.getSeenInCache(attNSN)
+
+	if nbrOfSeenInCaches > 1 {
+		// If the NetworkAttachment was seen in more than one informer's cache
+		// the most up-to-date version is unkown. Halt processing until future
+		// delete notifications from the informers storing stale versions arrive
+		// and reveal the current state of the NetworkAttachment.
+		klog.V(4).Infof("Cannot process NetworkAttachment %s because it was seen in more than one informer.", attNSN)
+		haltProcessing = true
+		return
 	}
 
-	// If the attachment has been seen in exactly one VNI lookup it up in
-	// the remote attachments cache for the VNI with which it's been seen
-	var (
-		attAsRemote          *netv1a1.NetworkAttachment
-		remAttCacheLookupErr error
-	)
-	if nbrOfVNIs == 1 {
-		remoteAttsLister := ca.getRemoteAttListerForVNI(vni)
-		if remoteAttsLister != nil {
-			attAsRemote, remAttCacheLookupErr = remoteAttsLister.Get(attNSN.Name)
+	// If the NetworkAttachment has been seen only in one informer's cache, get
+	// the lister backed by that cache so that we can retrieve the
+	// NetworkAttachment.
+	var attCache koslisterv1a1.NetworkAttachmentNamespaceLister
+	if nbrOfSeenInCaches == 1 {
+		if attCacheID == localAttsCacheID {
+			attCache = ca.localAttsLister.NetworkAttachments(attNSN.Namespace)
+		} else {
+			attCache = ca.getRemoteAttsLister(uint32(attCacheID))
 		}
 	}
 
-	// Lookup the attachment in the local attachments cache
-	attAsLocal, localAttCacheLookupErr := ca.localAttsLister.NetworkAttachments(attNSN.Namespace).Get(attNSN.Name)
-
-	switch {
-	case (remAttCacheLookupErr != nil && !k8serrors.IsNotFound(remAttCacheLookupErr)) ||
-		(localAttCacheLookupErr != nil && !k8serrors.IsNotFound(localAttCacheLookupErr)):
-		// If we're here at least one of the two lookups failed. This should
-		// never happen. No point in retrying.
-		klog.V(1).Infof("Attempt to retrieve attachment %s with lister failed: %s. This should never happen, hence a reference to %s will not be requeued",
-			attNSN,
-			aggregateErrors("\n\t", remAttCacheLookupErr, localAttCacheLookupErr).Error(),
-			attNSN)
-	case attAsLocal != nil && attAsRemote != nil:
-		// If we're here the attachment has been found in both caches, hence it's
-		// state is ambiguous. It will be deleted by one of the caches soon, and
-		// this will cause a reference to be enqueued, so it will be processed
-		// again when the ambiguity has been resolved (assuming it has not been
-		// seen with other VNIs meanwhile).
-		klog.V(4).Infof("Att %s has inconsistent state: found both in local atts cache and remote atts cache for VNI %06x",
-			attNSN,
-			vni)
-	case attAsLocal != nil && attAsRemote == nil:
-		// If we're here the attachment was found only in the local cache:
-		// that's the univocal version of the attachment
-		return attAsLocal, false
-	case attAsLocal == nil && attAsRemote != nil:
-		// If we're here the attachment was found only in the remote attachments
-		// cache for its vni: that's the univocal version of the attachment
-		return attAsRemote, false
+	if attCache == nil {
+		// Either the NetworkAttachment was seen in no informer's cache because
+		// it was deleted, or the lister backed by the cache where it was seen
+		// has not been found because the attachment is remote and its virtual
+		// network has become irrelevant making the attachment itself
+		// irrelevant. As far as the connection agent is concerned the
+		// NetworkAttachment has been deleted.
+		return
 	}
-	// If we're here neither lookup could find the attachment: we assume the
-	// attachment has been deleted by both caches and is therefore no longer
-	// relevant to the connection agent
-	return nil, true
+
+	// Retrieve the NetworkAttachment.
+	att, err := attCache.Get(attNSN.Name)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		klog.Errorf("Failed to look up NetworkAttachment %s: %s. This should never happen, there will be no retry.", attNSN, err.Error())
+		haltProcessing = true
+	}
+
+	return
 }
 
 func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) error {
@@ -738,7 +728,7 @@ func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) er
 		// between the lookup in the remote attachments cache and the attempt to
 		// set the attachment name into its vnState, hence we treat it as a deleted
 		// attachment.
-		ca.removeSeenInVNI(attNSN, attVNI)
+		ca.removeSeenInCache(attNSN, cacheID(attVNI))
 		return ca.processDeletedAtt(attNSN)
 	}
 
@@ -1072,7 +1062,7 @@ func (ca *ConnectionAgent) clearVNResources(vnState *vnState, lastAttName string
 			Namespace: vnState.namespace,
 			Name:      aRemoteAttName,
 		}
-		ca.removeSeenInVNI(aRemoteAttNSN, vni)
+		ca.removeSeenInCache(aRemoteAttNSN, cacheID(vni))
 		ca.queue.Add(aRemoteAttNSN)
 	}
 }
@@ -1103,7 +1093,7 @@ func (ca *ConnectionAgent) onRemoteAttAdd(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 	attNSN := parse.AttNSN(att)
-	ca.addVNI(attNSN, att.Status.AddressVNI)
+	ca.addSeenInCache(attNSN, cacheID(att.Status.AddressVNI))
 	ca.queue.Add(attNSN)
 }
 
@@ -1123,7 +1113,7 @@ func (ca *ConnectionAgent) onRemoteAttDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 	attNSN := parse.AttNSN(att)
-	ca.removeSeenInVNI(attNSN, att.Status.AddressVNI)
+	ca.removeSeenInCache(attNSN, cacheID(att.Status.AddressVNI))
 	ca.queue.Add(attNSN)
 }
 
@@ -1201,49 +1191,57 @@ func (ca *ConnectionAgent) unsetRemoteIfc(nsn k8stypes.NamespacedName) {
 	ca.remoteAttachmentsGauge.Set(float64(len(ca.nsnToRemoteIfc)))
 }
 
-func (ca *ConnectionAgent) addVNI(nsn k8stypes.NamespacedName, vni uint32) {
-	ca.nsnToVNIsMutex.Lock()
-	defer ca.nsnToVNIsMutex.Unlock()
-	attVNIs := ca.nsnToVNIs[nsn]
-	if attVNIs == nil {
-		attVNIs = make(map[uint32]struct{})
-		ca.nsnToVNIs[nsn] = attVNIs
+func (ca *ConnectionAgent) addSeenInCache(nsn k8stypes.NamespacedName, cache cacheID) {
+	ca.nsnToSeenInCachesMutex.Lock()
+	defer ca.nsnToSeenInCachesMutex.Unlock()
+
+	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	if seenInCaches == nil {
+		seenInCaches = make(map[cacheID]struct{}, 1)
+		ca.nsnToSeenInCaches[nsn] = seenInCaches
 	}
-	attVNIs[vni] = struct{}{}
+
+	seenInCaches[cache] = struct{}{}
 }
 
-func (ca *ConnectionAgent) removeSeenInVNI(nsn k8stypes.NamespacedName, vni uint32) {
-	ca.nsnToVNIsMutex.Lock()
-	defer ca.nsnToVNIsMutex.Unlock()
-	attVNIs := ca.nsnToVNIs[nsn]
-	if attVNIs == nil {
+func (ca *ConnectionAgent) removeSeenInCache(nsn k8stypes.NamespacedName, cache cacheID) {
+	ca.nsnToSeenInCachesMutex.Lock()
+	defer ca.nsnToSeenInCachesMutex.Unlock()
+
+	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	if seenInCaches == nil {
 		return
 	}
-	delete(attVNIs, vni)
-	if len(attVNIs) == 0 {
-		delete(ca.nsnToVNIs, nsn)
+
+	delete(seenInCaches, cache)
+	if len(seenInCaches) == 0 {
+		delete(ca.nsnToSeenInCaches, nsn)
 	}
 }
 
-func (ca *ConnectionAgent) getAttSeenInVNI(nsn k8stypes.NamespacedName) (onlyVNI uint32, nbrOfVNIs int) {
-	ca.nsnToVNIsMutex.RLock()
-	defer ca.nsnToVNIsMutex.RUnlock()
-	attVNIs := ca.nsnToVNIs[nsn]
-	nbrOfVNIs = len(attVNIs)
-	if nbrOfVNIs == 1 {
-		for onlyVNI = range attVNIs {
+func (ca *ConnectionAgent) getSeenInCache(nsn k8stypes.NamespacedName) (seenInCache cacheID, nbrOfSeenInCaches int) {
+	ca.nsnToSeenInCachesMutex.RLock()
+	defer ca.nsnToSeenInCachesMutex.RUnlock()
+
+	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	nbrOfSeenInCaches = len(seenInCaches)
+	if nbrOfSeenInCaches == 1 {
+		for seenInCache = range seenInCaches {
 		}
 	}
+
 	return
 }
 
-func (ca *ConnectionAgent) getRemoteAttListerForVNI(vni uint32) koslisterv1a1.NetworkAttachmentNamespaceLister {
+func (ca *ConnectionAgent) getRemoteAttsLister(vni uint32) koslisterv1a1.NetworkAttachmentNamespaceLister {
 	ca.vniToVnStateMutex.RLock()
 	defer ca.vniToVnStateMutex.RUnlock()
+
 	vnState := ca.vniToVnState[vni]
 	if vnState == nil {
 		return nil
 	}
+
 	return vnState.remoteAttsLister
 }
 
