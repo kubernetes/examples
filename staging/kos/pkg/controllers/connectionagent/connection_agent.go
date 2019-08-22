@@ -31,7 +31,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfields "k8s.io/apimachinery/pkg/fields"
-	k8slabels "k8s.io/apimachinery/pkg/labels"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
@@ -461,146 +460,12 @@ func (ca *ConnectionAgent) syncPreExistingIfcs() error {
 }
 
 func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
-	allPreExistingLocalIfcs, err := ca.netFabric.ListLocalIfcs()
-	if err != nil {
-		return fmt.Errorf("failed initial local network interfaces list: %s", err.Error())
-	}
-
-	for _, aPreExistingLocalIfc := range allPreExistingLocalIfcs {
-		ifcVNIAndIP := localIfcVNIAndIP(&aPreExistingLocalIfc)
-		ifcOwnerAtts, err := ca.localAttsInformer.GetIndexer().ByIndex(attVNIAndIPIndexerName, ifcVNIAndIP)
-		if err != nil {
-			return fmt.Errorf("indexing local network interface with VNI/IP=%s failed: %s",
-				ifcVNIAndIP,
-				err.Error())
-		}
-
-		if len(ifcOwnerAtts) == 1 {
-			// A local attachment which should own the interface because their
-			// VNI and IP match was found.
-			ifcOwnerAtt := ifcOwnerAtts[0].(*netv1a1.NetworkAttachment)
-			nsn := parse.AttNSN(ifcOwnerAtt)
-			oldLocalState, oldIfcExists := ca.getLocalAttState(nsn)
-			ca.setLocalAttMainState(nsn, LocalAttachmentMainState{aPreExistingLocalIfc, ifcOwnerAtt.Spec.PostDeleteExec})
-			ca.setExecReport(nsn, ifcOwnerAtt.Status.PostCreateExecReport)
-			klog.V(3).Infof("Matched interface %#+v with local attachment %#+v", aPreExistingLocalIfc, ifcOwnerAtt)
-			if oldIfcExists {
-				aPreExistingLocalIfc = oldLocalState.LocalNetIfc
-			} else {
-				continue
-			}
-		}
-
-		// The interface must be deleted, e.g. because it could not be matched
-		// to an attachment, or because the attachment to which it has already
-		// been matched has changed and was matched to a different interface.
-		for i := 1; true; i++ {
-			err := ca.DeleteLocalIfc(aPreExistingLocalIfc)
-			if err == nil {
-				break
-			}
-			klog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
-				aPreExistingLocalIfc,
-				err.Error(),
-				i)
-			time.Sleep(netFabricRetryPeriod)
-		}
-		// Do not run the PostDeleteExec, it probably would not work
-		// because the PostCreateExec ran in a different container if
-		// at all.
-		klog.V(3).Infof("Deleted orphan local interface %#+v", aPreExistingLocalIfc)
-	}
-
+	// TODO: implement
 	return nil
 }
 
 func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
-	// Start all remote attachments Informers because we need to look up remote
-	// attachments to decide which interfaces to keep and which to delete.
-	allLocalAtts, err := ca.localAttsLister.List(k8slabels.Everything())
-	if err != nil {
-		return fmt.Errorf("failed initial local attachments list: %s", err.Error())
-	}
-	for _, aLocalAtt := range allLocalAtts {
-		nsn, attVNI := parse.AttNSN(aLocalAtt), aLocalAtt.Status.AddressVNI
-		ca.updateVNStateForExistingAtt(nsn, true, attVNI)
-	}
-
-	// Read all remote interfaces, for each interface find the attachment with
-	// the same VNI and IP in the Informer's cache for the remote attachments
-	// with the same VNI as the interface. If either the attachment or the
-	// Informer are not found, delete the interface, bind it to the attachment
-	// otherwise.
-	allPreExistingRemoteIfcs, err := ca.netFabric.ListRemoteIfcs()
-	if err != nil {
-		return fmt.Errorf("failed initial remote network interfaces list: %s", err.Error())
-	}
-	for _, aPreExistingRemoteIfc := range allPreExistingRemoteIfcs {
-		var ifcOwnerAtts []interface{}
-		ifcVNI := aPreExistingRemoteIfc.VNI
-		remoteAttsInformer, remoteAttsInformerStopCh := ca.getRemoteAttsInformerForVNI(ifcVNI)
-		if remoteAttsInformer != nil {
-			if !remoteAttsInformer.HasSynced() &&
-				!k8scache.WaitForCacheSync(remoteAttsInformerStopCh, remoteAttsInformer.HasSynced) {
-				return fmt.Errorf("failed to sync cache of remote attachments for VNI %06x", ifcVNI)
-			}
-			ifcOwnerAtts, err = remoteAttsInformer.GetIndexer().ByIndex(attVNIAndIPIndexerName, remoteIfcVNIAndIP(&aPreExistingRemoteIfc))
-		}
-
-		if len(ifcOwnerAtts) == 1 {
-			// A remote attachment which should own the interface because their
-			// VNI and IP match was found.
-			ifcOwnerAtt := ifcOwnerAtts[0].(*netv1a1.NetworkAttachment)
-			nsn := parse.AttNSN(ifcOwnerAtt)
-			oldRemoteIfc, oldRemoteIfcExists := ca.getRemoteIfc(nsn)
-			ca.assignRemoteIfc(nsn, aPreExistingRemoteIfc)
-			klog.V(3).Infof("Matched interface %#+v with remote attachment %#+v",
-				aPreExistingRemoteIfc,
-				ifcOwnerAtt)
-			if oldRemoteIfcExists {
-				aPreExistingRemoteIfc = oldRemoteIfc
-			} else {
-				if oldLocalState, oldLocalIfcExists := ca.getLocalAttState(nsn); oldLocalIfcExists {
-					for i := 1; true; i++ {
-						err := ca.DeleteLocalIfc(oldLocalState.LocalNetIfc)
-						if err == nil {
-							break
-						}
-						klog.V(3).Infof("Deletion of orphan local interface %#+v failed: %s. Attempt nbr. %d",
-							oldLocalState.LocalNetIfc,
-							err.Error(),
-							i)
-						time.Sleep(netFabricRetryPeriod)
-					}
-					ca.unsetLocalAttState(nsn)
-					// Do not run the PostDeleteExec, it probably would not work
-					// because the PostCreateExec ran in a different container
-					// if at all.
-					klog.V(3).Infof("Deleted orphan local interface %#+v", oldLocalState.LocalNetIfc)
-				}
-				continue
-			}
-		}
-
-		// Either there's no remote attachments Informer associated with the
-		// interface VNI (because there are no local attachments with that VNI),
-		// or no remote attachment owning the interface was found, or the
-		// attachment owning the interface already has one. For all such cases
-		// we need to delete the interface.
-		for i := 1; true; i++ {
-			err := ca.DeleteRemoteIfc(aPreExistingRemoteIfc)
-			if err == nil {
-				break
-			}
-			klog.V(3).Infof("Deletion of orphan remote interface %#+v failed: %s. Attempt nbr. %d",
-				aPreExistingRemoteIfc,
-				err.Error(),
-				i)
-			time.Sleep(netFabricRetryPeriod)
-		}
-		klog.V(3).Infof("Deleted orphan remote interface %#+v", aPreExistingRemoteIfc)
-	}
-
+	// TODO: implement
 	return nil
 }
 
