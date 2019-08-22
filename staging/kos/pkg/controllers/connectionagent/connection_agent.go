@@ -413,7 +413,7 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 	ca.localAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onLocalAttAdd,
 		UpdateFunc: ca.onLocalAttUpdate,
-		DeleteFunc: ca.onLocalAttRemove,
+		DeleteFunc: ca.onLocalAttDelete,
 	})
 }
 
@@ -433,7 +433,7 @@ func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 	}
 }
 
-func (ca *ConnectionAgent) onLocalAttRemove(obj interface{}) {
+func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
 	ca.queue.Add(parse.AttNSN(att))
@@ -1078,7 +1078,7 @@ func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
 	remoteAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onRemoteAttAdd,
 		UpdateFunc: ca.onRemoteAttUpdate,
-		DeleteFunc: ca.onRemoteAttRemove,
+		DeleteFunc: ca.onRemoteAttDelete,
 	})
 
 	remoteAttsInformerStopCh := make(chan struct{})
@@ -1112,7 +1112,7 @@ func (ca *ConnectionAgent) onRemoteAttUpdate(oldObj, obj interface{}) {
 	}
 }
 
-func (ca *ConnectionAgent) onRemoteAttRemove(obj interface{}) {
+func (ca *ConnectionAgent) onRemoteAttDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
 	klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 	attNSN := parse.AttNSN(att)
