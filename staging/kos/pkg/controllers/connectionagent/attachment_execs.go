@@ -49,8 +49,13 @@ const (
 // attachment's status iff it still should be.  If `!saveReport` then
 // the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
+func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, netIfc networkInterface, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
 	if len(cmd) == 0 {
+		return nil
+	}
+	localIfc, isLocal := netIfc.(*localNetworkInterface)
+	if !isLocal {
+		// Commands are executed only for local network interfaces.
 		return nil
 	}
 	if _, allowed := c.allowedPrograms[cmd[0]]; !allowed {
@@ -61,11 +66,11 @@ func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, localIfc
 		return nil
 	}
 	klog.V(4).Infof("Will launch attachment command: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
-	go func() { c.RunCommand(attNSN, localIfc, cmd, what, saveReport) }()
+	go func() { c.RunCommand(attNSN, &localIfc.LocalNetIfc, localIfc.id, cmd, what, saveReport) }()
 	return nil
 }
 
-func (c *ConnectionAgent) RunCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, urcmd []string, what string, saveReport bool) {
+func (c *ConnectionAgent) RunCommand(attNSN k8stypes.NamespacedName, localIfc *netfabric.LocalNetIfc, ifcID string, urcmd []string, what string, saveReport bool) {
 	expanded := make([]string, len(urcmd)-1)
 	for i, argi := range urcmd[1:] {
 		argi = strings.Replace(argi, "${ifname}", localIfc.Name, -1)
@@ -105,11 +110,11 @@ func (c *ConnectionAgent) RunCommand(attNSN k8stypes.NamespacedName, localIfc *n
 		}
 	}
 	c.attachmentExecDurationHistograms.With(prometheus.Labels{"what": what}).Observe(stopTime.Sub(startTime).Seconds())
-	c.attachmentExecStatusCounts.With(prometheus.Labels{"what": what, "exitStatus": strconv.FormatInt(int64(cr.ExitStatus), 10)}).Add(1)
+	c.attachmentExecStatusCounts.With(prometheus.Labels{"what": what, "exitStatus": strconv.FormatInt(int64(cr.ExitStatus), 10)}).Inc()
 	klog.V(4).Infof("Exec report: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, report=%#+v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cr)
 	if !saveReport {
 		return
 	}
-	c.setExecReport(attNSN, &cr)
+	c.setExecReport(attNSN, ifcID, &cr)
 	c.queue.Add(attNSN)
 }
