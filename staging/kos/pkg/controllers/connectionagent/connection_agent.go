@@ -478,10 +478,7 @@ func (ca *ConnectionAgent) processQueueItem(attNSN k8stypes.NamespacedName) {
 	klog.V(5).Infof("Working on attachment %s, with %d earlier requeues", attNSN, requeues)
 	err := ca.processNetworkAttachment(attNSN)
 	if err != nil {
-		klog.Warningf("Failed processing NetworkAttachment %s, requeuing (%d earlier requeues): %s",
-			attNSN,
-			requeues,
-			err.Error())
+		klog.Warningf("Failed processing NetworkAttachment %s, requeuing (%d earlier requeues): %s", attNSN, requeues, err.Error())
 		ca.queue.AddRateLimited(attNSN)
 		return
 	}
@@ -824,11 +821,7 @@ func (ca *ConnectionAgent) removeAttFromVNState(attName string, vni uint32) *vnS
 // can be deleted.
 func (ca *ConnectionAgent) clearVNResources(vnState *vnState, lastAttName string, vni uint32) {
 	close(vnState.remoteAttsInformerStopCh)
-	klog.V(2).Infof("NetworkAttachment %s/%s was the last local with vni %06x: remote attachments informer was stopped",
-		vnState.namespace,
-		lastAttName,
-		vni)
-
+	klog.V(2).Infof("NetworkAttachment %s/%s was the last local with vni %06x: remote attachments informer was stopped", vnState.namespace, lastAttName, vni)
 	for aRemoteAttName := range vnState.remoteAtts {
 		aRemoteAttNSN := k8stypes.NamespacedName{
 			Namespace: vnState.namespace,
