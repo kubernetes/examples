@@ -478,10 +478,6 @@ func (ca *ConnectionAgent) processQueueItem(attNSN k8stypes.NamespacedName) {
 	klog.V(5).Infof("Working on attachment %s, with %d earlier requeues", attNSN, requeues)
 	err := ca.processNetworkAttachment(attNSN)
 	if err != nil {
-		// If we're here there's been an error: either the attachment current state was
-		// ambiguous (e.g. more than one vni), or there's been a problem while processing
-		// it (e.g. Interface creation failed). We requeue the attachment reference so that
-		// it can be processed again and hopefully next time there will be no errors.
 		klog.Warningf("Failed processing NetworkAttachment %s, requeuing (%d earlier requeues): %s",
 			attNSN,
 			requeues,
