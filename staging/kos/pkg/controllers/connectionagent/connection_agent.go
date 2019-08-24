@@ -509,7 +509,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	// so is its network interface.
 	localIfc := attIfc.(*localNetworkInterface)
 	ifcMAC := localIfc.GuestMAC.String()
-	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, postCreateExecReport, statusErrs) {
+	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport) {
 		return nil
 	}
 
@@ -569,12 +569,12 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	return
 }
 
-func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachment, macAddr, ifcName string, postCreateER *netv1a1.ExecReport, statusErrs sliceOfString) bool {
+func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachment, macAddr, ifcName string, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport) bool {
 	return macAddr == att.Status.MACAddress &&
 		ifcName == att.Status.IfcName &&
 		ca.hostIP.String() == att.Status.HostIP &&
-		postCreateER != nil && postCreateER.Equiv(att.Status.PostCreateExecReport) &&
-		statusErrs != nil && statusErrs.Equal(att.Status.Errors.Host)
+		statusErrs != nil && statusErrs.Equal(att.Status.Errors.Host) &&
+		postCreateER != nil && postCreateER.Equiv(att.Status.PostCreateExecReport)
 }
 
 func (ca *ConnectionAgent) syncVirtualNetwork(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) *netv1a1.NetworkAttachment {
@@ -717,10 +717,10 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 
 func (ca *ConnectionAgent) updateLocalAttachmentStatus(att *netv1a1.NetworkAttachment, macAddr, ifcName string, statusErrs sliceOfString, pcer *netv1a1.ExecReport) error {
 	att2 := att.DeepCopy()
-	att2.Status.Errors.Host = statusErrs
 	att2.Status.MACAddress = macAddr
-	att2.Status.HostIP = ca.hostIP.String()
 	att2.Status.IfcName = ifcName
+	att2.Status.HostIP = ca.hostIP.String()
+	att2.Status.Errors.Host = statusErrs
 	att2.Status.PostCreateExecReport = pcer
 
 	tBeforeUpdate := time.Now()
