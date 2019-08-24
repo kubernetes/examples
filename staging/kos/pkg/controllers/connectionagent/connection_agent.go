@@ -53,6 +53,7 @@ import (
 // TODO update prometheus metrics
 // TODO re-discuss with Mike change in MAC address handling
 // TODO inteface to attachment handling need review and probably tweaks related to MAC/hostIP/ifc name
+// TODO updateVirtNetVNI => setVirtNetVNI
 
 const (
 	// localAttsCacheID is the ID for the local NetworkAttachments informer's
@@ -99,55 +100,48 @@ const (
 // informer's cache NetworkAttachments were seen in and should be looked up in.
 type cacheID uint32
 
-// vnState stores all the state needed for a Virtual Network for
-// which there is at least one NetworkAttachment local to this node.
-type vnState struct {
+// virtualNetwork stores all the state needed for a virtual network for which
+// there is at least one NetworkAttachment local to this connection agent.
+type virtualNetwork struct {
 	// remoteAttsInformer is an informer on the NetworkAttachments that are
-	// both: (1) in the Virtual Network the vnState represents, (2) not on
-	// this node. It is stopped when the last local NetworkAttachment in the
-	// Virtual Network associated with the vnState instance is deleted. To
-	// stop it, remoteAttsInformerStopCh must be closed.
+	// both: (1) in this virtual network, (2) remote.
+	// It is stopped by closing remoteAttsInformerStopCh when the last local
+	// NetworkAttachment in this virtual network is deleted.
 	remoteAttsInformer       k8scache.SharedIndexInformer
 	remoteAttsInformerStopCh chan struct{}
 
-	// remoteAttsLister is a lister on the NetworkAttachments that are
-	// both: (1) in the Virtual Network the vnState represents, (2) not
-	// on this node. Since a Virtual Network cannot span multiple k8s API
-	// namespaces, it's a NamespaceLister.
+	// remoteAttsLister is a lister on the NetworkAttachments that are both:
+	// (1) in this virtual network, (2) remote.
 	remoteAttsLister koslisterv1a1.NetworkAttachmentNamespaceLister
 
-	// namespace is the namespace of the Virtual Network
-	// associated with this vnState.
+	// namespace is the K8s API namespace of this virtual network.
 	namespace string
 
 	// localAtts and remoteAtts store the names of the local and remote
-	// NetworkAttachments in the Virtual Network the vnState represents,
-	// respectively. localAtts is used to detect when the last local attachment
-	// in the virtual network is deleted, so that remoteAttsInformer can be
-	// stopped. remoteAtts is used to enqueue references to the remote
-	// attachments in the Virtual Network when such Virtual Network becomes
-	// irrelevant (deletion of last local attachment), so that the interfaces of
-	// the remote attachments can be deleted.
+	// NetworkAttachments in this virtual network, respectively. localAtts is
+	// used to detect when the last local attachment is deleted. This signals
+	// irrelevance of the virtual network for the connection agent. As a
+	// consequence, remoteAttsInformer is stopped and remoteAtts is used to
+	// enqueue references to remote NetworkAttachments so that their network
+	// interfaces can be deleted.
 	localAtts  map[string]struct{}
 	remoteAtts map[string]struct{}
 }
 
 // ConnectionAgent represents a K8S controller which runs on every node of the
 // cluster and eagerly maintains up-to-date the mapping between virtual IPs and
-// physical IPs for every relevant NetworkAttachment. A NetworkAttachment is
+// host IPs for every relevant NetworkAttachment. A NetworkAttachment is
 // relevant to a connection agent if: (1) it runs on the same node as the
-// connection agent, or (2) it's part of a Virtual Network where at least one
+// connection agent, or (2) it's in a virtual network where at least one
 // NetworkAttachment for which (1) is true exists. To achieve its goal, a
 // connection agent receives notifications about relevant NetworkAttachments
-// from the K8s API server through Informers, and when necessary
-// creates/updates/deletes Network Interfaces through a low-level network
-// interface fabric. When a new Virtual Network becomes relevant for the
-// connection agent because of the creation of the first attachment of that
-// Virtual Network on the same node as the connection agent, a new informer on
-// remote NetworkAttachments in that Virtual Network is created. Upon being
-// notified of the creation of a local NetworkAttachment, the connection agent
-// also updates the status of such attachment with its host IP and the name of
-// the interface which was created.
+// through Informers, and when necessary creates/updates/deletes network
+// interfaces through a low-level network interface fabric. When a new virtual
+// network becomes relevant, a new informer on remote NetworkAttachments in that
+// virtual network is created. Upon being notified of the creation of a local
+// NetworkAttachment, the connection agent also updates the status of such
+// attachment with its host IP and the name and the MAC address of the interface
+// which was created.
 type ConnectionAgent struct {
 	nodeName      string
 	hostIP        gonet.IP
@@ -164,15 +158,18 @@ type ConnectionAgent struct {
 	localAttsInformer k8scache.SharedIndexInformer
 	localAttsLister   koslisterv1a1.NetworkAttachmentLister
 
-	// Map from vni to vnState associated with that vni. Accessed only while
-	// holding vniToVnStateMutex
-	vniToVnState      map[uint32]*vnState
-	vniToVnStateMutex sync.RWMutex
+	// Map from VNI to virtual network associated with that VNI.
+	// Access only while holding vniToVirtNetMutex.
+	// Never acquire vniToVirtNetMutex while holding attToSeenInCachesMutex, it
+	// can lead to deadlock.
+	vniToVirtNet      map[uint32]*virtualNetwork
+	vniToVirtNetMutex sync.RWMutex
 
-	// nsnToVNStateVNI maps local attachments namespaced names to the VNI of the
-	// vnState they're stored in. Accessed only while holding nsnToVNStateVNIMutex.
-	nsnToVNStateVNI      map[k8stypes.NamespacedName]uint32
-	nsnToVNStateVNIMutex sync.RWMutex
+	// nsnToVirtNetVNI maps NetworkAttachments namespaced names to the VNI of
+	// the virtualNetwork struct they're stored in.
+	// Access only while holding nsnToVirtNetVNIMutex.
+	nsnToVirtNetVNI      map[k8stypes.NamespacedName]uint32
+	nsnToVirtNetVNIMutex sync.RWMutex
 
 	// nsnToNetworkInterface maps NetworkAttachments namespaced names to their
 	// network interfaces.
@@ -346,8 +343,8 @@ func New(nodeName string,
 		queue:                                queue,
 		workers:                              workers,
 		netFabric:                            netFabric,
-		vniToVnState:                         make(map[uint32]*vnState),
-		nsnToVNStateVNI:                      make(map[k8stypes.NamespacedName]uint32),
+		vniToVirtNet:                         make(map[uint32]*virtualNetwork),
+		nsnToVirtNetVNI:                      make(map[k8stypes.NamespacedName]uint32),
 		nsnToNetworkInterface:                make(map[k8stypes.NamespacedName]networkInterface),
 		nsnToPostCreateExecReport:            make(map[k8stypes.NamespacedName]*netv1a1.ExecReport),
 		nsnToSeenInCaches:                    make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
@@ -492,13 +489,26 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 		return nil
 	}
 
-	if att != nil {
-		// The NetworkAttachment exists and it's current state is univocal.
-		return ca.processExistingAtt(att)
+	// Even if the NetworkAttachment exists (att != nil) we might find out that
+	// its virtual network has become irrelevant, and the NetworkAttachment
+	// should therefore be treated as a deleted one (att = nil). If that's the
+	// case syncVirtualNetwork will return nil, hence we write the return arg to
+	// att.
+	att = ca.syncVirtualNetwork(attNSN, att)
+
+	attIfc, statusErrs, postCreateExecReport, err := ca.syncNetworkInterface(attNSN, att)
+	if err != nil {
+		return err
 	}
 
-	// The NetworkAttachment has been deleted.
-	return ca.processDeletedAtt(attNSN)
+	// The only thing left to do is updating the NetworkAttachment status. If
+	// it's not needed, return.
+	ifcMACAddr := attIfc.guestMAC().String()
+	if att == nil || ca.nodeName != att.Spec.Node || ca.localAttachmentIsUpToDate(att, ifcMACAddr, postCreateExecReport, statusErrs) {
+		return nil
+	}
+
+	return ca.updateLocalAttachmentStatus(att, ifcMACAddr, attIfc.name(), statusErrs, postCreateExecReport)
 }
 
 // getNetworkAttachment attempts to determine the univocal version of the
@@ -554,177 +564,122 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	return
 }
 
-func (ca *ConnectionAgent) processExistingAtt(att *netv1a1.NetworkAttachment) error {
-	attNSN, attVNI := parse.AttNSN(att), att.Status.AddressVNI
-	attNode := att.Spec.Node
-	klog.V(5).Infof("Working on existing: attachment=%s, node=%s, resourceVersion=%s", attNSN, attNode, att.ResourceVersion)
-
-	// Update the vnState associated with the attachment. This typically involves
-	// adding the attachment to the vnState associated to its vni (and initializing
-	// that vnState if the attachment is the first local one with its vni), but
-	// could also entail removing the attachment from the vnState associated with
-	// its old vni if the vni has changed.
-	vnState, noVnStateFoundForRemoteAtt := ca.updateVNState(attVNI, attNSN, attNode)
-	if vnState != nil {
-		// If we're here att is currently remote but was previously the last local
-		// attachment in its vni. Thus, we act as if the last local attachment
-		// in the vn was deleted
-		ca.clearVNResources(vnState, attNSN.Name, attVNI)
-		return nil
-	}
-	if noVnStateFoundForRemoteAtt {
-		// If we're here att is remote but its vnState has been removed because
-		// of the deletion of the last local attachment in its virtual network
-		// between the lookup in the remote attachments cache and the attempt to
-		// set the attachment name into its vnState, hence we treat it as a deleted
-		// attachment.
-		ca.removeSeenInCache(attNSN, cacheID(attVNI))
-		return ca.processDeletedAtt(attNSN)
-	}
-
-	attIfc, statusErrs, postCreateExecReport, err := ca.syncNetworkInterface(attNSN, att)
-	if err != nil {
-		return err
-	}
-
-	// The only thing left to do is updating the NetworkAttachment status. If
-	// it's not needed, return.
-	ifcMACAddr := attIfc.guestMAC().String()
-	if att == nil || ca.nodeName != att.Spec.Node || ca.localAttachmentIsUpToDate(att, ifcMACAddr, postCreateExecReport, statusErrs) {
-		return nil
-	}
-
-	return ca.updateLocalAttachmentStatus(att, ifcMACAddr, attIfc.name(), statusErrs, postCreateExecReport)
-}
-
 func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachment, macAddr string, postCreateER *netv1a1.ExecReport, statusErrs sliceOfString) bool {
 	return macAddr == att.Status.MACAddress &&
 		postCreateER != nil && postCreateER.Equiv(att.Status.PostCreateExecReport) &&
 		statusErrs != nil && statusErrs.Equal(att.Status.Errors.Host)
 }
 
-func (ca *ConnectionAgent) processDeletedAtt(attNSN k8stypes.NamespacedName) error {
-	vnStateVNI, vnStateVNIFound := ca.getVNStateVNI(attNSN)
-	if vnStateVNIFound {
-		ca.updateVNStateAfterAttDeparture(attNSN.Name, vnStateVNI)
-		ca.unsetVNStateVNI(attNSN)
+func (ca *ConnectionAgent) syncVirtualNetwork(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) *netv1a1.NetworkAttachment {
+	oldVNI, oldVNIFound := ca.getVirtNetVNI(attNSN)
+	if oldVNIFound && att == nil || att.Status.AddressVNI != oldVNI {
+		// Remove the NetworkAttachment from its old virtual network.
+		ca.updateOldVirtualNetwork(attNSN, oldVNI)
 	}
 
-	_, _, _, err := ca.syncNetworkInterface(attNSN, nil)
-	if err != nil {
-		return err
+	if att != nil {
+		// Add the NetworkAttachment to its current virtual network.
+		// Even if the NetworkAttachment exists (att != nil) we might find out
+		// that its virtual network has become irrelevant, and the
+		// NetworkAttachment should therefore be treated as a deleted one
+		// (att = nil). If that's the case set att to nil before returning it so
+		// that the caller knows.
+		att, _ = ca.updateVirtualNetwork(attNSN, att)
 	}
 
-	return nil
+	return att
 }
 
-func (ca *ConnectionAgent) updateVNState(attNewVNI uint32,
-	attNSN k8stypes.NamespacedName,
-	attNode string) (*vnState, bool) {
-
-	attOldVNI, oldVNIFound := ca.getVNStateVNI(attNSN)
-	if oldVNIFound && attOldVNI != attNewVNI {
-		// if we're here the attachment vni changed since the last time it
-		// was processed, hence we update the vnState associated with the
-		// old value of the vni to reflect the attachment departure.
-		ca.updateVNStateAfterAttDeparture(attNSN.Name, attOldVNI)
-		ca.unsetVNStateVNI(attNSN)
-	}
-
-	return ca.updateVNStateForExistingAtt(attNSN, attNode == ca.nodeName, attNewVNI)
-}
-
-// updateVNStateForExistingAtt adds the attachment to the vnState associated with
-// its vni. If the attachment is local and is the first one for its vni, the
-// associated vnState is initialized (this entails starting the remote attachments
-// informer). If the attachment was the last local attachment in its vnState and
-// has become remote, the vnState for its vni is cleared (it's removed from the
-// map storing the vnStates) and returned, so that the caller can perform a clean
-// up of the resources associated with the vnState (remote attachments informer
-// is stopped and references to the remote attachments are enqueued). If the
-// attachment is remote and its vnState cannot be found (because the last local
-// attachment in the same Virtual Network has been deleted) noVnStateFoundForRemoteAtt
-// is set to true so that the caller knows and can react appropriately.
-func (ca *ConnectionAgent) updateVNStateForExistingAtt(attNSN k8stypes.NamespacedName,
-	attIsLocal bool,
-	vni uint32) (vnStateRet *vnState, noVnStateFoundForRemoteAtt bool) {
-
-	attName := attNSN.Name
-	firstLocalAttInVN := false
-
-	ca.vniToVnStateMutex.Lock()
+// updateVirtualNetwork adds a NetworkAttachment to its virtual network state.
+// It is safe to call even if the NetworkAttachment is already part of the
+// virtual network state. Edge cases where the NetworkAttachment location (local
+// or remote) has changed since the last invocation are handled.
+// It assumes that att is non-nil.
+// Normally the first return arg is att itself, but if the virtual network has
+// become irrelevant it returns nil to signal to the caller that the
+// NetworkAttachment should be treated as a deleted one.
+// The second return arg is the updated virtual network.
+func (ca *ConnectionAgent) updateVirtualNetwork(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (*netv1a1.NetworkAttachment, *virtualNetwork) {
+	ca.vniToVirtNetMutex.Lock()
 	defer func() {
-		ca.vniToVnStateMutex.Unlock()
-		if vnStateRet == nil && !noVnStateFoundForRemoteAtt {
-			ca.setVNStateVNI(attNSN, vni)
-		} else {
-			ca.unsetVNStateVNI(attNSN)
+		ca.vniToVirtNetMutex.Unlock()
+		if att == nil {
+			ca.clearVirtNetVNI(attNSN)
+			return
 		}
-		if firstLocalAttInVN {
-			klog.V(2).Infof("VN with ID %06x became relevant: an Informer has been started", vni)
-		}
+		ca.updateVirtNetVNI(attNSN, att.Status.AddressVNI)
 	}()
 
-	vnState := ca.vniToVnState[vni]
-	if attIsLocal {
-		// If the vnState for the attachment vni is missing it means that the
-		// attachment is the first local one for its vni, hence we initialize
-		// the vnState (this entails starting the remote attachments informer).
-		// We also add the attachment name to the local attachments in the
-		// virtual network and remove the attachment name from the remote
-		// attachments: this is needed in case we're here because of a delete
-		// followed by a re-create which did not change the vni but made the
-		// attachment transition from remote to local.
-		if vnState == nil {
-			vnState = ca.initVNState(vni, attNSN.Namespace)
-			ca.vniToVnState[vni] = vnState
-			firstLocalAttInVN = true
+	vn := ca.vniToVirtNet[att.Status.AddressVNI]
+	if vn == nil {
+		if att.Spec.Node != ca.nodeName {
+			// The NetworkAttachment is remote and has become irrelevant because
+			// the last local NetworkAttachment in its virtual network has been
+			// deleted.
+			att = nil
+			return att, nil
 		}
-		delete(vnState.remoteAtts, attName)
-		vnState.localAtts[attName] = struct{}{}
-	} else {
-		// If the vnState for the attachment's vni is not missing (because the
-		// last local attachment with the same vni has been deleted), we add the
-		// attachment name to the remote attachments in the vnState. Then we
-		// remove the attachment name from the local attachments: this is needed
-		// in case we're here because of a delete followed by a re-create which
-		// did not change the vni but made the attachment transition from local
-		// to remote. After doing this, we check whether the local attachment
-		// we've removed was the last one for its vni. If that's the case, the
-		// vni is no longer relevant to the connection agent, hence we unset and
-		// return the vnState so that the caller can perform the necessary clean
-		// up. If the vnState is missing, we set the return flag
-		// noVnStateFoundForRemoteAtt to true so that the caller knows that the
-		// remote attachment it is processing must not get an interface (this is
-		// needed because a reference to such attachment is not necessarily
-		// already in the list of remote attachments in the vn, hence it's not
-		// granted that such a reference has been enqueued to delete the
-		// attachment).
-		if vnState != nil {
-			vnState.remoteAtts[attName] = struct{}{}
-			delete(vnState.localAtts, attName)
-			if len(vnState.localAtts) == 0 {
-				delete(ca.vniToVnState, vni)
-				vnStateRet = vnState
-			}
-		} else {
-			noVnStateFoundForRemoteAtt = true
-		}
+
+		// The NetworkAttachment is the first local one with its VNI: its
+		// virtual network has just become relevant, initialize the needed state.
+		vn = ca.initVirtualNetwork(att.Namespace, att.Status.AddressVNI)
+		ca.vniToVirtNet[att.Status.AddressVNI] = vn
+		klog.V(3).Infof("Creation of %s made virtual network with VNI %d relevant. Its state has been initialized.", attNSN, att.Status.AddressVNI)
 	}
 
-	return
+	if att.Spec.Node == ca.nodeName {
+		// In case there was a deleted remote NetworkAttachment with the same
+		// namespaced name as this one in the virtual network, remove it.
+		delete(vn.remoteAtts, att.Name)
+
+		vn.localAtts[att.Name] = struct{}{}
+		return att, vn
+	}
+
+	// The NetworkAttachment is remote, but maybe there was a deleted local
+	// NetworkAttachment with the same namespaced name as this one in the
+	// virtual network. Remove it and check whether it was the last local
+	// NetworkAttachment: if that's the case the virtual network has become
+	// irrelevant.
+	delete(vn.localAtts, att.Name)
+	if len(vn.localAtts) == 0 {
+		// The virtual network has become irrelevant.
+		delete(ca.vniToVirtNet, att.Status.AddressVNI)
+		ca.finalizeVirtualNetwork(vn, att.Status.AddressVNI)
+		klog.V(3).Infof("Deletion of %s made virtual network with VNI %d irrelevant. All the state associated with it is being deleted.", attNSN, att.Status.AddressVNI)
+		att = nil
+		return att, nil
+	}
+
+	vn.remoteAtts[att.Name] = struct{}{}
+
+	return att, vn
 }
 
-func (ca *ConnectionAgent) updateVNStateAfterAttDeparture(attName string, vni uint32) {
-	vnState := ca.removeAttFromVNState(attName, vni)
-	if vnState == nil {
+// updateOldVirtualNetwork removes attNSN from the virtualNetwork associated
+// with oldVNI and performs additional clean up (such as clearing the
+// virtualNetwork) if needed.
+func (ca *ConnectionAgent) updateOldVirtualNetwork(attNSN k8stypes.NamespacedName, oldVNI uint32) {
+	ca.vniToVirtNetMutex.Lock()
+	defer func() {
+		ca.vniToVirtNetMutex.Unlock()
+		ca.clearVirtNetVNI(attNSN)
+	}()
+
+	oldVN := ca.vniToVirtNet[oldVNI]
+	if oldVN == nil {
 		return
 	}
-	// If we're here attName was the last local attachment in the virtual network
-	// with id vni. Hence we stop the remote attachments informer and enqueue
-	// references to remote attachments in that virtual network, so that their
-	// interfaces can be deleted.
-	ca.clearVNResources(vnState, attName, vni)
+
+	delete(oldVN.localAtts, attNSN.Name)
+	if len(oldVN.localAtts) == 0 {
+		delete(ca.vniToVirtNet, oldVNI)
+		ca.finalizeVirtualNetwork(oldVN, oldVNI)
+		klog.V(3).Infof("Deletion of %s made virtual network with VNI %d irrelevant. All the state associated with it is being deleted.", attNSN, oldVNI)
+		return
+	}
+
+	delete(oldVN.remoteAtts, attNSN.Name)
 }
 
 func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport, err error) {
@@ -797,58 +752,36 @@ func (ca *ConnectionAgent) updateLocalAttachmentStatus(att *netv1a1.NetworkAttac
 	return nil
 }
 
-// removeAttFromVNState removes attName from the vnState associated with vni, both
-// for local and remote attachments. If attName is the last local attachment in
-// the vnState, vnState is returned, so that the caller can perform additional
-// clean up (e.g. stopping the remote attachments informer).
-func (ca *ConnectionAgent) removeAttFromVNState(attName string, vni uint32) *vnState {
-	ca.vniToVnStateMutex.Lock()
-	defer ca.vniToVnStateMutex.Unlock()
-	vnState := ca.vniToVnState[vni]
-	if vnState != nil {
-		delete(vnState.localAtts, attName)
-		if len(vnState.localAtts) == 0 {
-			delete(ca.vniToVnState, vni)
-			return vnState
-		}
-		delete(vnState.remoteAtts, attName)
-	}
-	return nil
-}
+// finalizeVirtualNetwork stops the informer on remote attachments on the
+// virtual network and enqueues references to such attachments so that their
+// interfaces can be deleted.
+func (ca *ConnectionAgent) finalizeVirtualNetwork(vn *virtualNetwork, vni uint32) {
+	close(vn.remoteAttsInformerStopCh)
 
-// clearVNResources stops the informer on remote attachments on the virtual
-// network and enqueues references to such attachments so that their interfaces
-// can be deleted.
-func (ca *ConnectionAgent) clearVNResources(vnState *vnState, lastAttName string, vni uint32) {
-	close(vnState.remoteAttsInformerStopCh)
-	klog.V(2).Infof("NetworkAttachment %s/%s was the last local with vni %06x: remote attachments informer was stopped", vnState.namespace, lastAttName, vni)
-	for aRemoteAttName := range vnState.remoteAtts {
-		aRemoteAttNSN := k8stypes.NamespacedName{
-			Namespace: vnState.namespace,
-			Name:      aRemoteAttName,
-		}
-		ca.removeSeenInCache(aRemoteAttNSN, cacheID(vni))
-		ca.queue.Add(aRemoteAttNSN)
+	for remAtt := range vn.remoteAtts {
+		nsn := k8stypes.NamespacedName{Namespace: vn.namespace,
+			Name: remAtt}
+		ca.removeSeenInCache(nsn, cacheID(vni))
+		ca.queue.Add(nsn)
 	}
 }
 
-func (ca *ConnectionAgent) initVNState(vni uint32, namespace string) *vnState {
-	remoteAttsInformer, remoteAttsLister := ca.newInformerAndLister(resyncPeriod, namespace, ca.remoteAttSelector(vni))
+func (ca *ConnectionAgent) initVirtualNetwork(ns string, vni uint32) *virtualNetwork {
+	remoteAttsInformer, remoteAttsLister := ca.newInformerAndLister(resyncPeriod, ns, ca.remoteAttSelector(vni))
 
 	remoteAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onRemoteAttAdd,
 		UpdateFunc: ca.onRemoteAttUpdate,
-		DeleteFunc: ca.onRemoteAttDelete,
-	})
+		DeleteFunc: ca.onRemoteAttDelete})
 
 	remoteAttsInformerStopCh := make(chan struct{})
 	go remoteAttsInformer.Run(mergeStopChannels(ca.stopCh, remoteAttsInformerStopCh))
 
-	return &vnState{
+	return &virtualNetwork{
 		remoteAttsInformer:       remoteAttsInformer,
 		remoteAttsInformerStopCh: remoteAttsInformerStopCh,
-		remoteAttsLister:         remoteAttsLister.NetworkAttachments(namespace),
-		namespace:                namespace,
+		remoteAttsLister:         remoteAttsLister.NetworkAttachments(ns),
+		namespace:                ns,
 		localAtts:                make(map[string]struct{}),
 		remoteAtts:               make(map[string]struct{}),
 	}
@@ -928,23 +861,26 @@ func (ca *ConnectionAgent) unassignNetworkInterface(ifcOwner k8stypes.Namespaced
 	// TODO: update gauge for local/remote NetworkAttachments.
 }
 
-func (ca *ConnectionAgent) getVNStateVNI(nsn k8stypes.NamespacedName) (vni uint32, vniFound bool) {
-	ca.nsnToVNStateVNIMutex.RLock()
-	defer ca.nsnToVNStateVNIMutex.RUnlock()
-	vni, vniFound = ca.nsnToVNStateVNI[nsn]
+func (ca *ConnectionAgent) getVirtNetVNI(att k8stypes.NamespacedName) (vni uint32, found bool) {
+	ca.nsnToVirtNetVNIMutex.RLock()
+	defer ca.nsnToVirtNetVNIMutex.RUnlock()
+
+	vni, found = ca.nsnToVirtNetVNI[att]
 	return
 }
 
-func (ca *ConnectionAgent) unsetVNStateVNI(nsn k8stypes.NamespacedName) {
-	ca.nsnToVNStateVNIMutex.Lock()
-	defer ca.nsnToVNStateVNIMutex.Unlock()
-	delete(ca.nsnToVNStateVNI, nsn)
+func (ca *ConnectionAgent) clearVirtNetVNI(att k8stypes.NamespacedName) {
+	ca.nsnToVirtNetVNIMutex.Lock()
+	defer ca.nsnToVirtNetVNIMutex.Unlock()
+
+	delete(ca.nsnToVirtNetVNI, att)
 }
 
-func (ca *ConnectionAgent) setVNStateVNI(nsn k8stypes.NamespacedName, vni uint32) {
-	ca.nsnToVNStateVNIMutex.Lock()
-	defer ca.nsnToVNStateVNIMutex.Unlock()
-	ca.nsnToVNStateVNI[nsn] = vni
+func (ca *ConnectionAgent) updateVirtNetVNI(att k8stypes.NamespacedName, vni uint32) {
+	ca.nsnToVirtNetVNIMutex.Lock()
+	defer ca.nsnToVirtNetVNIMutex.Unlock()
+
+	ca.nsnToVirtNetVNI[att] = vni
 }
 
 func (ca *ConnectionAgent) addSeenInCache(nsn k8stypes.NamespacedName, cache cacheID) {
@@ -990,26 +926,15 @@ func (ca *ConnectionAgent) getSeenInCache(nsn k8stypes.NamespacedName) (seenInCa
 }
 
 func (ca *ConnectionAgent) getRemoteAttsLister(vni uint32) koslisterv1a1.NetworkAttachmentNamespaceLister {
-	ca.vniToVnStateMutex.RLock()
-	defer ca.vniToVnStateMutex.RUnlock()
+	ca.vniToVirtNetMutex.RLock()
+	defer ca.vniToVirtNetMutex.RUnlock()
 
-	vnState := ca.vniToVnState[vni]
-	if vnState == nil {
+	vn := ca.vniToVirtNet[vni]
+	if vn == nil {
 		return nil
 	}
 
-	return vnState.remoteAttsLister
-}
-
-// getRemoteAttsIndexerForVNI accesses the map with all the vnStates but it's not
-// thread-safe because it is meant to be used only at start-up, when there's only
-// one goroutine running.
-func (ca *ConnectionAgent) getRemoteAttsInformerForVNI(vni uint32) (k8scache.SharedIndexInformer, chan struct{}) {
-	vnState := ca.vniToVnState[vni]
-	if vnState == nil {
-		return nil, nil
-	}
-	return vnState.remoteAttsInformer, vnState.remoteAttsInformerStopCh
+	return vn.remoteAttsLister
 }
 
 // localAttSelector returns a fields selector that matches local
