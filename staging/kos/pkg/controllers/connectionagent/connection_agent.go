@@ -508,11 +508,12 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	// If we're here there's no doubt that the NetworkAttachment is local, and
 	// so is its network interface.
 	localIfc := attIfc.(*localNetworkInterface)
-	if ca.localAttachmentIsUpToDate(att, localIfc.GuestMAC.String(), postCreateExecReport, statusErrs) {
+	ifcMAC := localIfc.GuestMAC.String()
+	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, postCreateExecReport, statusErrs) {
 		return nil
 	}
 
-	return ca.updateLocalAttachmentStatus(att, localIfc.GuestMAC.String(), localIfc.Name, statusErrs, postCreateExecReport)
+	return ca.updateLocalAttachmentStatus(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport)
 }
 
 // getNetworkAttachment attempts to determine the univocal version of the
@@ -568,8 +569,10 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	return
 }
 
-func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachment, macAddr string, postCreateER *netv1a1.ExecReport, statusErrs sliceOfString) bool {
+func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachment, macAddr, ifcName string, postCreateER *netv1a1.ExecReport, statusErrs sliceOfString) bool {
 	return macAddr == att.Status.MACAddress &&
+		ifcName == att.Status.IfcName &&
+		ca.hostIP.String() == att.Status.HostIP &&
 		postCreateER != nil && postCreateER.Equiv(att.Status.PostCreateExecReport) &&
 		statusErrs != nil && statusErrs.Equal(att.Status.Errors.Host)
 }
