@@ -164,29 +164,29 @@ type ConnectionAgent struct {
 	vniToVirtNet      map[uint32]*virtualNetwork
 	vniToVirtNetMutex sync.RWMutex
 
-	// nsnToVirtNetVNI maps NetworkAttachments namespaced names to the VNI of
+	// attToVirtNetVNI maps NetworkAttachments namespaced names to the VNI of
 	// the virtualNetwork struct they're stored in.
-	// Access only while holding nsnToVirtNetVNIMutex.
-	nsnToVirtNetVNI      map[k8stypes.NamespacedName]uint32
-	nsnToVirtNetVNIMutex sync.RWMutex
+	// Access only while holding attToVirtNetVNIMutex.
+	attToVirtNetVNI      map[k8stypes.NamespacedName]uint32
+	attToVirtNetVNIMutex sync.RWMutex
 
-	// nsnToNetworkInterface maps NetworkAttachments namespaced names to their
+	// attToNetworkInterface maps NetworkAttachments namespaced names to their
 	// network interfaces.
-	// nsnToPostCreateExecReport maps local NetworkAttachments namespaced names
+	// attToPostCreateExecReport maps local NetworkAttachments namespaced names
 	// to the report of the command that was executed after creating their
 	// network interface.
-	// Access both only while holding nsnToNetworkInterfaceMutex.
-	nsnToNetworkInterface      map[k8stypes.NamespacedName]networkInterface
-	nsnToPostCreateExecReport  map[k8stypes.NamespacedName]*netv1a1.ExecReport
-	nsnToNetworkInterfaceMutex sync.RWMutex
+	// Access both only while holding attToNetworkInterfaceMutex.
+	attToNetworkInterface      map[k8stypes.NamespacedName]networkInterface
+	attToPostCreateExecReport  map[k8stypes.NamespacedName]*netv1a1.ExecReport
+	attToNetworkInterfaceMutex sync.RWMutex
 
-	// nsnToSeenInCaches maps NetworkAttachments namespaced names to the IDs
+	// attToSeenInCaches maps NetworkAttachments namespaced names to the IDs
 	// of the Informer's caches where they have been seen. It tells workers
 	// where to look up attachments after dequeuing references and it's
 	// populated by informers' notification handlers.
-	// Access only while holding nsnToSeenInCachesMutex.
-	nsnToSeenInCaches      map[k8stypes.NamespacedName]map[cacheID]struct{}
-	nsnToSeenInCachesMutex sync.RWMutex
+	// Access only while holding attToSeenInCachesMutex.
+	attToSeenInCaches      map[k8stypes.NamespacedName]map[cacheID]struct{}
+	attToSeenInCachesMutex sync.RWMutex
 
 	// allowedPrograms is the values allowed to appear in the [0] of a
 	// slice to exec post-create or -delete.
@@ -343,10 +343,10 @@ func New(nodeName string,
 		workers:                              workers,
 		netFabric:                            netFabric,
 		vniToVirtNet:                         make(map[uint32]*virtualNetwork),
-		nsnToVirtNetVNI:                      make(map[k8stypes.NamespacedName]uint32),
-		nsnToNetworkInterface:                make(map[k8stypes.NamespacedName]networkInterface),
-		nsnToPostCreateExecReport:            make(map[k8stypes.NamespacedName]*netv1a1.ExecReport),
-		nsnToSeenInCaches:                    make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
+		attToVirtNetVNI:                      make(map[k8stypes.NamespacedName]uint32),
+		attToNetworkInterface:                make(map[k8stypes.NamespacedName]networkInterface),
+		attToPostCreateExecReport:            make(map[k8stypes.NamespacedName]*netv1a1.ExecReport),
+		attToSeenInCaches:                    make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
 		allowedPrograms:                      allowedPrograms,
 		attachmentCreateToLocalIfcHistogram:  attachmentCreateToLocalIfcHistogram,
 		attachmentCreateToRemoteIfcHistogram: attachmentCreateToRemoteIfcHistogram,
@@ -815,29 +815,29 @@ func (ca *ConnectionAgent) onRemoteAttDelete(obj interface{}) {
 }
 
 func (ca *ConnectionAgent) getNetworkInterface(att k8stypes.NamespacedName) (ifc networkInterface, execReport *netv1a1.ExecReport, ifcFound bool) {
-	ca.nsnToNetworkInterfaceMutex.RLock()
-	defer ca.nsnToNetworkInterfaceMutex.RUnlock()
+	ca.attToNetworkInterfaceMutex.RLock()
+	defer ca.attToNetworkInterfaceMutex.RUnlock()
 
-	ifc, ifcFound = ca.nsnToNetworkInterface[att]
+	ifc, ifcFound = ca.attToNetworkInterface[att]
 	if ifcFound {
-		execReport = ca.nsnToPostCreateExecReport[att]
+		execReport = ca.attToPostCreateExecReport[att]
 	}
 	return
 }
 
-func (ca *ConnectionAgent) assignNetworkInterface(ifcOwner k8stypes.NamespacedName, ifc networkInterface) {
-	ca.nsnToNetworkInterfaceMutex.Lock()
-	defer ca.nsnToNetworkInterfaceMutex.Unlock()
+func (ca *ConnectionAgent) assignNetworkInterface(att k8stypes.NamespacedName, ifc networkInterface) {
+	ca.attToNetworkInterfaceMutex.Lock()
+	defer ca.attToNetworkInterfaceMutex.Unlock()
 
-	ca.nsnToNetworkInterface[ifcOwner] = ifc
+	ca.attToNetworkInterface[att] = ifc
 	// TODO: update gauge for local/remote NetworkAttachments.
 }
 
-func (ca *ConnectionAgent) setExecReport(ifcOwner k8stypes.NamespacedName, ifcID string, er *netv1a1.ExecReport) {
-	ca.nsnToNetworkInterfaceMutex.Lock()
-	defer ca.nsnToNetworkInterfaceMutex.Unlock()
+func (ca *ConnectionAgent) setExecReport(att k8stypes.NamespacedName, ifcID string, er *netv1a1.ExecReport) {
+	ca.attToNetworkInterfaceMutex.Lock()
+	defer ca.attToNetworkInterfaceMutex.Unlock()
 
-	ifc, ifcFound := ca.nsnToNetworkInterface[ifcOwner]
+	ifc, ifcFound := ca.attToNetworkInterface[att]
 	if ifcFound {
 		// Post create execs are bound to a specific interface but run
 		// asynchronously wrt to the workers that process NetworkAttachments and
@@ -846,75 +846,75 @@ func (ca *ConnectionAgent) setExecReport(ifcOwner k8stypes.NamespacedName, ifcID
 		// that the exec report is bound to.
 		localIfc, isLocal := ifc.(*localNetworkInterface)
 		if isLocal && localIfc.id == ifcID {
-			ca.nsnToPostCreateExecReport[ifcOwner] = er
+			ca.attToPostCreateExecReport[att] = er
 		}
 	}
 }
 
-func (ca *ConnectionAgent) unassignNetworkInterface(ifcOwner k8stypes.NamespacedName) {
-	ca.nsnToNetworkInterfaceMutex.Lock()
-	defer ca.nsnToNetworkInterfaceMutex.Unlock()
+func (ca *ConnectionAgent) unassignNetworkInterface(att k8stypes.NamespacedName) {
+	ca.attToNetworkInterfaceMutex.Lock()
+	defer ca.attToNetworkInterfaceMutex.Unlock()
 
-	delete(ca.nsnToNetworkInterface, ifcOwner)
-	delete(ca.nsnToPostCreateExecReport, ifcOwner)
+	delete(ca.attToNetworkInterface, att)
+	delete(ca.attToPostCreateExecReport, att)
 	// TODO: update gauge for local/remote NetworkAttachments.
 }
 
 func (ca *ConnectionAgent) getVirtNetVNI(att k8stypes.NamespacedName) (vni uint32, found bool) {
-	ca.nsnToVirtNetVNIMutex.RLock()
-	defer ca.nsnToVirtNetVNIMutex.RUnlock()
+	ca.attToVirtNetVNIMutex.RLock()
+	defer ca.attToVirtNetVNIMutex.RUnlock()
 
-	vni, found = ca.nsnToVirtNetVNI[att]
+	vni, found = ca.attToVirtNetVNI[att]
 	return
 }
 
 func (ca *ConnectionAgent) clearVirtNetVNI(att k8stypes.NamespacedName) {
-	ca.nsnToVirtNetVNIMutex.Lock()
-	defer ca.nsnToVirtNetVNIMutex.Unlock()
+	ca.attToVirtNetVNIMutex.Lock()
+	defer ca.attToVirtNetVNIMutex.Unlock()
 
-	delete(ca.nsnToVirtNetVNI, att)
+	delete(ca.attToVirtNetVNI, att)
 }
 
 func (ca *ConnectionAgent) setVirtNetVNI(att k8stypes.NamespacedName, vni uint32) {
-	ca.nsnToVirtNetVNIMutex.Lock()
-	defer ca.nsnToVirtNetVNIMutex.Unlock()
+	ca.attToVirtNetVNIMutex.Lock()
+	defer ca.attToVirtNetVNIMutex.Unlock()
 
-	ca.nsnToVirtNetVNI[att] = vni
+	ca.attToVirtNetVNI[att] = vni
 }
 
-func (ca *ConnectionAgent) addSeenInCache(nsn k8stypes.NamespacedName, cache cacheID) {
-	ca.nsnToSeenInCachesMutex.Lock()
-	defer ca.nsnToSeenInCachesMutex.Unlock()
+func (ca *ConnectionAgent) addSeenInCache(att k8stypes.NamespacedName, cache cacheID) {
+	ca.attToSeenInCachesMutex.Lock()
+	defer ca.attToSeenInCachesMutex.Unlock()
 
-	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	seenInCaches := ca.attToSeenInCaches[att]
 	if seenInCaches == nil {
 		seenInCaches = make(map[cacheID]struct{}, 1)
-		ca.nsnToSeenInCaches[nsn] = seenInCaches
+		ca.attToSeenInCaches[att] = seenInCaches
 	}
 
 	seenInCaches[cache] = struct{}{}
 }
 
-func (ca *ConnectionAgent) removeSeenInCache(nsn k8stypes.NamespacedName, cache cacheID) {
-	ca.nsnToSeenInCachesMutex.Lock()
-	defer ca.nsnToSeenInCachesMutex.Unlock()
+func (ca *ConnectionAgent) removeSeenInCache(att k8stypes.NamespacedName, cache cacheID) {
+	ca.attToSeenInCachesMutex.Lock()
+	defer ca.attToSeenInCachesMutex.Unlock()
 
-	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	seenInCaches := ca.attToSeenInCaches[att]
 	if seenInCaches == nil {
 		return
 	}
 
 	delete(seenInCaches, cache)
 	if len(seenInCaches) == 0 {
-		delete(ca.nsnToSeenInCaches, nsn)
+		delete(ca.attToSeenInCaches, att)
 	}
 }
 
-func (ca *ConnectionAgent) getSeenInCache(nsn k8stypes.NamespacedName) (seenInCache cacheID, nbrOfSeenInCaches int) {
-	ca.nsnToSeenInCachesMutex.RLock()
-	defer ca.nsnToSeenInCachesMutex.RUnlock()
+func (ca *ConnectionAgent) getSeenInCache(att k8stypes.NamespacedName) (seenInCache cacheID, nbrOfSeenInCaches int) {
+	ca.attToSeenInCachesMutex.RLock()
+	defer ca.attToSeenInCachesMutex.RUnlock()
 
-	seenInCaches := ca.nsnToSeenInCaches[nsn]
+	seenInCaches := ca.attToSeenInCaches[att]
 	nbrOfSeenInCaches = len(seenInCaches)
 	if nbrOfSeenInCaches == 1 {
 		for seenInCache = range seenInCaches {
