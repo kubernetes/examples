@@ -18,7 +18,6 @@ package connectionagent
 
 import (
 	"bytes"
-	"fmt"
 	gonet "net"
 	"strconv"
 	"strings"
@@ -117,19 +116,6 @@ func mergeStopChannels(ch1, ch2 <-chan struct{}) chan struct{} {
 		}
 	}()
 	return aggregateStopCh
-}
-
-func aggregateErrors(sep string, errs ...error) error {
-	aggregateErrsSlice := make([]string, 0, len(errs))
-	for i, err := range errs {
-		if err != nil && strings.Trim(err.Error(), " ") != "" {
-			aggregateErrsSlice = append(aggregateErrsSlice, fmt.Sprintf("error nbr. %d ", i)+err.Error())
-		}
-	}
-	if len(aggregateErrsSlice) > 0 {
-		return fmt.Errorf("%s", strings.Join(aggregateErrsSlice, sep))
-	}
-	return nil
 }
 
 func formatErrVal(err bool) string {
