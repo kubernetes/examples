@@ -53,7 +53,6 @@ import (
 // TODO update prometheus metrics
 // TODO re-discuss with Mike change in MAC address handling
 // TODO inteface to attachment handling need review and probably tweaks related to MAC/hostIP/ifc name
-// TODO updateVirtNetVNI => setVirtNetVNI
 
 const (
 	// localAttsCacheID is the ID for the local NetworkAttachments informer's
@@ -607,7 +606,7 @@ func (ca *ConnectionAgent) updateVirtualNetwork(attNSN k8stypes.NamespacedName, 
 			ca.clearVirtNetVNI(attNSN)
 			return
 		}
-		ca.updateVirtNetVNI(attNSN, att.Status.AddressVNI)
+		ca.setVirtNetVNI(attNSN, att.Status.AddressVNI)
 	}()
 
 	vn := ca.vniToVirtNet[att.Status.AddressVNI]
@@ -876,7 +875,7 @@ func (ca *ConnectionAgent) clearVirtNetVNI(att k8stypes.NamespacedName) {
 	delete(ca.nsnToVirtNetVNI, att)
 }
 
-func (ca *ConnectionAgent) updateVirtNetVNI(att k8stypes.NamespacedName, vni uint32) {
+func (ca *ConnectionAgent) setVirtNetVNI(att k8stypes.NamespacedName, vni uint32) {
 	ca.nsnToVirtNetVNIMutex.Lock()
 	defer ca.nsnToVirtNetVNIMutex.Unlock()
 
