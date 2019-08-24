@@ -404,8 +404,7 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 	ca.localAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onLocalAttAdd,
 		UpdateFunc: ca.onLocalAttUpdate,
-		DeleteFunc: ca.onLocalAttDelete,
-	})
+		DeleteFunc: ca.onLocalAttDelete})
 }
 
 func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
@@ -591,22 +590,24 @@ func (ca *ConnectionAgent) syncVirtualNetwork(attNSN k8stypes.NamespacedName, at
 		// NetworkAttachment should therefore be treated as a deleted one
 		// (att = nil). If that's the case set att to nil before returning it so
 		// that the caller knows.
-		att, _ = ca.updateVirtualNetwork(attNSN, att)
+		att, _ = ca.updateVirtualNetwork(att)
 	}
 
 	return att
 }
 
-// updateVirtualNetwork adds a NetworkAttachment to its virtual network state.
+// updateVirtualNetwork adds a NetworkAttachment to its virtualNetwork.
 // It is safe to call even if the NetworkAttachment is already part of the
-// virtual network state. Edge cases where the NetworkAttachment location (local
+// virtualNetwork state. Edge cases where the NetworkAttachment location (local
 // or remote) has changed since the last invocation are handled.
-// It assumes that att is non-nil.
-// Normally the first return arg is att itself, but if the virtual network has
+// It assumes that `att` is non-nil.
+// Normally the first return arg is `att` itself, but if the virtual network has
 // become irrelevant it returns nil to signal to the caller that the
 // NetworkAttachment should be treated as a deleted one.
-// The second return arg is the updated virtual network.
-func (ca *ConnectionAgent) updateVirtualNetwork(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (*netv1a1.NetworkAttachment, *virtualNetwork) {
+// The second return arg is the updated virtualNetwork.
+func (ca *ConnectionAgent) updateVirtualNetwork(att *netv1a1.NetworkAttachment) (*netv1a1.NetworkAttachment, *virtualNetwork) {
+	attNSN := parse.AttNSN(att)
+
 	ca.vniToVirtNetMutex.Lock()
 	defer func() {
 		ca.vniToVirtNetMutex.Unlock()
@@ -741,7 +742,7 @@ func (ca *ConnectionAgent) updateLocalAttachmentStatus(att *netv1a1.NetworkAttac
 			err.Error())
 	}
 
-	klog.V(3).Infof("Updated NetworkAttachment %s's status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=#+v",
+	klog.V(3).Infof("Updated NetworkAttachment %s's status: oldRV=%s, newRV=%s, ipv4=%s, hostIP=%s, macAddress=%s, ifcName=%s, statusErrs=%#+v, PostCreateExecReport=%#+v",
 		parse.AttNSN(att),
 		att.ResourceVersion,
 		updatedAtt.ResourceVersion,
@@ -822,13 +823,13 @@ func (ca *ConnectionAgent) onRemoteAttDelete(obj interface{}) {
 	ca.queue.Add(attNSN)
 }
 
-func (ca *ConnectionAgent) getNetworkInterface(att k8stypes.NamespacedName) (ifc networkInterface, execReport *netv1a1.ExecReport, ifcFound bool) {
+func (ca *ConnectionAgent) getNetworkInterface(att k8stypes.NamespacedName) (ifc networkInterface, postCreateER *netv1a1.ExecReport, ifcFound bool) {
 	ca.attToNetworkInterfaceMutex.RLock()
 	defer ca.attToNetworkInterfaceMutex.RUnlock()
 
 	ifc, ifcFound = ca.attToNetworkInterface[att]
 	if ifcFound {
-		execReport = ca.attToPostCreateExecReport[att]
+		postCreateER = ca.attToPostCreateExecReport[att]
 	}
 	return
 }
@@ -950,7 +951,8 @@ func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
 	// The NetworkAttachment must be local.
 	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.nodeName)
 
-	// The NetworkAttachment must have a virtual IP to create an Interface.
+	// The NetworkAttachment must have a virtual IP to create a network
+	// interface.
 	attWithAnIP := k8sfields.OneTermNotEqualSelector(attIPv4Field, "")
 
 	// Return a selector given by the logical AND between localAtt and
@@ -985,7 +987,7 @@ func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns s
 	networkAttachments := kosinformers.NewFilteredSharedInformerFactory(ca.kcs, resyncPeriod, ns, tloFunc).Network().V1alpha1().NetworkAttachments()
 
 	// Add indexer used at start up to match pre-existing network interfaces to
-	// owning NetworkAttachment.
+	// owning NetworkAttachment (if one exists).
 	networkAttachments.Informer().AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
 
 	return networkAttachments.Informer(), networkAttachments.Lister()
