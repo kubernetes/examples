@@ -573,8 +573,8 @@ func (ca *ConnectionAgent) localAttachmentIsUpToDate(att *netv1a1.NetworkAttachm
 	return macAddr == att.Status.MACAddress &&
 		ifcName == att.Status.IfcName &&
 		ca.hostIP.String() == att.Status.HostIP &&
-		statusErrs != nil && statusErrs.Equal(att.Status.Errors.Host) &&
-		postCreateER != nil && postCreateER.Equiv(att.Status.PostCreateExecReport)
+		statusErrs.Equal(att.Status.Errors.Host) &&
+		postCreateER.Equiv(att.Status.PostCreateExecReport)
 }
 
 func (ca *ConnectionAgent) syncVirtualNetwork(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) *netv1a1.NetworkAttachment {
