@@ -502,12 +502,17 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 
 	// The only thing left to do is updating the NetworkAttachment status. If
 	// it's not needed, return.
-	ifcMACAddr := attIfc.guestMAC().String()
-	if att == nil || ca.nodeName != att.Spec.Node || ca.localAttachmentIsUpToDate(att, ifcMACAddr, postCreateExecReport, statusErrs) {
+	if att == nil || ca.nodeName != att.Spec.Node {
+		return nil
+	}
+	// If we're here there's no doubt that the NetworkAttachment is local, and
+	// so is its network interface.
+	localIfc := attIfc.(*localNetworkInterface)
+	if ca.localAttachmentIsUpToDate(att, localIfc.GuestMAC.String(), postCreateExecReport, statusErrs) {
 		return nil
 	}
 
-	return ca.updateLocalAttachmentStatus(att, ifcMACAddr, attIfc.name(), statusErrs, postCreateExecReport)
+	return ca.updateLocalAttachmentStatus(att, localIfc.GuestMAC.String(), localIfc.Name, statusErrs, postCreateExecReport)
 }
 
 // getNetworkAttachment attempts to determine the univocal version of the

@@ -40,8 +40,6 @@ var localIfcIDGenerator uint64
 
 type networkInterface interface {
 	canBeOwnedBy(*netv1a1.NetworkAttachment) bool
-	guestMAC() gonet.HardwareAddr
-	name() string
 }
 
 type localNetworkInterface struct {
@@ -60,14 +58,6 @@ func (ifc *localNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) b
 		ifc.hostName == att.Spec.Node
 }
 
-func (ifc *localNetworkInterface) guestMAC() gonet.HardwareAddr {
-	return ifc.GuestMAC
-}
-
-func (ifc *localNetworkInterface) name() string {
-	return ifc.Name
-}
-
 type remoteNetworkInterface struct {
 	netfabric.RemoteNetIfc
 }
@@ -79,14 +69,6 @@ func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) 
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
 		ifc.HostIP.Equal(gonet.ParseIP(att.Status.HostIP))
-}
-
-func (ifc *remoteNetworkInterface) guestMAC() gonet.HardwareAddr {
-	return ifc.GuestMAC
-}
-
-func (ifc *remoteNetworkInterface) name() string {
-	return ""
 }
 
 func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
