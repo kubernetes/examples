@@ -39,7 +39,7 @@ const (
 	failSysUnexpectedType = -3
 )
 
-// LaunchCommand normally forks a goroutine to exec the given command.
+// launchCommand normally forks a goroutine to exec the given command.
 // If the given command is empty this function does nothing and
 // returns nil.  If a problem is discovered during preparation then an
 // ExecReport reflecting that problem is returned and there is no
@@ -49,7 +49,7 @@ const (
 // attachment's status iff it still should be.  If `!saveReport` then
 // the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, netIfc networkInterface, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
+func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, netIfc networkInterface, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
 	if len(cmd) == 0 {
 		return nil
 	}
@@ -66,11 +66,11 @@ func (c *ConnectionAgent) LaunchCommand(attNSN k8stypes.NamespacedName, netIfc n
 		return nil
 	}
 	klog.V(4).Infof("Will launch attachment command: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
-	go func() { c.RunCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, cmd, what, saveReport) }()
+	go func() { c.runCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, cmd, what, saveReport) }()
 	return nil
 }
 
-func (c *ConnectionAgent) RunCommand(attNSN k8stypes.NamespacedName, localIfc netfabric.LocalNetIfc, ifcID string, urcmd []string, what string, saveReport bool) {
+func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, localIfc netfabric.LocalNetIfc, ifcID string, urcmd []string, what string, saveReport bool) {
 	expanded := make([]string, len(urcmd)-1)
 	for i, argi := range urcmd[1:] {
 		argi = strings.Replace(argi, "${ifname}", localIfc.Name, -1)

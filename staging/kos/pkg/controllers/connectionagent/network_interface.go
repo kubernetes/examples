@@ -72,34 +72,41 @@ func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) 
 }
 
 func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
-	if ca.nodeName == att.Spec.Node {
+	if ca.node == att.Spec.Node {
 		ifc, err = ca.createLocalNetworkInterface(att)
 	} else {
 		ifc, err = ca.createRemoteNetworkInterface(att)
 	}
+
 	if err == nil {
 		attNSN := parse.AttNSN(att)
 		ca.assignNetworkInterface(attNSN, ifc)
-		statusErrs = ca.LaunchCommand(attNSN, ifc, att.Spec.PostCreateExec, "postCreate", true, true)
+		statusErrs = ca.launchCommand(attNSN, ifc, att.Spec.PostCreateExec, "postCreate", true, true)
 	}
+
 	return
 }
 
 func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttachment) (*localNetworkInterface, error) {
 	ifc := ca.newLocalNetworkInterfaceForAttachment(att)
+
 	tBefore := time.Now()
 	err := ca.netFabric.CreateLocalIfc(ifc.LocalNetIfc)
 	tAfter := time.Now()
+
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	return ifc, err
 }
 
 func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAttachment) (*remoteNetworkInterface, error) {
 	ifc := ca.newRemoteNetworkInterfaceForAttachment(att)
+
 	tBefore := time.Now()
 	err := ca.netFabric.CreateRemoteIfc(ifc.RemoteNetIfc)
 	tAfter := time.Now()
+
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+
 	return ifc, err
 }
 
@@ -112,9 +119,11 @@ func (ca *ConnectionAgent) deleteNetworkInterface(ownerNSN k8stypes.NamespacedNa
 	default:
 		err = fmt.Errorf("deleteNetworkInterface received an argument of type %T. This should never happen, only supported types are %T and %T", ifcOpaque, &localNetworkInterface{}, &remoteNetworkInterface{})
 	}
+
 	if err == nil {
 		ca.unassignNetworkInterface(ownerNSN)
 	}
+
 	return
 }
 
@@ -122,10 +131,13 @@ func (ca *ConnectionAgent) deleteLocalNetworkInterface(ownerNSN k8stypes.Namespa
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteLocalIfc(ifc.LocalNetIfc)
 	tAfter := time.Now()
+
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+
 	if err == nil {
-		ca.LaunchCommand(ownerNSN, ifc, ifc.postDeleteExec, "postDelete", true, false)
+		ca.launchCommand(ownerNSN, ifc, ifc.postDeleteExec, "postDelete", true, false)
 	}
+
 	return err
 }
 
@@ -133,27 +145,29 @@ func (ca *ConnectionAgent) deleteRemoteNetworkInterface(ifc *remoteNetworkInterf
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteRemoteIfc(ifc.RemoteNetIfc)
 	tAfter := time.Now()
+
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+
 	return err
 }
 
-func (ca *ConnectionAgent) newLocalNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) (ifc *localNetworkInterface) {
-	ifc = &localNetworkInterface{}
+func (ca *ConnectionAgent) newLocalNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) *localNetworkInterface {
+	ifc := &localNetworkInterface{}
 	ifc.VNI = att.Status.AddressVNI
 	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
 	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
 	ifc.Name = generateIfcName(ifc.GuestMAC)
-	ifc.hostName = ca.nodeName
+	ifc.hostName = ca.node
 	ifc.id = string(atomic.AddUint64(&localIfcIDGenerator, 1))
 	ifc.postDeleteExec = att.Spec.PostDeleteExec
-	return
+	return ifc
 }
 
-func (ca *ConnectionAgent) newRemoteNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) (ifc *remoteNetworkInterface) {
-	ifc = &remoteNetworkInterface{}
+func (ca *ConnectionAgent) newRemoteNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) *remoteNetworkInterface {
+	ifc := &remoteNetworkInterface{}
 	ifc.VNI = att.Status.AddressVNI
 	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
 	ifc.HostIP = gonet.ParseIP(att.Status.HostIP)
 	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
-	return
+	return ifc
 }

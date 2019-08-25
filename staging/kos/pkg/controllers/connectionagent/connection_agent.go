@@ -142,7 +142,7 @@ type virtualNetwork struct {
 // attachment with its host IP and the name and the MAC address of the interface
 // which was created.
 type ConnectionAgent struct {
-	nodeName      string
+	node          string
 	hostIP        gonet.IP
 	kcs           *kosclientset.Clientset
 	netv1a1Ifc    netvifc1a1.NetworkV1alpha1Interface
@@ -216,7 +216,7 @@ type ConnectionAgent struct {
 
 // New returns a deactivated instance of a ConnectionAgent (neither the workers
 // goroutines nor any Informer have been started). Invoke Run to activate.
-func New(nodeName string,
+func New(node string,
 	hostIP gonet.IP,
 	kcs *kosclientset.Clientset,
 	eventIfc k8scorev1client.EventInterface,
@@ -232,7 +232,7 @@ func New(nodeName string,
 			Name:        "attachment_create_to_local_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating local interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	attachmentCreateToRemoteIfcHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
@@ -241,7 +241,7 @@ func New(nodeName string,
 			Name:        "attachment_create_to_remote_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating remote interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	fabricLatencyHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -250,7 +250,7 @@ func New(nodeName string,
 			Name:        "fabric_latency_seconds",
 			Help:        "Network fabric operation time in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		},
 		[]string{"op", "err"})
 	attachmentCreateToStatusHistogram := prometheus.NewHistogram(
@@ -260,7 +260,7 @@ func New(nodeName string,
 			Name:        "attachment_create_to_status_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to return from successful status update",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	attachmentStatusHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -269,7 +269,7 @@ func New(nodeName string,
 			Name:        "attachment_status_latency_seconds",
 			Help:        "Round trip latency to update attachment status, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		},
 		[]string{"statusErr", "err"})
 	localAttachmentsGauge := prometheus.NewGauge(
@@ -278,7 +278,7 @@ func New(nodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "local_attachments",
 			Help:        "Number of local attachments in network fabric",
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	remoteAttachmentsGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -286,7 +286,7 @@ func New(nodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "remote_attachments",
 			Help:        "Number of remote attachments in network fabric",
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	attachmentExecDurationHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -295,7 +295,7 @@ func New(nodeName string,
 			Name:        "attachment_exec_duration_secs",
 			Help:        "Time to run attachment commands, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		},
 		[]string{"what"})
 	attachmentExecStatusCounts := prometheus.NewCounterVec(
@@ -304,7 +304,7 @@ func New(nodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "attachment_exec_status_count",
 			Help:        "Counts of commands by what and exit status",
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		},
 		[]string{"what", "exitStatus"})
 	fabricNameCounts := prometheus.NewCounterVec(
@@ -313,7 +313,7 @@ func New(nodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "fabric_count",
 			Help:        "Indicator of chosen fabric implementation",
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		},
 		[]string{"fabric"})
 	workerCount := prometheus.NewCounter(
@@ -322,7 +322,7 @@ func New(nodeName string,
 			Subsystem:   MetricsSubsystem,
 			Name:        "worker_count",
 			Help:        "Number of queue worker threads",
-			ConstLabels: map[string]string{"node": nodeName},
+			ConstLabels: map[string]string{"node": node},
 		})
 	prometheus.MustRegister(attachmentCreateToLocalIfcHistogram, attachmentCreateToRemoteIfcHistogram, fabricLatencyHistograms, attachmentCreateToStatusHistogram, attachmentStatusHistograms, localAttachmentsGauge, remoteAttachmentsGauge, attachmentExecDurationHistograms, attachmentExecStatusCounts, fabricNameCounts, workerCount)
 
@@ -331,10 +331,10 @@ func New(nodeName string,
 	eventBroadcaster := k8seventrecord.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&k8scorev1client.EventSinkImpl{eventIfc})
-	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "connection-agent", Host: nodeName})
+	eventRecorder := eventBroadcaster.NewRecorder(kosscheme.Scheme, k8scorev1api.EventSource{Component: "connection-agent", Host: node})
 
 	return &ConnectionAgent{
-		nodeName:                             nodeName,
+		node:                                 node,
 		hostIP:                               hostIP,
 		kcs:                                  kcs,
 		netv1a1Ifc:                           kcs.NetworkV1alpha1(),
@@ -501,7 +501,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 
 	// The only thing left to do is updating the NetworkAttachment status. If
 	// it's not needed, return.
-	if att == nil || ca.nodeName != att.Spec.Node {
+	if att == nil || ca.node != att.Spec.Node {
 		return nil
 	}
 	// If we're here there's no doubt that the NetworkAttachment is local, and
@@ -620,12 +620,11 @@ func (ca *ConnectionAgent) updateVirtualNetwork(att *netv1a1.NetworkAttachment) 
 
 	vn := ca.vniToVirtNet[att.Status.AddressVNI]
 	if vn == nil {
-		if att.Spec.Node != ca.nodeName {
+		if att.Spec.Node != ca.node {
 			// The NetworkAttachment is remote and has become irrelevant because
 			// the last local NetworkAttachment in its virtual network has been
 			// deleted.
-			att = nil
-			return att, nil
+			return nil, nil
 		}
 
 		// The NetworkAttachment is the first local one with its VNI: its
@@ -635,7 +634,7 @@ func (ca *ConnectionAgent) updateVirtualNetwork(att *netv1a1.NetworkAttachment) 
 		klog.V(3).Infof("Creation of %s made virtual network with VNI %d relevant. Its state has been initialized.", attNSN, att.Status.AddressVNI)
 	}
 
-	if att.Spec.Node == ca.nodeName {
+	if att.Spec.Node == ca.node {
 		// In case there was a deleted remote NetworkAttachment with the same
 		// namespaced name as this one in the virtual network, remove it.
 		delete(vn.remoteAtts, att.Name)
@@ -655,8 +654,7 @@ func (ca *ConnectionAgent) updateVirtualNetwork(att *netv1a1.NetworkAttachment) 
 		delete(ca.vniToVirtNet, att.Status.AddressVNI)
 		ca.finalizeVirtualNetwork(vn, att.Status.AddressVNI)
 		klog.V(3).Infof("Deletion of %s made virtual network with VNI %d irrelevant. All the state associated with it is being deleted.", attNSN, att.Status.AddressVNI)
-		att = nil
-		return att, nil
+		return nil, nil
 	}
 
 	vn.remoteAtts[att.Name] = struct{}{}
@@ -706,7 +704,7 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 	}
 
 	if oldIfcCanBeUsed {
-		statusErrs = ca.LaunchCommand(attNSN, oldIfc, att.Spec.PostCreateExec, "postCreate", false, false)
+		statusErrs = ca.launchCommand(attNSN, oldIfc, att.Spec.PostCreateExec, "postCreate", false, false)
 		postCreateER = oldExecReport
 		ifc = oldIfc
 		return
@@ -949,7 +947,7 @@ func (ca *ConnectionAgent) getRemoteAttsLister(vni uint32) koslisterv1a1.Network
 // NetworkAttachments for whom a network interface can be created.
 func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
 	// The NetworkAttachment must be local.
-	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.nodeName)
+	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.node)
 
 	// The NetworkAttachment must have a virtual IP to create a network
 	// interface.
@@ -965,7 +963,7 @@ func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
 // network interface can be created.
 func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
 	// The NetworkAttachment must be remote.
-	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.nodeName)
+	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.node)
 
 	// The NetworkAttachment must be in the Virtual Network identified by vni.
 	attInSpecificVN := k8sfields.OneTermEqualSelector(attVNIField, strconv.FormatUint(uint64(vni), 10))
