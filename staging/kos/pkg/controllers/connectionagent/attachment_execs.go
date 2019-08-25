@@ -40,14 +40,14 @@ const (
 )
 
 // launchCommand normally forks a goroutine to exec the given command.
-// If the given command is empty this function does nothing and
-// returns nil.  If a problem is discovered during preparation then an
-// ExecReport reflecting that problem is returned and there is no
-// exec.  Otherwise the fork and exec are done and, if `saveReport`,
-// the attachment's local state is updated with the ExecReport and the
-// attachment is requeued so that the ExecReport gets stored into the
-// attachment's status iff it still should be.  If `!saveReport` then
-// the ExecReport is just logged (but probably should be emitted in an
+// If the given command is empty or the network interface is not local this
+// function does nothing and returns nil.
+// If a problem is discovered during preparation then an ExecReport reflecting
+// that problem is returned and there is no exec. Otherwise the fork and exec
+// are done and, if `saveReport`, the attachment's local state is updated with
+// the ExecReport and the attachment is requeued so that the ExecReport gets
+// stored into the attachment's status if it still should be.  If `!saveReport`
+// then the ExecReport is just logged (but probably should be emitted in an
 // Event).
 func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, netIfc networkInterface, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
 	if len(cmd) == 0 {
