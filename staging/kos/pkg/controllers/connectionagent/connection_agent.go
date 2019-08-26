@@ -498,6 +498,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	if err != nil {
 		return err
 	}
+	klog.V(3).Infof("Synced network interface for attachment %s", attNSN)
 
 	// The only thing left to do is updating the NetworkAttachment status. If
 	// it's not needed, return.
@@ -707,6 +708,7 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 		statusErrs = ca.launchCommand(attNSN, oldIfc, att.Spec.PostCreateExec, "postCreate", false, false)
 		postCreateER = oldExecReport
 		ifc = oldIfc
+		klog.V(5).Infof("Attachment %s can use old network interface %s. statusErrs=%#+v, postCreateExecReport=%#+v", attNSN, ifc, statusErrs, postCreateER)
 		return
 	}
 

@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
@@ -39,6 +40,7 @@ import (
 var localIfcIDGenerator uint64
 
 type networkInterface interface {
+	String() string
 	canBeOwnedBy(*netv1a1.NetworkAttachment) bool
 }
 
@@ -58,6 +60,10 @@ func (ifc *localNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) b
 		ifc.hostName == att.Spec.Node
 }
 
+func (ifc *localNetworkInterface) String() string {
+	return fmt.Sprintf("{type=local, VNI=%#x, guestIP=%s, guestMAC=%s, name=%s}", ifc.VNI, ifc.GuestIP, ifc.GuestMAC, ifc.Name)
+}
+
 type remoteNetworkInterface struct {
 	netfabric.RemoteNetIfc
 }
@@ -71,6 +77,10 @@ func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) 
 		ifc.HostIP.Equal(gonet.ParseIP(att.Status.HostIP))
 }
 
+func (ifc *remoteNetworkInterface) String() string {
+	return fmt.Sprintf("{type=remote, VNI=%#x, guestIP=%s, guestMAC=%s, hostIP=%s}", ifc.VNI, ifc.GuestIP, ifc.GuestMAC, ifc.HostIP)
+}
+
 func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
 	if ca.node == att.Spec.Node {
 		ifc, err = ca.createLocalNetworkInterface(att)
@@ -80,6 +90,7 @@ func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment
 
 	if err == nil {
 		attNSN := parse.AttNSN(att)
+		klog.V(5).Infof("Created network interface %s for attachment %s", ifc, attNSN)
 		ca.assignNetworkInterface(attNSN, ifc)
 		statusErrs = ca.launchCommand(attNSN, ifc, att.Spec.PostCreateExec, "postCreate", true, true)
 	}
@@ -95,6 +106,7 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+
 	return ifc, err
 }
 
@@ -121,6 +133,7 @@ func (ca *ConnectionAgent) deleteNetworkInterface(ownerNSN k8stypes.NamespacedNa
 	}
 
 	if err == nil {
+		klog.V(5).Infof("Deleted network interface %s for attachment %s", ifcOpaque, ownerNSN)
 		ca.unassignNetworkInterface(ownerNSN)
 	}
 
