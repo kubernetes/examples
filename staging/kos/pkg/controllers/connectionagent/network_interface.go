@@ -40,8 +40,8 @@ import (
 var localIfcIDGenerator uint64
 
 type networkInterface interface {
-	String() string
 	canBeOwnedBy(*netv1a1.NetworkAttachment) bool
+	String() string
 }
 
 type localNetworkInterface struct {

@@ -50,10 +50,6 @@ import (
 	"k8s.io/examples/staging/kos/pkg/util/parse"
 )
 
-// TODO update prometheus metrics
-// TODO re-discuss with Mike change in MAC address handling
-// TODO inteface to attachment handling need review and probably tweaks related to MAC/hostIP/ifc name
-
 const (
 	// localAttsCacheID is the ID for the local NetworkAttachments informer's
 	// cache. Remote NetworkAttachments informers are partitioned by VNI so
@@ -506,7 +502,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 		return nil
 	}
 	// If we're here there's no doubt that the NetworkAttachment is local, and
-	// so is its network interface.
+	// so must be its network interface.
 	localIfc := attIfc.(*localNetworkInterface)
 	ifcMAC := localIfc.GuestMAC.String()
 	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport) {
@@ -560,6 +556,8 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	}
 
 	// Retrieve the NetworkAttachment.
+	// ? What happens if this .Get hits the cache after the Informer has been
+	// stopped? need to check.
 	att, err := attCache.Get(attNSN.Name)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		klog.Errorf("Failed to look up NetworkAttachment %s: %s. This should never happen, there will be no retry.", attNSN, err.Error())
@@ -599,8 +597,8 @@ func (ca *ConnectionAgent) syncVirtualNetwork(attNSN k8stypes.NamespacedName, at
 
 // updateVirtualNetwork adds a NetworkAttachment to its virtualNetwork.
 // It is safe to call even if the NetworkAttachment is already part of the
-// virtualNetwork state. Edge cases where the NetworkAttachment location (local
-// or remote) has changed since the last invocation are handled.
+// virtualNetwork. Edge cases where the NetworkAttachment location (local or
+// remote) has changed since the last invocation are handled.
 // It assumes that `att` is non-nil.
 // Normally the first return arg is `att` itself, but if the virtual network has
 // become irrelevant it returns nil to signal to the caller that the
@@ -663,8 +661,8 @@ func (ca *ConnectionAgent) updateVirtualNetwork(att *netv1a1.NetworkAttachment) 
 	return att, vn
 }
 
-// updateOldVirtualNetwork removes attNSN from the virtualNetwork associated
-// with oldVNI and performs additional clean up (such as clearing the
+// updateOldVirtualNetwork removes `attNSN` from the virtualNetwork associated
+// with `oldVNI` and performs additional clean up (such as clearing the
 // virtualNetwork) if needed.
 func (ca *ConnectionAgent) updateOldVirtualNetwork(attNSN k8stypes.NamespacedName, oldVNI uint32) {
 	ca.vniToVirtNetMutex.Lock()
