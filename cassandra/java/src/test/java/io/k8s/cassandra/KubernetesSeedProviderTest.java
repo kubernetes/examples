@@ -20,8 +20,10 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -36,12 +38,12 @@ public class KubernetesSeedProviderTest {
 	private static final Logger logger = LoggerFactory.getLogger(KubernetesSeedProviderTest.class);
 
 	@Test
-	@Ignore("has to be run inside of a kube cluster")
+	@Ignore("has to be run inside of a kubernetes cluster")
 	public void getSeeds() throws Exception {
 		SeedProvider provider = new KubernetesSeedProvider(new HashMap<String, String>());
 		List<InetAddress> seeds = provider.getSeeds();
 
-		assertThat(seeds, is(not(empty())));
+		assertThat(seeds, not(empty()));
 
 	}
 }

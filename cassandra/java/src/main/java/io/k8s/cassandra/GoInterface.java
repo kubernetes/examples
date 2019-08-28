@@ -25,9 +25,9 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 public interface GoInterface extends Library {
-	public String GetEndpoints(String namespace, String service, String seeds);
+	String GetEndpoints(String namespace, String service, String seeds);
 
-	public class GoSlice extends Structure {
+	class GoSlice extends Structure {
 		public static class ByValue extends GoSlice implements Structure.ByValue {
 		}
 
@@ -36,11 +36,11 @@ public interface GoInterface extends Library {
 		public long cap;
 
 		protected List<String> getFieldOrder() {
-			return Arrays.asList(new String[] { "data", "len", "cap" });
+			return Arrays.asList("data", "len", "cap" );
 		}
 	}
 
-	public class GoString extends Structure {
+	class GoString extends Structure {
 		public static class ByValue extends GoString implements Structure.ByValue {
 		}
 
@@ -48,7 +48,7 @@ public interface GoInterface extends Library {
 		public long n;
 
 		protected List<String> getFieldOrder() {
-			return Arrays.asList(new String[] { "p", "n" });
+			return Arrays.asList("p", "n" );
 		}
 	}
 }
