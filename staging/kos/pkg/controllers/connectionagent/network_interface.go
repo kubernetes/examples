@@ -19,31 +19,31 @@ package connectionagent
 import (
 	"fmt"
 	gonet "net"
+	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
+	k8scache "k8s.io/client-go/tools/cache"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
-	"k8s.io/examples/staging/kos/pkg/util/parse"
 )
 
-// yes, there's a cap to the total number of local network interfaces that can
-// be generated over time. uint64 is large enough though. Assuming 1Ki local
-// network interfaces per second are created, the cap is reached approximately
-// after 571 million years. We wish KOS all the best but we doubt it can last
-// that long.
 var localIfcIDGenerator uint64
 
+// networkInterface is a convenience interface to simplify the high-level logic
+// of the connection agent by concealing the differences between local and
+// remote network interfaces (which implement it).
 type networkInterface interface {
 	canBeOwnedBy(*netv1a1.NetworkAttachment) bool
+	index() string
 	String() string
 }
 
+// localNetworkInterface wraps a network fabric LocalNetIfc and adds to it state
+// that the network fabric ignores but is relevant to the connection agent.
 type localNetworkInterface struct {
 	netfabric.LocalNetIfc
 	hostName       string
@@ -58,6 +58,10 @@ func (ifc *localNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) b
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
 		ifc.hostName == att.Spec.Node
+}
+
+func (ifc *localNetworkInterface) index() string {
+	return strconv.FormatUint(uint64(ifc.VNI), 16) + "/" + ifc.GuestIP.String()
 }
 
 func (ifc *localNetworkInterface) String() string {
@@ -77,25 +81,19 @@ func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment) 
 		ifc.HostIP.Equal(gonet.ParseIP(att.Status.HostIP))
 }
 
+func (ifc *remoteNetworkInterface) index() string {
+	return ifc.HostIP.String() + "/" + ifc.GuestIP.String()
+}
+
 func (ifc *remoteNetworkInterface) String() string {
 	return fmt.Sprintf("{type=remote, VNI=%#x, guestIP=%s, guestMAC=%s, hostIP=%s}", ifc.VNI, ifc.GuestIP, ifc.GuestMAC, ifc.HostIP)
 }
 
-func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
+func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (networkInterface, error) {
 	if ca.node == att.Spec.Node {
-		ifc, err = ca.createLocalNetworkInterface(att)
-	} else {
-		ifc, err = ca.createRemoteNetworkInterface(att)
+		return ca.createLocalNetworkInterface(att)
 	}
-
-	if err == nil {
-		attNSN := parse.AttNSN(att)
-		klog.V(5).Infof("Created network interface %s for attachment %s", ifc, attNSN)
-		ca.assignNetworkInterface(attNSN, ifc)
-		statusErrs = ca.launchCommand(attNSN, ifc, att.Spec.PostCreateExec, "postCreate", true, true)
-	}
-
-	return
+	return ca.createRemoteNetworkInterface(att)
 }
 
 func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttachment) (*localNetworkInterface, error) {
@@ -122,34 +120,24 @@ func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAtta
 	return ifc, err
 }
 
-func (ca *ConnectionAgent) deleteNetworkInterface(ownerNSN k8stypes.NamespacedName, ifcOpaque networkInterface) (err error) {
+func (ca *ConnectionAgent) deleteNetworkInterface(ifcOpaque networkInterface) (err error) {
 	switch ifc := ifcOpaque.(type) {
 	case *localNetworkInterface:
-		err = ca.deleteLocalNetworkInterface(ownerNSN, ifc)
+		err = ca.deleteLocalNetworkInterface(ifc)
 	case *remoteNetworkInterface:
 		err = ca.deleteRemoteNetworkInterface(ifc)
 	default:
 		err = fmt.Errorf("deleteNetworkInterface received an argument of type %T. This should never happen, only supported types are %T and %T", ifcOpaque, &localNetworkInterface{}, &remoteNetworkInterface{})
 	}
-
-	if err == nil {
-		klog.V(5).Infof("Deleted network interface %s for attachment %s", ifcOpaque, ownerNSN)
-		ca.unassignNetworkInterface(ownerNSN)
-	}
-
 	return
 }
 
-func (ca *ConnectionAgent) deleteLocalNetworkInterface(ownerNSN k8stypes.NamespacedName, ifc *localNetworkInterface) error {
+func (ca *ConnectionAgent) deleteLocalNetworkInterface(ifc *localNetworkInterface) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteLocalIfc(ifc.LocalNetIfc)
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
-
-	if err == nil {
-		ca.launchCommand(ownerNSN, ifc, ifc.postDeleteExec, "postDelete", true, false)
-	}
 
 	return err
 }
@@ -183,4 +171,43 @@ func (ca *ConnectionAgent) newRemoteNetworkInterfaceForAttachment(att *netv1a1.N
 	ifc.HostIP = gonet.ParseIP(att.Status.HostIP)
 	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
 	return ifc
+}
+
+func (ca *ConnectionAgent) listPreExistingNetworkInterfaces() ([]networkInterface, error) {
+	localInterfaces, err := ca.netFabric.ListLocalIfcs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list local network interfaces: %s", err.Error())
+	}
+
+	remoteInterfaces, err := ca.netFabric.ListRemoteIfcs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list remote network interfaces: %s", err.Error())
+	}
+
+	networkInterfaces := make([]networkInterface, 0, len(localInterfaces)+len(remoteInterfaces))
+
+	for _, locIfc := range localInterfaces {
+		networkInterfaces = append(networkInterfaces, &localNetworkInterface{
+			LocalNetIfc: locIfc,
+			hostName:    ca.node,
+			id:          string(atomic.AddUint64(&localIfcIDGenerator, 1))})
+	}
+	for _, remIfc := range remoteInterfaces {
+		networkInterfaces = append(networkInterfaces, &remoteNetworkInterface{
+			RemoteNetIfc: remIfc})
+	}
+
+	return networkInterfaces, nil
+}
+
+func (ca *ConnectionAgent) getIndexerForNetworkInterface(ifcOpaque networkInterface) (indexer k8scache.Indexer, err error) {
+	switch ifc := ifcOpaque.(type) {
+	case *localNetworkInterface:
+		indexer = ca.localAttsInformer.GetIndexer()
+	case *remoteNetworkInterface:
+		indexer = ca.getRemoteAttsIndexer(ifc.VNI)
+	default:
+		err = fmt.Errorf("getIndexerForNetworkInterface received an argument of type %T. This should never happen, only supported types are %T and %T", ifcOpaque, &localNetworkInterface{}, &remoteNetworkInterface{})
+	}
+	return
 }

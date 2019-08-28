@@ -40,8 +40,7 @@ const (
 )
 
 // launchCommand normally forks a goroutine to exec the given command.
-// If the given command is empty or the network interface is not local this
-// function does nothing and returns nil.
+// If the given command is empty this function does nothing and returns nil.
 // If a problem is discovered during preparation then an ExecReport reflecting
 // that problem is returned and there is no exec. Otherwise the fork and exec
 // are done and, if `saveReport`, the attachment's local state is updated with
@@ -49,33 +48,28 @@ const (
 // stored into the attachment's status if it still should be.  If `!saveReport`
 // then the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, netIfc networkInterface, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
+func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, ifcID string, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
 	if len(cmd) == 0 {
 		return nil
 	}
-	localIfc, isLocal := netIfc.(*localNetworkInterface)
-	if !isLocal {
-		// Commands are executed only for local network interfaces.
-		return nil
-	}
 	if _, allowed := c.allowedPrograms[cmd[0]]; !allowed {
-		klog.V(4).Infof("Non-allowed attachment command spec: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
+		klog.V(4).Infof("Non-allowed attachment command spec: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, ifc.VNI, ifc.GuestIP, ifc.Name, ifc.GuestMAC, what, cmd)
 		return sliceOfString{fmt.Sprintf("%s specifies non-allowed path %s", what, cmd[0])}
 	}
 	if !doit {
 		return nil
 	}
-	klog.V(4).Infof("Will launch attachment command: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cmd)
-	go func() { c.runCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, cmd, what, saveReport) }()
+	klog.V(4).Infof("Will launch attachment command: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, ifc.VNI, ifc.GuestIP, ifc.Name, ifc.GuestMAC, what, cmd)
+	go func() { c.runCommand(attNSN, ifc, ifcID, cmd, what, saveReport) }()
 	return nil
 }
 
-func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, localIfc netfabric.LocalNetIfc, ifcID string, urcmd []string, what string, saveReport bool) {
+func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, ifcID string, urcmd []string, what string, saveReport bool) {
 	expanded := make([]string, len(urcmd)-1)
 	for i, argi := range urcmd[1:] {
-		argi = strings.Replace(argi, "${ifname}", localIfc.Name, -1)
-		argi = strings.Replace(argi, "${ipv4}", localIfc.GuestIP.String(), -1)
-		argi = strings.Replace(argi, "${mac}", localIfc.GuestMAC.String(), -1)
+		argi = strings.Replace(argi, "${ifname}", ifc.Name, -1)
+		argi = strings.Replace(argi, "${ipv4}", ifc.GuestIP.String(), -1)
+		argi = strings.Replace(argi, "${mac}", ifc.GuestMAC.String(), -1)
 		expanded[i] = argi
 	}
 	cmd := exec.Command(urcmd[0], expanded...)
@@ -101,17 +95,17 @@ func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, localIfc ne
 			case syscall.WaitStatus:
 				cr.ExitStatus = int32(esyst.ExitStatus())
 			default:
-				klog.Warningf("et.Sys has unexpected type: vni=%06x, att=%s, what=%s, type=%T, esys=%#+v", localIfc.VNI, attNSN, what, esys, esys)
+				klog.Warningf("et.Sys has unexpected type: vni=%06x, att=%s, what=%s, type=%T, esys=%#+v", ifc.VNI, attNSN, what, esys, esys)
 				cr.ExitStatus = failSysUnexpectedType
 			}
 		default:
-			klog.Warningf("err is not a *exec.ExitError: vni=%06x, att=%s, what=%s, type=%T, err=%#+v", localIfc.VNI, attNSN, what, err, err)
+			klog.Warningf("err is not a *exec.ExitError: vni=%06x, att=%s, what=%s, type=%T, err=%#+v", ifc.VNI, attNSN, what, err, err)
 			cr.ExitStatus = failErrNotExit
 		}
 	}
 	c.attachmentExecDurationHistograms.With(prometheus.Labels{"what": what}).Observe(stopTime.Sub(startTime).Seconds())
 	c.attachmentExecStatusCounts.With(prometheus.Labels{"what": what, "exitStatus": strconv.FormatInt(int64(cr.ExitStatus), 10)}).Inc()
-	klog.V(4).Infof("Exec report: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, report=%#+v", attNSN, localIfc.VNI, localIfc.GuestIP, localIfc.Name, localIfc.GuestMAC, what, cr)
+	klog.V(4).Infof("Exec report: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, report=%#+v", attNSN, ifc.VNI, ifc.GuestIP, ifc.Name, ifc.GuestMAC, what, cr)
 	if !saveReport {
 		return
 	}

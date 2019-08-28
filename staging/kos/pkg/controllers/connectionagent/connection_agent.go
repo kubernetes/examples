@@ -31,6 +31,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfields "k8s.io/apimachinery/pkg/fields"
+	k8slabels "k8s.io/apimachinery/pkg/labels"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
@@ -58,10 +59,9 @@ const (
 	// valid VNI value: there's no overlapping with the other IDs.
 	localAttsCacheID cacheID = 0
 
-	// Name of the indexer which computes a string concatenating the VNI and IP
-	// of a network attachment. Used for syncing pre-existing interfaces at
-	// start-up.
-	attVNIAndIPIndexerName = "attachmentVNIAndIP"
+	// Name of the indexer used to match pre-existing network interfaces to
+	// network attachments.
+	ifcOwnerDataIndexerName = "ifcOwnerData"
 
 	// NetworkAttachments in network.example.com/v1alpha1 fields names. Used to
 	// build field selectors.
@@ -380,7 +380,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	}
 	klog.V(2).Infoln("Local NetworkAttachments informer synced")
 
-	if err := ca.syncPreExistingIfcs(); err != nil {
+	if err := ca.syncPreExistingNetworkInterfaces(); err != nil {
 		return err
 	}
 	klog.V(2).Infoln("Pre-existing interfaces synced")
@@ -395,7 +395,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 }
 
 func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
-	ca.localAttsInformer, ca.localAttsLister = ca.newInformerAndLister(resyncPeriod, k8smetav1.NamespaceAll, ca.localAttSelector())
+	ca.localAttsInformer, ca.localAttsLister = ca.newInformerAndLister(resyncPeriod, k8smetav1.NamespaceAll, ca.localAttSelector(), attVNIAndIP)
 
 	ca.localAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onLocalAttAdd,
@@ -434,22 +434,123 @@ func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	ca.queue.Add(attNSN)
 }
 
-func (ca *ConnectionAgent) syncPreExistingIfcs() error {
-	if err := ca.syncPreExistingLocalIfcs(); err != nil {
-		return err
+func (ca *ConnectionAgent) syncPreExistingNetworkInterfaces() error {
+	ifcs, err := ca.listPreExistingNetworkInterfaces()
+	if err != nil {
+		return fmt.Errorf("failed to sync pre-existing network interfaces: %s", err.Error())
 	}
 
-	return ca.syncPreExistingRemoteIfcs()
-}
+	// Start all the remote attachments informers because to choose whether to
+	// keep a pre-existing remote network interface or not we need to look for a
+	// remote network attachment that can own it in the informer cache for the
+	// VNI of the network interface.
+	err = ca.startRemoteAttsInformers()
+	if err != nil {
+		return fmt.Errorf("failed to sync pre-existing network interfaces: %s", err.Error())
+	}
 
-func (ca *ConnectionAgent) syncPreExistingLocalIfcs() error {
-	// TODO: implement
+	for _, ifc := range ifcs {
+		err := ca.syncPreExistingNetworkInterface(ifc)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (ca *ConnectionAgent) syncPreExistingRemoteIfcs() error {
-	// TODO: implement
+func (ca *ConnectionAgent) startRemoteAttsInformers() error {
+	localAtts, err := ca.localAttsLister.List(k8slabels.Everything())
+	if err != nil {
+		return fmt.Errorf("failed to list local network attachments: %s", err.Error())
+	}
+
+	for _, att := range localAtts {
+		// Updating the virtual network entails starting the remote attachments
+		// informer.
+		_, virtNet := ca.updateVirtualNetwork(att)
+		if !virtNet.remoteAttsInformer.HasSynced() && !k8scache.WaitForCacheSync(virtNet.remoteAttsInformerStopCh, virtNet.remoteAttsInformer.HasSynced) {
+			return fmt.Errorf("failed to sync remote attachments informer for VNI %#x", att.Status.AddressVNI)
+		}
+	}
+
 	return nil
+}
+
+func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface) error {
+	// Retrieve the indexer where an attachment elegible to own the network
+	// interface is, assuming one exists.
+	indexer, err := ca.getIndexerForNetworkInterface(ifc)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve indexer for network interface %s", ifc)
+	}
+
+	// Retrieve the attachment elegible to own the network interface, assuming
+	// one exists.
+	var ifcOwner *netv1a1.NetworkAttachment
+	if indexer != nil {
+		ifcOwnerObj, err := indexer.ByIndex(ifcOwnerDataIndexerName, ifc.index())
+		if err != nil {
+			return fmt.Errorf("ByIndex(%s, %s) failed: %s", ifcOwnerDataIndexerName, ifc.index(), err.Error())
+		}
+		if len(ifcOwnerObj) == 1 {
+			ifcOwner, _ = ifcOwnerObj[0].(*netv1a1.NetworkAttachment)
+		}
+	}
+
+	if ifcOwner != nil {
+		ifcOwnerNSN := parse.AttNSN(ifcOwner)
+		_, ownerAlreadyHasInterface := ca.getNetworkInterface(ifcOwnerNSN)
+
+		// Pre-existing Network interfaces are matched to network attachments
+		// on the basis of the VNI, the IP and the host of the attachment. But
+		// these fields can be seen changing even if the namespaced name is
+		// steady, for instance by deleting the network attachment and creating
+		// one with same namespaced name and a different VNI. This means that
+		// two network interfaces could be matched to the same namespaced name,
+		// where each match would correspond to two different versions of the
+		// same network attachment, or two different network attachments with
+		// the same namespaced name. In such cases, the interface to keep is the
+		// one matching the most recent version of the network attachment, while
+		// the other should be deleted. Notice that the order in which the
+		// matches took place does not say which match should be kept, because
+		// the two versions of the matched network attachment might come from
+		// different informers and there are no cross-informer ordering
+		// guarantees. There are ways to always take the optimal choice, but
+		// they make for really complex code and yield little advantage because
+		// attachments can change: if an attachment is matched and it changes 1
+		// sec later, the match was useless. For this reason, this code does not
+		// attempt to always take the optimal choice: in cases of collisions the
+		// interface that was matched first is taken and the other is deleted.
+		// Collisions should be a rare event anyway. Even if the wrong choice is
+		// taken during normal operation the connection agent will rectify the
+		// the mistake by realizing the network interface does not match the
+		// attachment and creating a correct interface after deleting the old one.
+		if !ownerAlreadyHasInterface {
+			ca.assignNetworkInterface(ifcOwnerNSN, ifc)
+			klog.V(3).Infof("Matched pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
+			if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
+				ca.setExecReport(ifcOwnerNSN, localIfc.id, ifcOwner.Status.PostCreateExecReport)
+				localIfc.postDeleteExec = ifcOwner.Spec.PostDeleteExec
+			}
+			return nil
+		}
+	}
+
+	// No attachment elegible to own the network interface was found: delete it.
+	ca.deleteOrphanNetworkInterface(ifc)
+	return nil
+}
+
+func (ca *ConnectionAgent) deleteOrphanNetworkInterface(ifc networkInterface) {
+	for i := 1; ; i++ {
+		err := ca.deleteNetworkInterface(ifc)
+		if err == nil {
+			klog.V(4).Infof("Deleted pre-existing orphan network interface %s (attempt nbr. %d)", ifc, i)
+			break
+		}
+		klog.Errorf("failed to delete pre-existing orphan network interface %s (attempt nbr. %d)", ifc, i)
+	}
 }
 
 func (ca *ConnectionAgent) processQueue() {
@@ -490,7 +591,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	// att.
 	att = ca.syncVirtualNetwork(attNSN, att)
 
-	attIfc, statusErrs, postCreateExecReport, err := ca.syncNetworkInterface(attNSN, att)
+	localIfc, statusErrs, postCreateExecReport, err := ca.syncNetworkInterface(attNSN, att)
 	if err != nil {
 		return err
 	}
@@ -501,9 +602,8 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	if att == nil || ca.node != att.Spec.Node {
 		return nil
 	}
-	// If we're here there's no doubt that the NetworkAttachment is local, and
-	// so must be its network interface.
-	localIfc := attIfc.(*localNetworkInterface)
+	// If we're here there's no doubt that the NetworkAttachment and its
+	// interface are local.
 	ifcMAC := localIfc.GuestMAC.String()
 	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport) {
 		return nil
@@ -687,14 +787,20 @@ func (ca *ConnectionAgent) updateOldVirtualNetwork(attNSN k8stypes.NamespacedNam
 	delete(oldVN.remoteAtts, attNSN.Name)
 }
 
-func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport, err error) {
-	oldIfc, oldExecReport, oldIfcFound := ca.getNetworkInterface(attNSN)
+func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (localIfc *localNetworkInterface, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport, err error) {
+	oldIfc, oldIfcFound := ca.getNetworkInterface(attNSN)
 	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedBy(att)
 
 	if oldIfcFound && !oldIfcCanBeUsed {
-		err = ca.deleteNetworkInterface(attNSN, oldIfc)
+		err = ca.deleteNetworkInterface(oldIfc)
 		if err != nil {
 			return
+		}
+		ca.unassignNetworkInterface(attNSN)
+		klog.V(4).Infof("Deleted network interface %s for attachment %s", oldIfc, attNSN)
+		if oldLocalIfc, oldIfcIsLocal := oldIfc.(*localNetworkInterface); oldIfcIsLocal {
+			ca.unsetExecReport(attNSN)
+			ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, oldLocalIfc.id, oldLocalIfc.postDeleteExec, "postDelete", true, false)
 		}
 	}
 
@@ -703,14 +809,25 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 	}
 
 	if oldIfcCanBeUsed {
-		statusErrs = ca.launchCommand(attNSN, oldIfc, att.Spec.PostCreateExec, "postCreate", false, false)
-		postCreateER = oldExecReport
-		ifc = oldIfc
-		klog.V(5).Infof("Attachment %s can use old network interface %s. statusErrs=%#+v, postCreateExecReport=%#+v", attNSN, ifc, statusErrs, postCreateER)
+		if oldLocalIfc, oldIfcIsLocal := oldIfc.(*localNetworkInterface); oldIfcIsLocal {
+			statusErrs = ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, oldLocalIfc.id, att.Spec.PostCreateExec, "postCreate", false, false)
+			postCreateER = ca.getExecReport(attNSN)
+			localIfc = oldLocalIfc
+		}
+		klog.V(4).Infof("Attachment %s can use old network interface %s.", attNSN, oldIfc)
 		return
 	}
 
-	ifc, statusErrs, err = ca.createNetworkInterface(att)
+	ifc, err := ca.createNetworkInterface(att)
+	if err != nil {
+		return
+	}
+	ca.assignNetworkInterface(attNSN, ifc)
+	klog.V(4).Infof("Created network interface %s for attachment %s", ifc, attNSN)
+	if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
+		statusErrs = ca.launchCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, att.Spec.PostCreateExec, "postCreate", true, true)
+	}
+
 	return
 }
 
@@ -773,7 +890,7 @@ func (ca *ConnectionAgent) finalizeVirtualNetwork(vn *virtualNetwork, vni uint32
 }
 
 func (ca *ConnectionAgent) initVirtualNetwork(ns string, vni uint32) *virtualNetwork {
-	remoteAttsInformer, remoteAttsLister := ca.newInformerAndLister(resyncPeriod, ns, ca.remoteAttSelector(vni))
+	remoteAttsInformer, remoteAttsLister := ca.newInformerAndLister(resyncPeriod, ns, ca.remoteAttSelector(vni), attHostIPAndIP)
 
 	remoteAttsInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 		AddFunc:    ca.onRemoteAttAdd,
@@ -821,14 +938,11 @@ func (ca *ConnectionAgent) onRemoteAttDelete(obj interface{}) {
 	ca.queue.Add(attNSN)
 }
 
-func (ca *ConnectionAgent) getNetworkInterface(att k8stypes.NamespacedName) (ifc networkInterface, postCreateER *netv1a1.ExecReport, ifcFound bool) {
+func (ca *ConnectionAgent) getNetworkInterface(att k8stypes.NamespacedName) (ifc networkInterface, ifcFound bool) {
 	ca.attToNetworkInterfaceMutex.RLock()
 	defer ca.attToNetworkInterfaceMutex.RUnlock()
 
 	ifc, ifcFound = ca.attToNetworkInterface[att]
-	if ifcFound {
-		postCreateER = ca.attToPostCreateExecReport[att]
-	}
 	return
 }
 
@@ -837,7 +951,6 @@ func (ca *ConnectionAgent) assignNetworkInterface(att k8stypes.NamespacedName, i
 	defer ca.attToNetworkInterfaceMutex.Unlock()
 
 	ca.attToNetworkInterface[att] = ifc
-	// TODO: update gauge for local/remote NetworkAttachments.
 }
 
 func (ca *ConnectionAgent) setExecReport(att k8stypes.NamespacedName, ifcID string, er *netv1a1.ExecReport) {
@@ -858,13 +971,25 @@ func (ca *ConnectionAgent) setExecReport(att k8stypes.NamespacedName, ifcID stri
 	}
 }
 
+func (ca *ConnectionAgent) unsetExecReport(att k8stypes.NamespacedName) {
+	ca.attToNetworkInterfaceMutex.Lock()
+	defer ca.attToNetworkInterfaceMutex.Unlock()
+
+	delete(ca.attToPostCreateExecReport, att)
+}
+
+func (ca *ConnectionAgent) getExecReport(att k8stypes.NamespacedName) *netv1a1.ExecReport {
+	ca.attToNetworkInterfaceMutex.RLock()
+	defer ca.attToNetworkInterfaceMutex.RUnlock()
+
+	return ca.attToPostCreateExecReport[att]
+}
+
 func (ca *ConnectionAgent) unassignNetworkInterface(att k8stypes.NamespacedName) {
 	ca.attToNetworkInterfaceMutex.Lock()
 	defer ca.attToNetworkInterfaceMutex.Unlock()
 
 	delete(ca.attToNetworkInterface, att)
-	delete(ca.attToPostCreateExecReport, att)
-	// TODO: update gauge for local/remote NetworkAttachments.
 }
 
 func (ca *ConnectionAgent) getVirtNetVNI(att k8stypes.NamespacedName) (vni uint32, found bool) {
@@ -943,6 +1068,18 @@ func (ca *ConnectionAgent) getRemoteAttsLister(vni uint32) koslisterv1a1.Network
 	return vn.remoteAttsLister
 }
 
+func (ca *ConnectionAgent) getRemoteAttsIndexer(vni uint32) k8scache.Indexer {
+	ca.vniToVirtNetMutex.RLock()
+	defer ca.vniToVirtNetMutex.RUnlock()
+
+	vn := ca.vniToVirtNet[vni]
+	if vn == nil {
+		return nil
+	}
+
+	return vn.remoteAttsInformer.GetIndexer()
+}
+
 // localAttSelector returns a fields selector that matches local
 // NetworkAttachments for whom a network interface can be created.
 func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
@@ -980,21 +1117,13 @@ func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
 	return fieldsSelector{k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)}
 }
 
-func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs fieldsSelector) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
+func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs fieldsSelector, indexer k8scache.IndexFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
 	tloFunc := fs.toTweakListOptionsFunc()
 	networkAttachments := kosinformers.NewFilteredSharedInformerFactory(ca.kcs, resyncPeriod, ns, tloFunc).Network().V1alpha1().NetworkAttachments()
 
 	// Add indexer used at start up to match pre-existing network interfaces to
 	// owning NetworkAttachment (if one exists).
-	networkAttachments.Informer().AddIndexers(map[string]k8scache.IndexFunc{attVNIAndIPIndexerName: attVNIAndIPIndexer})
+	networkAttachments.Informer().AddIndexers(map[string]k8scache.IndexFunc{ifcOwnerDataIndexerName: indexer})
 
 	return networkAttachments.Informer(), networkAttachments.Lister()
-}
-
-// attVNIAndIPIndexer is an Index function that computes a string made up by vni
-// and IP of a NetworkAttachment. Used to sync pre-existing interfaces with
-// attachments at start up.
-func attVNIAndIPIndexer(obj interface{}) ([]string, error) {
-	att := obj.(*netv1a1.NetworkAttachment)
-	return []string{attVNIAndIP(att.Status.AddressVNI, att.Status.IPv4)}, nil
 }

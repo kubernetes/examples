@@ -17,16 +17,16 @@ limitations under the License.
 package connectionagent
 
 import (
-	"bytes"
 	gonet "net"
 	"strconv"
 	"strings"
 
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfields "k8s.io/apimachinery/pkg/fields"
+	k8scache "k8s.io/client-go/tools/cache"
 
+	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	kosinternalifcs "k8s.io/examples/staging/kos/pkg/client/informers/externalversions/internalinterfaces"
-	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
 )
 
 type sliceOfString []string
@@ -61,25 +61,25 @@ func (fs fieldsSelector) toTweakListOptionsFunc() kosinternalifcs.TweakListOptio
 	}
 }
 
-func ifcNeedsUpdate(ifcHostIP, newHostIP gonet.IP, ifcMAC, newMAC gonet.HardwareAddr) bool {
-	return !ifcHostIP.Equal(newHostIP) || !bytes.Equal(ifcMAC, newMAC)
+// attVNIAndIP is an Index function that computes a string made up by vni and IP
+// of a NetworkAttachment. Used to sync pre-existing local network interfaces
+// with local network attachments at start up.
+func attVNIAndIP(obj interface{}) ([]string, error) {
+	att := obj.(*netv1a1.NetworkAttachment)
+	return []string{strconv.FormatUint(uint64(att.Status.AddressVNI), 16) + "/" + att.Status.IPv4}, nil
 }
 
-func attVNIAndIP(vni uint32, ipv4 string) string {
-	return strconv.FormatUint(uint64(vni), 16) + "/" + ipv4
+var _ k8scache.IndexFunc = attVNIAndIP
+
+// attHostIPAndIP is an Index function that computes a string made up by host IP
+// and IP of a NetworkAttachment. Used to sync pre-existing remote network
+// interfaces with remote network attachments at start up.
+func attHostIPAndIP(obj interface{}) ([]string, error) {
+	att := obj.(*netv1a1.NetworkAttachment)
+	return []string{att.Status.HostIP + "/" + att.Status.IPv4}, nil
 }
 
-func localIfcVNIAndIP(ifc *netfabric.LocalNetIfc) string {
-	return ifcVNIAndIP(ifc.VNI, ifc.GuestIP)
-}
-
-func remoteIfcVNIAndIP(ifc *netfabric.RemoteNetIfc) string {
-	return ifcVNIAndIP(ifc.VNI, ifc.GuestIP)
-}
-
-func ifcVNIAndIP(vni uint32, ipv4 gonet.IP) string {
-	return strconv.FormatUint(uint64(vni), 16) + "/" + ipv4.String()
-}
+var _ k8scache.IndexFunc = attHostIPAndIP
 
 func generateMACAddr(vni uint32, guestIPv4 gonet.IP) gonet.HardwareAddr {
 	guestIPBytes := guestIPv4.To4()
