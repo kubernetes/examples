@@ -363,12 +363,6 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	defer k8sutilruntime.HandleCrash()
 	defer ca.queue.ShutDown()
 
-	// Serve Prometheus metrics
-	http.Handle("/metrics", promhttp.Handler())
-	go func() {
-		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
-	}()
-
 	ca.stopCh = stopCh
 
 	ca.initLocalAttsInformerAndLister()
@@ -384,6 +378,12 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 		return err
 	}
 	klog.V(2).Infoln("Pre-existing interfaces synced")
+
+	// Serve Prometheus metrics.
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
+	}()
 
 	for i := 0; i < ca.workers; i++ {
 		go k8swait.Until(ca.processQueue, time.Second, stopCh)
@@ -825,6 +825,7 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 	ca.assignNetworkInterface(attNSN, ifc)
 	klog.V(4).Infof("Created network interface %s for attachment %s", ifc, attNSN)
 	if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
+		ca.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "Implemented", "Created Linux network interface named %s with MAC address %s and IPv4 address %s", localIfc.Name, localIfc.GuestMAC, localIfc.GuestIP)
 		statusErrs = ca.launchCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, att.Spec.PostCreateExec, "postCreate", true, true)
 	}
 

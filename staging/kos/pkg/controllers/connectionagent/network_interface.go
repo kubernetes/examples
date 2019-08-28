@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	k8scache "k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
@@ -104,6 +105,12 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		if att.Status.IfcName == "" {
+			ca.attachmentCreateToLocalIfcHistogram.Observe(tAfter.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
+		}
+		ca.localAttachmentsGauge.Inc()
+	}
 
 	return ifc, err
 }
@@ -116,6 +123,10 @@ func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAtta
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		ca.attachmentCreateToRemoteIfcHistogram.Observe(tAfter.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
+		ca.remoteAttachmentsGauge.Inc()
+	}
 
 	return ifc, err
 }
@@ -138,6 +149,9 @@ func (ca *ConnectionAgent) deleteLocalNetworkInterface(ifc *localNetworkInterfac
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		ca.localAttachmentsGauge.Dec()
+	}
 
 	return err
 }
@@ -148,6 +162,9 @@ func (ca *ConnectionAgent) deleteRemoteNetworkInterface(ifc *remoteNetworkInterf
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		ca.remoteAttachmentsGauge.Dec()
+	}
 
 	return err
 }
@@ -178,11 +195,15 @@ func (ca *ConnectionAgent) listPreExistingNetworkInterfaces() ([]networkInterfac
 	if err != nil {
 		return nil, fmt.Errorf("failed to list local network interfaces: %s", err.Error())
 	}
+	klog.V(2).Infof("Found %d pre-existing local network interfaces.", len(localInterfaces))
+	ca.localAttachmentsGauge.Set(float64(len(localInterfaces)))
 
 	remoteInterfaces, err := ca.netFabric.ListRemoteIfcs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list remote network interfaces: %s", err.Error())
 	}
+	klog.V(2).Infof("Found %d pre-existing remote network interfaces.", len(remoteInterfaces))
+	ca.remoteAttachmentsGauge.Set(float64(len(remoteInterfaces)))
 
 	networkInterfaces := make([]networkInterface, 0, len(localInterfaces)+len(remoteInterfaces))
 
