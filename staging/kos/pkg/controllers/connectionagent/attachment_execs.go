@@ -48,7 +48,7 @@ const (
 // stored into the attachment's status if it still should be.  If `!saveReport`
 // then the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, ifcID string, cmd []string, what string, doit, saveReport bool) (statusErrs sliceOfString) {
+func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, ifcID string, cmd []string, what string, doit, saveReport bool) sliceOfString {
 	if len(cmd) == 0 {
 		return nil
 	}

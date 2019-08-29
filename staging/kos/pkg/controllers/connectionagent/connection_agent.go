@@ -824,7 +824,8 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 	}
 	ca.assignNetworkInterface(attNSN, ifc)
 	klog.V(4).Infof("Created network interface %s for attachment %s", ifc, attNSN)
-	if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
+	localIfc, ifcIsLocal := ifc.(*localNetworkInterface)
+	if ifcIsLocal {
 		ca.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "Implemented", "Created Linux network interface named %s with MAC address %s and IPv4 address %s", localIfc.Name, localIfc.GuestMAC, localIfc.GuestIP)
 		statusErrs = ca.launchCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, att.Spec.PostCreateExec, "postCreate", true, true)
 	}
