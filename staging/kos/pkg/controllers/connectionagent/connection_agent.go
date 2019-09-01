@@ -763,6 +763,7 @@ func (ca *ConnectionAgent) addLocalAttToLayer2VNState(att k8stypes.NamespacedNam
 		// The NetworkAttachment is the first local one for its virtual network,
 		// which has therefore just become relevant.
 		l2VNState = ca.initLayer2VNState(vni, att.Namespace)
+		klog.V(2).Infof("Virtual Network with VNI %d became relevant because of creation of first local attachment %s. Its state has been initialized.", vni, att)
 	}
 
 	if l2VNState.namespace != att.Namespace {
@@ -797,6 +798,7 @@ func (ca *ConnectionAgent) removeLocalAttFromLayer2VNState(att k8stypes.Namespac
 		delete(ca.vniToLayer2VNState, vni)
 		close(oldLayer2VNState.remoteAttsInformerStopCh)
 		ca.clearLayer1VNState(vni, oldLayer2VNState.namespace)
+		klog.V(2).Infof("Virtual Network with VNI %d became irrelevant because of deletion of last local attachment %s. Its state is being cleared.", vni, att)
 	}
 }
 
