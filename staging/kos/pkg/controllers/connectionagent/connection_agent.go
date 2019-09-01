@@ -80,14 +80,14 @@ const (
 	// The HTTP port under which the scraping endpoint ("/metrics") is served.
 	// Pick an unusual one because the host's network namespace is used.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
-	MetricsAddr = ":9294"
+	metricsAddr = ":9294"
 
 	// The HTTP path under which the scraping endpoint ("/metrics") is served.
-	MetricsPath = "/metrics"
+	metricsPath = "/metrics"
 
 	// The namespace and subsystem of the Prometheus metrics produced here
-	MetricsNamespace = "kos"
-	MetricsSubsystem = "agent"
+	metricsNamespace = "kos"
+	metricsSubsystem = "agent"
 )
 
 // cacheID models the ID of an informer's cache. Used to keep track of which
@@ -222,8 +222,8 @@ func New(node string,
 
 	attachmentCreateToLocalIfcHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_create_to_local_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating local interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
@@ -231,8 +231,8 @@ func New(node string,
 		})
 	attachmentCreateToRemoteIfcHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_create_to_remote_ifc_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to finished creating remote interface",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
@@ -240,8 +240,8 @@ func New(node string,
 		})
 	fabricLatencyHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "fabric_latency_seconds",
 			Help:        "Network fabric operation time in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16},
@@ -250,8 +250,8 @@ func New(node string,
 		[]string{"op", "err"})
 	attachmentCreateToStatusHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_create_to_status_latency_seconds",
 			Help:        "Seconds from attachment CreationTimestamp to return from successful status update",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
@@ -259,8 +259,8 @@ func New(node string,
 		})
 	attachmentStatusHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_status_latency_seconds",
 			Help:        "Round trip latency to update attachment status, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
@@ -269,24 +269,24 @@ func New(node string,
 		[]string{"statusErr", "err"})
 	localAttachmentsGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "local_attachments",
 			Help:        "Number of local attachments in network fabric",
 			ConstLabels: map[string]string{"node": node},
 		})
 	remoteAttachmentsGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "remote_attachments",
 			Help:        "Number of remote attachments in network fabric",
 			ConstLabels: map[string]string{"node": node},
 		})
 	attachmentExecDurationHistograms := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_exec_duration_secs",
 			Help:        "Time to run attachment commands, in seconds",
 			Buckets:     []float64{-0.125, 0, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256},
@@ -295,8 +295,8 @@ func New(node string,
 		[]string{"what"})
 	attachmentExecStatusCounts := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "attachment_exec_status_count",
 			Help:        "Counts of commands by what and exit status",
 			ConstLabels: map[string]string{"node": node},
@@ -304,8 +304,8 @@ func New(node string,
 		[]string{"what", "exitStatus"})
 	fabricNameCounts := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "fabric_count",
 			Help:        "Indicator of chosen fabric implementation",
 			ConstLabels: map[string]string{"node": node},
@@ -313,8 +313,8 @@ func New(node string,
 		[]string{"fabric"})
 	workerCount := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace:   MetricsNamespace,
-			Subsystem:   MetricsSubsystem,
+			Namespace:   metricsNamespace,
+			Subsystem:   metricsSubsystem,
 			Name:        "worker_count",
 			Help:        "Number of queue worker threads",
 			ConstLabels: map[string]string{"node": node},
@@ -381,7 +381,7 @@ func (ca *ConnectionAgent) Run(stopCh <-chan struct{}) error {
 	// Serve Prometheus metrics.
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(MetricsAddr, nil).Error())
+		klog.Errorf("In-process HTTP server crashed: %s", http.ListenAndServe(metricsAddr, nil).Error())
 	}()
 
 	for i := 0; i < ca.workers; i++ {

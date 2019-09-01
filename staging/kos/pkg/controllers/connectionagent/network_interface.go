@@ -25,7 +25,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	k8scache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
@@ -221,14 +220,14 @@ func (ca *ConnectionAgent) listPreExistingNetworkInterfaces() ([]networkInterfac
 	return networkInterfaces, nil
 }
 
-func (ca *ConnectionAgent) getIndexerForNetworkInterface(ifcOpaque networkInterface) (indexer k8scache.Indexer, err error) {
-	switch ifc := ifcOpaque.(type) {
-	case *localNetworkInterface:
-		indexer = ca.localAttsInformer.GetIndexer()
-	case *remoteNetworkInterface:
-		indexer = ca.getRemoteAttsIndexer(ifc.VNI)
-	default:
-		err = fmt.Errorf("getIndexerForNetworkInterface received an argument of type %T. This should never happen, only supported types are %T and %T", ifcOpaque, &localNetworkInterface{}, &remoteNetworkInterface{})
-	}
-	return
-}
+// func (ca *ConnectionAgent) getIndexerForNetworkInterface(ifcOpaque networkInterface) (indexer k8scache.Indexer, err error) {
+// 	switch ifc := ifcOpaque.(type) {
+// 	case *localNetworkInterface:
+// 		indexer = ca.localAttsInformer.GetIndexer()
+// 	case *remoteNetworkInterface:
+// 		indexer = ca.getRemoteAttsIndexer(ifc.VNI)
+// 	default:
+// 		err = fmt.Errorf("getIndexerForNetworkInterface received an argument of type %T. This should never happen, only supported types are %T and %T", ifcOpaque, &localNetworkInterface{}, &remoteNetworkInterface{})
+// 	}
+// 	return
+// }
