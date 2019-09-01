@@ -1121,7 +1121,7 @@ func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
 
 func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs fieldsSelector, indexer k8scache.IndexFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
 	tloFunc := fs.toTweakListOptionsFunc()
-	networkAttachments := kosinformers.NewFilteredSharedInformerFactory(ca.kcs, resyncPeriod, ns, tloFunc).Network().V1alpha1().NetworkAttachments()
+	networkAttachments := kosinformers.NewSharedInformerFactoryWithOptions(ca.kcs, resyncPeriod, kosinformers.WithNamespace(ns), kosinformers.WithTweakListOptions(tloFunc)).Network().V1alpha1().NetworkAttachments()
 
 	// Add indexer used at start up to match pre-existing network interfaces to
 	// owning NetworkAttachment (if one exists).
