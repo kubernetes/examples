@@ -41,9 +41,9 @@ This section uses following core components of Kubernetes:
 Run the below commands to get started quickly
 
 ```sh
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-pvc.yaml?raw=true
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-deployment.yaml?raw=true
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-service.yaml?raw=true
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-pvc.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-deployment.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-service.yaml
 ```
 
 ### Step 1: Create Persistent Volume Claim
@@ -61,13 +61,13 @@ kind: PersistentVolumeClaim
 metadata:
   # This name uniquely identifies the PVC. Will be used in deployment below.
   name: minio-pv-claim
-  storageClassName: standard
   labels:
     app: minio-storage-claim
 spec:
   # Read more about access modes here: http://kubernetes.io/docs/user-guide/persistent-volumes/#access-modes
   accessModes:
     - ReadWriteOnce
+  storageClassName: standard
   resources:
     # This is the request for storage. Should be available in the cluster.
     requests:
@@ -77,7 +77,7 @@ spec:
 Create the PersistentVolumeClaim
 
 ```sh
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-pvc.yaml?raw=true
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-pvc.yaml
 persistentvolumeclaim "minio-pv-claim" created
 ```
 
@@ -136,7 +136,7 @@ spec:
 Create the Deployment
 
 ```sh
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-deployment.yaml?raw=true
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-deployment.yaml
 deployment "minio-deployment" created
 ```
 
@@ -163,7 +163,7 @@ spec:
 Create the Minio service
 
 ```sh
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-standalone-service.yaml?raw=true
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-standalone-service.yaml
 service "minio-service" created
 ```
 
@@ -199,9 +199,9 @@ This example uses following core components of Kubernetes:
 Run the below commands to get started quickly
 
 ```sh
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-headless-service.yaml?raw=true
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-statefulset.yaml?raw=true
-kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-service.yaml?raw=true
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-headless-service.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-statefulset.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-service.yaml
 ```
 
 ### Step 1: Create Minio Headless Service
@@ -229,7 +229,7 @@ spec:
 Create the Headless Service
 
 ```sh
-$ kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-headless-service.yaml?raw=true
+$ kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-headless-service.yaml
 service "minio" created
 ```
 
@@ -297,7 +297,7 @@ spec:
 Create the Statefulset
 
 ```sh
-$ kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-statefulset.yaml?raw=true
+$ kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-statefulset.yaml
 statefulset "minio" created
 ```
 
@@ -324,7 +324,7 @@ spec:
 Create the Minio service
 
 ```sh
-$ kubectl create -f https://github.com/kubernetes/kubernetes/blob/master/examples/storage/minio/minio-distributed-service.yaml?raw=true
+$ kubectl create -f https://raw.githubusercontent.com/kubernetes/examples/master/staging/storage/minio/minio-distributed-service.yaml
 service "minio-service" created
 ```
 
