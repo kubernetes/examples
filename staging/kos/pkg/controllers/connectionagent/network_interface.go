@@ -34,9 +34,8 @@ import (
 
 var localIfcIDGenerator uint64
 
-// networkInterface is a convenience interface to simplify the high-level logic
-// of the connection agent by concealing the differences between local and
-// remote network interfaces (which implement it).
+// networkInterface provides access to the local networking state of
+// NetworkAttachments.
 type networkInterface interface {
 	canBeOwnedBy(*netv1a1.NetworkAttachment) bool
 	index() string

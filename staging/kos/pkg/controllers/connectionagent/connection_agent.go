@@ -63,8 +63,7 @@ const (
 	// network attachments.
 	ifcOwnerDataIndexerName = "ifcOwnerData"
 
-	// NetworkAttachments in network.example.com/v1alpha1 fields names. Used to
-	// build field selectors.
+	// Field names of NetworkAttachments used to build field selectors.
 	attNodeField   = "spec.node"
 	attIPv4Field   = "status.ipv4"
 	attHostIPField = "status.hostIP"
@@ -78,12 +77,12 @@ const (
 	// network fabric operation fails while handling pre-existing interfaces.
 	netFabricRetryPeriod = time.Second
 
-	// The HTTP port under which the scraping endpoint ("/metrics") is served.
+	// The HTTP port at which Prometheus metrics are served.
 	// Pick an unusual one because the host's network namespace is used.
 	// See https://github.com/prometheus/prometheus/wiki/Default-port-allocations .
 	metricsAddr = ":9294"
 
-	// The HTTP path under which the scraping endpoint ("/metrics") is served.
+	// The HTTP path at which Prometheus metrics are served.
 	metricsPath = "/metrics"
 
 	// The namespace and subsystem of the Prometheus metrics produced here
@@ -157,8 +156,8 @@ type layer2VirtualNetworkState struct {
 // the associated virtual network becomes irrelevant (and this in turn triggers
 // deletion of the network interfaces of remote NetworkAttachments in that
 // virtual network).
-// All operations on a layer2VirtualNetworksState must be done while holding
-// its mutex's lock.
+// All operations on a layer2VirtualNetworksState while queue workers are
+// running must be done with the mutex locked.
 type layer2VirtualNetworksState struct {
 	sync.Mutex
 
