@@ -634,6 +634,7 @@ func (ca *ConnectionAgent) deleteOrphanNetworkInterface(ifc networkInterface) {
 			break
 		}
 		klog.Errorf("failed to delete pre-existing orphan network interface %s (attempt nbr. %d)", ifc, i)
+		time.Sleep(netFabricRetryPeriod)
 	}
 }
 
