@@ -102,16 +102,18 @@ func generateIfcName(macAddr gonet.HardwareAddr) string {
 func mergeStopChannels(ch1, ch2 <-chan struct{}) chan struct{} {
 	aggregateStopCh := make(chan struct{})
 	go func() {
-		select {
-		case _, ch1Open := <-ch1:
-			if !ch1Open {
-				close(aggregateStopCh)
-				return
-			}
-		case _, ch2Open := <-ch2:
-			if !ch2Open {
-				close(aggregateStopCh)
-				return
+		for {
+			select {
+			case _, ch1Open := <-ch1:
+				if !ch1Open {
+					close(aggregateStopCh)
+					return
+				}
+			case _, ch2Open := <-ch2:
+				if !ch2Open {
+					close(aggregateStopCh)
+					return
+				}
 			}
 		}
 	}()
