@@ -207,13 +207,13 @@ type ConnectionAgent struct {
 	// Always access while holding its mutex.
 	// Never attempt to lock l2VirtNetsState's mutex while holding
 	// l1VirtNetsState's, it can lead to deadlock.
-	l1VirtNetsState *layer1VirtualNetworksState
+	l1VirtNetsState layer1VirtualNetworksState
 
 	// Layer 2 of the state associated with all relevant virtual networks.
 	// Always access while holding its mutex.
 	// It is safe to attempt to lock l1VirtNetsState's mutex while holding
 	// l2VirtNetsState's.
-	l2VirtNetsState *layer2VirtualNetworksState
+	l2VirtNetsState layer2VirtualNetworksState
 
 	// attToNetworkInterface maps NetworkAttachments namespaced names to their
 	// network interfaces.
@@ -380,11 +380,11 @@ func New(node string,
 		queue:         queue,
 		workers:       workers,
 		netFabric:     netFabric,
-		l1VirtNetsState: &layer1VirtualNetworksState{
+		l1VirtNetsState: layer1VirtualNetworksState{
 			attToSeenInCaches: make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
 			vniToVNState:      make(map[uint32]*layer1VirtualNetworkState),
 		},
-		l2VirtNetsState: &layer2VirtualNetworksState{
+		l2VirtNetsState: layer2VirtualNetworksState{
 			localAttToLayer2VNI: make(map[k8stypes.NamespacedName]uint32),
 			vniToVNState:        make(map[uint32]*layer2VirtualNetworkState),
 		},
