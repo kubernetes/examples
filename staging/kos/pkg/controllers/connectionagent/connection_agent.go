@@ -97,10 +97,6 @@ type cacheID uint32
 // layer1VirtualNetworkState is the first layer of state associated with a
 // single relevant virtual network.
 type layer1VirtualNetworkState struct {
-	// unique identifier over a run of the connection agent of this
-	// layer1VirtualNetworkState. Used to prevent race conditions.
-	uid uint64
-
 	// List of names of remote NetworkAttachments in the virtual network (which
 	// implicitly determines the namespace) for whom an add notification handler
 	// has been executed but a delete notification handler has not.
@@ -167,10 +163,6 @@ type layer2VirtualNetworksState struct {
 
 	// vniToVNState maps a VNI to its layer2VirtualNetworkState.
 	vniToVNState map[uint32]*layer2VirtualNetworkState
-
-	// nextLayer1VNStateUID is the uid to assign to the next
-	// layer1VirtualNetworkState that will be created.
-	nextLayer1VNStateUID uint64
 }
 
 // ConnectionAgent represents a K8S controller which runs on every node of the
@@ -851,25 +843,23 @@ func (ca *ConnectionAgent) initLayer2VNState(vni uint32, namespace string) *laye
 	}
 	ca.l2VirtNetsState.vniToVNState[vni] = newLayer2VNState
 
-	l1VNStateUID := ca.l2VirtNetsState.nextLayer1VNStateUID
-	ca.l2VirtNetsState.nextLayer1VNStateUID++
+	l1VNS := ca.initLayer1VNState(vni, remAttsLister.NetworkAttachments(namespace))
 
-	ca.initLayer1VNState(vni, l1VNStateUID, remAttsLister.NetworkAttachments(namespace))
-
-	remAttsInformer.AddEventHandler(ca.newRemoteAttsEventHandler(l1VNStateUID))
+	remAttsInformer.AddEventHandler(ca.newRemoteAttsEventHandler(l1VNS))
 	go remAttsInformer.Run(mergeStopChannels(ca.stopCh, newLayer2VNState.remoteAttsInformerStopCh))
 
 	return newLayer2VNState
 }
 
-func (ca *ConnectionAgent) initLayer1VNState(vni uint32, uid uint64, remAttsLister koslisterv1a1.NetworkAttachmentNamespaceLister) {
+func (ca *ConnectionAgent) initLayer1VNState(vni uint32, remAttsLister koslisterv1a1.NetworkAttachmentNamespaceLister) *layer1VirtualNetworkState {
 	ca.l1VirtNetsState.Lock()
 	defer ca.l1VirtNetsState.Unlock()
 
-	ca.l1VirtNetsState.vniToVNState[vni] = &layer1VirtualNetworkState{
-		uid:              uid,
+	l1VNS := &layer1VirtualNetworkState{
 		remoteAtts:       make(map[string]struct{}),
 		remoteAttsLister: remAttsLister}
+	ca.l1VirtNetsState.vniToVNState[vni] = l1VNS
+	return l1VNS
 }
 
 func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
@@ -886,13 +876,13 @@ func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
 	}
 }
 
-func (ca *ConnectionAgent) newRemoteAttsEventHandler(vnStateUID uint64) k8scache.ResourceEventHandlerFuncs {
+func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetworkState) k8scache.ResourceEventHandlerFuncs {
 	onRemoteAttAdd := func(obj interface{}) {
 		att := obj.(*netv1a1.NetworkAttachment)
 		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		added := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, vnStateUID, true)
+		added := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
 		if added {
 			ca.queue.Add(attNSN)
 		}
@@ -915,7 +905,7 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(vnStateUID uint64) k8scache
 		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		removed := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, vnStateUID, false)
+		removed := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, false)
 		if removed {
 			ca.queue.Add(attNSN)
 		}
@@ -928,20 +918,22 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(vnStateUID uint64) k8scache
 	}
 }
 
-func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedName, vni uint32, vnStateUID uint64, attExists bool) (updated bool) {
+func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedName, vni uint32, attL1VNState *layer1VirtualNetworkState, attExists bool) (updated bool) {
 	ca.l1VirtNetsState.Lock()
 	defer ca.l1VirtNetsState.Unlock()
 
-	attLayer1VNState := ca.l1VirtNetsState.vniToVNState[vni]
+	vniL1VNState := ca.l1VirtNetsState.vniToVNState[vni]
 
 	// The check for non-nilness handles cases where the virtual network has
-	// become irrelevant and its state has been cleared after this function
-	// started executing but before it could acquire the lock on ca.l1VirtNetsState.
-	// The check on UIDs handles the cases where the virtual network became
+	// become irrelevant and its state has been cleared after the informer's
+	// cache modification that led to this function execution but before this
+	// function could acquire the lock on ca.l1VirtNetsState. The comparison
+	// between L1VNStates handles cases where the virtual network became
 	// irrelevant and its state was cleared and then it became relevant again
-	// and its state was re-initialized, all between start of execution of this
-	// function and acquisition of ca.l1VirtNetsState.
-	if attLayer1VNState == nil || attLayer1VNState.uid != vnStateUID {
+	// and its state was re-initialized, all between the cache modification that
+	// led to this function execution and acquisition of the lock on
+	// ca.l1VirtNetsState by this function.
+	if vniL1VNState == nil || vniL1VNState != attL1VNState {
 		return
 	}
 
@@ -952,13 +944,13 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 			ca.l1VirtNetsState.attToSeenInCaches[att] = attSeenInCaches
 		}
 		attSeenInCaches[cacheID(vni)] = struct{}{}
-		attLayer1VNState.remoteAtts[att.Name] = struct{}{}
+		attL1VNState.remoteAtts[att.Name] = struct{}{}
 	} else {
 		delete(attSeenInCaches, cacheID(vni))
 		if len(attSeenInCaches) == 0 {
 			delete(ca.l1VirtNetsState.attToSeenInCaches, att)
 		}
-		delete(attLayer1VNState.remoteAtts, att.Name)
+		delete(attL1VNState.remoteAtts, att.Name)
 	}
 
 	updated = true
