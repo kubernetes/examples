@@ -209,12 +209,8 @@ type ConnectionAgent struct {
 
 	// attToNetworkInterface maps NetworkAttachments namespaced names to their
 	// network interfaces.
-	// attToPostCreateExecReport maps local NetworkAttachments namespaced names
-	// to the report of the command that was executed after creating their
-	// network interface.
-	// Access both only while holding attToNetworkInterfaceMutex.
+	// Access only while holding attToNetworkInterfaceMutex.
 	attToNetworkInterface      map[k8stypes.NamespacedName]networkInterface
-	attToPostCreateExecReport  map[k8stypes.NamespacedName]*netv1a1.ExecReport
 	attToNetworkInterfaceMutex sync.RWMutex
 
 	// allowedPrograms is the values allowed to appear in the [0] of a
@@ -381,7 +377,6 @@ func New(node string,
 			vniToVNState:        make(map[uint32]*layer2VirtualNetworkState),
 		},
 		attToNetworkInterface:                make(map[k8stypes.NamespacedName]networkInterface),
-		attToPostCreateExecReport:            make(map[k8stypes.NamespacedName]*netv1a1.ExecReport),
 		allowedPrograms:                      allowedPrograms,
 		attachmentCreateToLocalIfcHistogram:  attachmentCreateToLocalIfcHistogram,
 		attachmentCreateToRemoteIfcHistogram: attachmentCreateToRemoteIfcHistogram,
@@ -579,8 +574,12 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 			ca.assignNetworkInterface(ifcOwnerNSN, ifc)
 			klog.V(3).Infof("Matched pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
 			if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
-				ca.setExecReport(ifcOwnerNSN, localIfc.id, ifcOwner.Status.PostCreateExecReport)
 				localIfc.postDeleteExec = ifcOwner.Spec.PostDeleteExec
+				if ifcOwner.Status.PostCreateExecReport != nil {
+					localIfc.postCreateExecReport = &execReport{
+						report: ifcOwner.Status.PostCreateExecReport,
+					}
+				}
 			}
 			return nil
 		}
@@ -593,7 +592,7 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 
 func (ca *ConnectionAgent) deleteOrphanNetworkInterface(ifc networkInterface) {
 	for i := 1; ; i++ {
-		err := ifc.delete(ca)
+		err := ifc.delete(k8stypes.NamespacedName{}, ca)
 		if err == nil {
 			klog.V(4).Infof("Deleted pre-existing orphan network interface %s (attempt nbr. %d)", ifc, i)
 			break
@@ -644,7 +643,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	klog.V(3).Infof("Synced Layer2VNState for attachment %s.", attNSN)
 
 	// Create/update/delete the network interface of the NetworkAttachment.
-	localIfc, statusErrs, postCreateExecReport, err := ca.syncNetworkInterface(attNSN, att)
+	ifc, statusErrs, err := ca.syncNetworkInterface(attNSN, att)
 	if err != nil {
 		return err
 	}
@@ -657,12 +656,14 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	}
 	// If we're here there's no doubt that the NetworkAttachment and its
 	// network interface are local.
+	localIfc := ifc.(*localNetworkInterface)
 	ifcMAC := localIfc.GuestMAC.String()
-	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport) {
+	ifcPCER := localIfc.postCreateExecReport.getReport()
+	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, ifcPCER) {
 		return nil
 	}
 
-	return ca.updateLocalAttachmentStatus(att, ifcMAC, localIfc.Name, statusErrs, postCreateExecReport)
+	return ca.updateLocalAttachmentStatus(att, ifcMAC, localIfc.Name, statusErrs, ifcPCER)
 }
 
 // getNetworkAttachment attempts to determine the univocal version of the
@@ -854,8 +855,7 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		att := obj.(*netv1a1.NetworkAttachment)
 		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
-		attNSN := parse.AttNSN(att)
-		ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
+		ca.updateL1VNStateForRemoteAtt(parse.AttNSN(att), att.Status.AddressVNI, l1VNS, true)
 	}
 
 	onRemoteAttUpdate := func(oldObj, obj interface{}) {
@@ -927,21 +927,17 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 	return
 }
 
-func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (localIfc *localNetworkInterface, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport, err error) {
+func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
 	oldIfc, oldIfcFound := ca.getNetworkInterface(attNSN)
-	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedBy(att, ca)
+	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedByAttachment(att, ca.node)
 
 	if oldIfcFound && !oldIfcCanBeUsed {
-		err = oldIfc.delete(ca)
+		err = oldIfc.delete(attNSN, ca)
 		if err != nil {
 			return
 		}
 		ca.unassignNetworkInterface(attNSN)
 		klog.V(4).Infof("Deleted network interface %s for attachment %s", oldIfc, attNSN)
-		if oldLocalIfc, oldIfcIsLocal := oldIfc.(*localNetworkInterface); oldIfcIsLocal {
-			ca.unsetExecReport(attNSN)
-			ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, oldLocalIfc.id, oldLocalIfc.postDeleteExec, "postDelete", true, false)
-		}
 	}
 
 	if att == nil {
@@ -950,24 +946,21 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 
 	if oldIfcCanBeUsed {
 		if oldLocalIfc, oldIfcIsLocal := oldIfc.(*localNetworkInterface); oldIfcIsLocal {
-			statusErrs = ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, oldLocalIfc.id, att.Spec.PostCreateExec, "postCreate", false, false)
-			postCreateER = ca.getExecReport(attNSN)
-			localIfc = oldLocalIfc
+			statusErrs = ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, nil, att.Spec.PostCreateExec, "postCreate", false)
+			ifc = oldLocalIfc
 		}
 		klog.V(4).Infof("Attachment %s can use old network interface %s.", attNSN, oldIfc)
 		return
 	}
 
-	ifc, err := ca.createNetworkInterface(att)
-	if err != nil {
-		return
+	if att.Spec.Node == ca.node {
+		ifc, statusErrs, err = ca.createLocalNetworkInterface(att)
+	} else {
+		ifc, err = ca.createRemoteNetworkInterface(att)
 	}
-	ca.assignNetworkInterface(attNSN, ifc)
-	klog.V(4).Infof("Created network interface %s for attachment %s", ifc, attNSN)
-	localIfc, ifcIsLocal := ifc.(*localNetworkInterface)
-	if ifcIsLocal {
-		ca.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "Implemented", "Created Linux network interface named %s with MAC address %s and IPv4 address %s", localIfc.Name, localIfc.GuestMAC, localIfc.GuestIP)
-		statusErrs = ca.launchCommand(attNSN, localIfc.LocalNetIfc, localIfc.id, att.Spec.PostCreateExec, "postCreate", true, true)
+	if err == nil {
+		ca.assignNetworkInterface(attNSN, ifc)
+		klog.V(4).Infof("Created network interface %s for attachment %s", ifc, attNSN)
 	}
 
 	return
@@ -1038,38 +1031,6 @@ func (ca *ConnectionAgent) assignNetworkInterface(att k8stypes.NamespacedName, i
 	defer ca.attToNetworkInterfaceMutex.Unlock()
 
 	ca.attToNetworkInterface[att] = ifc
-}
-
-func (ca *ConnectionAgent) setExecReport(att k8stypes.NamespacedName, ifcID string, er *netv1a1.ExecReport) {
-	ca.attToNetworkInterfaceMutex.Lock()
-	defer ca.attToNetworkInterfaceMutex.Unlock()
-
-	ifc, ifcFound := ca.attToNetworkInterface[att]
-	if ifcFound {
-		// Post create execs are bound to a specific interface but run
-		// asynchronously wrt to the workers that process NetworkAttachments and
-		// create/delete network interfaces. The following checks make sure that
-		// we don't set the exec report on a network interface different than
-		// that the exec report is bound to.
-		localIfc, isLocal := ifc.(*localNetworkInterface)
-		if isLocal && localIfc.id == ifcID {
-			ca.attToPostCreateExecReport[att] = er
-		}
-	}
-}
-
-func (ca *ConnectionAgent) unsetExecReport(att k8stypes.NamespacedName) {
-	ca.attToNetworkInterfaceMutex.Lock()
-	defer ca.attToNetworkInterfaceMutex.Unlock()
-
-	delete(ca.attToPostCreateExecReport, att)
-}
-
-func (ca *ConnectionAgent) getExecReport(att k8stypes.NamespacedName) *netv1a1.ExecReport {
-	ca.attToNetworkInterfaceMutex.RLock()
-	defer ca.attToNetworkInterfaceMutex.RUnlock()
-
-	return ca.attToPostCreateExecReport[att]
 }
 
 func (ca *ConnectionAgent) unassignNetworkInterface(att k8stypes.NamespacedName) {

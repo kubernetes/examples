@@ -20,44 +20,63 @@ import (
 	"fmt"
 	gonet "net"
 	"strconv"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	k8scorev1api "k8s.io/api/core/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
+	"k8s.io/examples/staging/kos/pkg/util/parse"
 )
-
-var localIfcIDGenerator uint64
 
 // networkInterface provides access to the local networking state of
 // NetworkAttachments.
 type networkInterface interface {
-	delete(*ConnectionAgent) error
-
 	// getOwner returns a NetworkAttachment eligible to own the network
 	// interface, if one exists. Invoke only BEFORE workers are started, when
 	// only the main goroutine is running, because implementers access
 	// mutex-protected state without holding the mutex.
 	getOwner(*ConnectionAgent) (*netv1a1.NetworkAttachment, error)
-	canBeOwnedBy(*netv1a1.NetworkAttachment, *ConnectionAgent) bool
+	canBeOwnedByAttachment(*netv1a1.NetworkAttachment, string) bool
+	delete(k8stypes.NamespacedName, *ConnectionAgent) error
 	String() string
+}
+
+type execReport struct {
+	sync.RWMutex
+	report *netv1a1.ExecReport
+}
+
+func (er *execReport) getReport() *netv1a1.ExecReport {
+	er.RLock()
+	defer er.RUnlock()
+
+	return er.report
+}
+
+func (er *execReport) setReport(report *netv1a1.ExecReport) {
+	er.Lock()
+	defer er.Unlock()
+
+	er.report = report
 }
 
 // localNetworkInterface wraps a network fabric LocalNetIfc and adds to it state
 // that the network fabric ignores but is relevant to the connection agent.
 type localNetworkInterface struct {
 	netfabric.LocalNetIfc
-	id             string
-	postDeleteExec []string
+	postCreateExecReport *execReport
+	postDeleteExec       []string
 }
 
 var _ networkInterface = &localNetworkInterface{}
 
-func (ifc *localNetworkInterface) delete(ca *ConnectionAgent) error {
+func (ifc *localNetworkInterface) delete(owner k8stypes.NamespacedName, ca *ConnectionAgent) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteLocalIfc(ifc.LocalNetIfc)
 	tAfter := time.Now()
@@ -65,6 +84,7 @@ func (ifc *localNetworkInterface) delete(ca *ConnectionAgent) error {
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
 		ca.localAttachmentsGauge.Dec()
+		ca.launchCommand(owner, ifc.LocalNetIfc, nil, ifc.postDeleteExec, "postDelete", true)
 	}
 
 	return err
@@ -73,22 +93,22 @@ func (ifc *localNetworkInterface) delete(ca *ConnectionAgent) error {
 func (ifc *localNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
 	indexer := ca.localAttsInformer.GetIndexer()
 	vniAndIP := strconv.FormatUint(uint64(ifc.VNI), 16) + "/" + ifc.GuestIP.String()
-	ownerObjs, err := indexer.ByIndex(ifcOwnerDataIndexerName, vniAndIP)
+	ownerObj, err := indexer.ByIndex(ifcOwnerDataIndexerName, vniAndIP)
 	if err != nil {
 		return nil, fmt.Errorf("ByIndex(%s, %s) failed: %s", ifcOwnerDataIndexerName, vniAndIP, err.Error())
 	}
-	if len(ownerObjs) == 1 {
-		owner := ownerObjs[0].(*netv1a1.NetworkAttachment)
+	if len(ownerObj) == 1 {
+		owner := ownerObj[0].(*netv1a1.NetworkAttachment)
 		return owner, nil
 	}
 	return nil, nil
 }
 
-func (ifc *localNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment, ca *ConnectionAgent) bool {
+func (ifc *localNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, localNode string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
-		ca.node == att.Spec.Node
+		localNode == att.Spec.Node
 }
 
 func (ifc *localNetworkInterface) String() string {
@@ -101,7 +121,7 @@ type remoteNetworkInterface struct {
 
 var _ networkInterface = &remoteNetworkInterface{}
 
-func (ifc *remoteNetworkInterface) delete(ca *ConnectionAgent) error {
+func (ifc *remoteNetworkInterface) delete(_ k8stypes.NamespacedName, ca *ConnectionAgent) error {
 	tBefore := time.Now()
 	err := ca.netFabric.DeleteRemoteIfc(ifc.RemoteNetIfc)
 	tAfter := time.Now()
@@ -120,18 +140,18 @@ func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Netwo
 		return nil, nil
 	}
 	hostIPAndIP := ifc.HostIP.String() + "/" + ifc.GuestIP.String()
-	ownerObjs, err := indexer.ByIndex(ifcOwnerDataIndexerName, hostIPAndIP)
+	ownerObj, err := indexer.ByIndex(ifcOwnerDataIndexerName, hostIPAndIP)
 	if err != nil {
 		return nil, fmt.Errorf("ByIndex(%s, %s) failed: %s", ifcOwnerDataIndexerName, hostIPAndIP, err.Error())
 	}
-	if len(ownerObjs) == 1 {
-		owner := ownerObjs[0].(*netv1a1.NetworkAttachment)
+	if len(ownerObj) == 1 {
+		owner := ownerObj[0].(*netv1a1.NetworkAttachment)
 		return owner, nil
 	}
 	return nil, nil
 }
 
-func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment, _ *ConnectionAgent) bool {
+func (ifc *remoteNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, _ string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
@@ -142,29 +162,24 @@ func (ifc *remoteNetworkInterface) String() string {
 	return fmt.Sprintf("{type=remote, VNI=%#x, guestIP=%s, guestMAC=%s, hostIP=%s}", ifc.VNI, ifc.GuestIP, ifc.GuestMAC, ifc.HostIP)
 }
 
-func (ca *ConnectionAgent) createNetworkInterface(att *netv1a1.NetworkAttachment) (networkInterface, error) {
-	if ca.node == att.Spec.Node {
-		return ca.createLocalNetworkInterface(att)
-	}
-	return ca.createRemoteNetworkInterface(att)
-}
-
-func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttachment) (*localNetworkInterface, error) {
-	ifc := ca.newLocalNetworkInterfaceForAttachment(att)
+func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttachment) (ifc *localNetworkInterface, statusErrs sliceOfString, err error) {
+	ifc = ca.newLocalNetworkInterfaceForAttachment(att)
 
 	tBefore := time.Now()
-	err := ca.netFabric.CreateLocalIfc(ifc.LocalNetIfc)
+	err = ca.netFabric.CreateLocalIfc(ifc.LocalNetIfc)
 	tAfter := time.Now()
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
+		statusErrs = ca.launchCommand(parse.AttNSN(att), ifc.LocalNetIfc, ifc.postCreateExecReport, att.Spec.PostCreateExec, "postCreate", true)
 		if att.Status.IfcName == "" {
 			ca.attachmentCreateToLocalIfcHistogram.Observe(tAfter.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
 		}
 		ca.localAttachmentsGauge.Inc()
+		ca.eventRecorder.Eventf(att, k8scorev1api.EventTypeNormal, "Implemented", "Created Linux network interface named %s with MAC address %s and IPv4 address %s", ifc.Name, ifc.GuestMAC, ifc.GuestIP)
 	}
 
-	return ifc, err
+	return
 }
 
 func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAttachment) (*remoteNetworkInterface, error) {
@@ -189,8 +204,10 @@ func (ca *ConnectionAgent) newLocalNetworkInterfaceForAttachment(att *netv1a1.Ne
 	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
 	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
 	ifc.Name = generateIfcName(ifc.GuestMAC)
-	ifc.id = string(atomic.AddUint64(&localIfcIDGenerator, 1))
 	ifc.postDeleteExec = att.Spec.PostDeleteExec
+	if len(att.Spec.PostCreateExec) > 0 {
+		ifc.postCreateExecReport = &execReport{}
+	}
 	return ifc
 }
 
@@ -222,8 +239,7 @@ func (ca *ConnectionAgent) listPreExistingNetworkInterfaces() ([]networkInterfac
 
 	for _, locIfc := range localInterfaces {
 		networkInterfaces = append(networkInterfaces, &localNetworkInterface{
-			LocalNetIfc: locIfc,
-			id:          string(atomic.AddUint64(&localIfcIDGenerator, 1))})
+			LocalNetIfc: locIfc})
 	}
 	for _, remIfc := range remoteInterfaces {
 		networkInterfaces = append(networkInterfaces, &remoteNetworkInterface{
