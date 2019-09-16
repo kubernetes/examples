@@ -542,24 +542,9 @@ func (ca *ConnectionAgent) startRemoteAttsInformers() error {
 }
 
 func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface) error {
-	// Retrieve the indexer where an attachment elegible to own the network
-	// interface is, assuming one exists.
-	indexer, err := ca.getIndexerForNetworkInterface(ifc)
+	ifcOwner, err := ifc.getOwner(ca)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve indexer for network interface %s", ifc)
-	}
-
-	// Retrieve the attachment elegible to own the network interface, assuming
-	// one exists.
-	var ifcOwner *netv1a1.NetworkAttachment
-	if indexer != nil {
-		ifcOwnerObj, err := indexer.ByIndex(ifcOwnerDataIndexerName, ifc.index())
-		if err != nil {
-			return fmt.Errorf("ByIndex(%s, %s) failed: %s", ifcOwnerDataIndexerName, ifc.index(), err.Error())
-		}
-		if len(ifcOwnerObj) == 1 {
-			ifcOwner, _ = ifcOwnerObj[0].(*netv1a1.NetworkAttachment)
-		}
+		return fmt.Errorf("failed to sync pre-existing network interface %s: %s", ifc, err.Error())
 	}
 
 	if ifcOwner != nil {
@@ -608,7 +593,7 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 
 func (ca *ConnectionAgent) deleteOrphanNetworkInterface(ifc networkInterface) {
 	for i := 1; ; i++ {
-		err := ca.deleteNetworkInterface(ifc)
+		err := ifc.delete(ca)
 		if err == nil {
 			klog.V(4).Infof("Deleted pre-existing orphan network interface %s (attempt nbr. %d)", ifc, i)
 			break
@@ -944,10 +929,10 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 
 func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (localIfc *localNetworkInterface, statusErrs sliceOfString, postCreateER *netv1a1.ExecReport, err error) {
 	oldIfc, oldIfcFound := ca.getNetworkInterface(attNSN)
-	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedBy(att)
+	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedBy(att, ca)
 
 	if oldIfcFound && !oldIfcCanBeUsed {
-		err = ca.deleteNetworkInterface(oldIfc)
+		err = oldIfc.delete(ca)
 		if err != nil {
 			return
 		}
