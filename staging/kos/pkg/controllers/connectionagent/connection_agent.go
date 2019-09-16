@@ -596,18 +596,6 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 			if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
 				ca.setExecReport(ifcOwnerNSN, localIfc.id, ifcOwner.Status.PostCreateExecReport)
 				localIfc.postDeleteExec = ifcOwner.Spec.PostDeleteExec
-			} else {
-				// The interface is remote and so is its owner. There's no
-				// guarantee that the add notification handler for the owner has
-				// executed yet, neither as for when it will execute. If that
-				// has not happened by the time a worker processes the deletion
-				// of the last local NetworkAttachment in the owner's virtual
-				// network, the layer 1 of the virtual network state is cleared
-				// before the owner's namespaced name could be recorded in it.
-				// This means the owner is not processed, hence its network
-				// interface is not deleted even if it should. To avoid this,
-				// enqueue the owner to force its processing.
-				ca.queue.Add(ifcOwnerNSN)
 			}
 			return nil
 		}
@@ -882,10 +870,7 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		added := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
-		if added {
-			ca.queue.Add(attNSN)
-		}
+		ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
 	}
 
 	onRemoteAttUpdate := func(oldObj, obj interface{}) {
