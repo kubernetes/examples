@@ -845,7 +845,11 @@ func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
 	for aRemoteAtt := range layer1VNState.remoteAtts {
 		aRemoteAttNSN := k8stypes.NamespacedName{Namespace: namespace,
 			Name: aRemoteAtt}
-		delete(ca.l1VirtNetsState.attToSeenInCaches[aRemoteAttNSN], cacheID(vni))
+		aRemoteAttSeenInCaches := ca.l1VirtNetsState.attToSeenInCaches[aRemoteAttNSN]
+		delete(aRemoteAttSeenInCaches, cacheID(vni))
+		if len(aRemoteAttSeenInCaches) == 0 {
+			delete(ca.l1VirtNetsState.attToSeenInCaches, aRemoteAttNSN)
+		}
 		ca.queue.Add(aRemoteAttNSN)
 	}
 }
