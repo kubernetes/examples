@@ -946,7 +946,7 @@ func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, 
 
 	if oldIfcCanBeUsed {
 		if oldLocalIfc, oldIfcIsLocal := oldIfc.(*localNetworkInterface); oldIfcIsLocal {
-			statusErrs = ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, nil, att.Spec.PostCreateExec, "postCreate", false)
+			statusErrs = ca.launchCommand(attNSN, oldLocalIfc.LocalNetIfc, att.Spec.PostCreateExec, nil, "postCreate", false)
 			ifc = oldLocalIfc
 		}
 		klog.V(4).Infof("Attachment %s can use old network interface %s.", attNSN, oldIfc)

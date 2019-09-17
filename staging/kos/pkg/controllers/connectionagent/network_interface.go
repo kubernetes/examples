@@ -53,17 +53,27 @@ type execReport struct {
 }
 
 func (er *execReport) getReport() *netv1a1.ExecReport {
+	if er == nil {
+		return nil
+	}
+
 	er.RLock()
 	defer er.RUnlock()
 
 	return er.report
 }
 
-func (er *execReport) setReport(report *netv1a1.ExecReport) {
+func (er *execReport) setReport(report *netv1a1.ExecReport) (set bool) {
+	if er == nil {
+		return
+	}
+	set = true
+
 	er.Lock()
 	defer er.Unlock()
 
 	er.report = report
+	return
 }
 
 // localNetworkInterface wraps a network fabric LocalNetIfc and adds to it state
@@ -84,7 +94,7 @@ func (ifc *localNetworkInterface) delete(owner k8stypes.NamespacedName, ca *Conn
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
 		ca.localAttachmentsGauge.Dec()
-		ca.launchCommand(owner, ifc.LocalNetIfc, nil, ifc.postDeleteExec, "postDelete", true)
+		ca.launchCommand(owner, ifc.LocalNetIfc, ifc.postDeleteExec, nil, "postDelete", true)
 	}
 
 	return err
@@ -171,7 +181,7 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
-		statusErrs = ca.launchCommand(parse.AttNSN(att), ifc.LocalNetIfc, ifc.postCreateExecReport, att.Spec.PostCreateExec, "postCreate", true)
+		statusErrs = ca.launchCommand(parse.AttNSN(att), ifc.LocalNetIfc, att.Spec.PostCreateExec, ifc.postCreateExecReport, "postCreate", true)
 		if att.Status.IfcName == "" {
 			ca.attachmentCreateToLocalIfcHistogram.Observe(tAfter.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
 		}
