@@ -855,7 +855,9 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		att := obj.(*netv1a1.NetworkAttachment)
 		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
-		ca.updateL1VNStateForRemoteAtt(parse.AttNSN(att), att.Status.AddressVNI, l1VNS, true)
+		attNSN := parse.AttNSN(att)
+		ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
+		ca.queue.Add(attNSN)
 	}
 
 	onRemoteAttUpdate := func(oldObj, obj interface{}) {
@@ -894,16 +896,14 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 
 	vniL1VNState := ca.l1VirtNetsState.vniToVNState[vni]
 
-	// The check for non-nilness handles cases where the virtual network has
-	// become irrelevant and its state has been cleared after the informer's
-	// cache modification that led to this function execution but before this
-	// function could acquire the lock on ca.l1VirtNetsState. The comparison
-	// between L1VNStates handles cases where the virtual network became
-	// irrelevant and its state was cleared and then it became relevant again
-	// and its state was re-initialized, all between the cache modification that
-	// led to this function execution and acquisition of the lock on
-	// ca.l1VirtNetsState by this function.
-	if vniL1VNState == nil || vniL1VNState != attL1VNState {
+	// This function executes within a notification handler bound to an informer
+	// associated to a layer 1 virtual network state (attL1VNState). If the
+	// handler executes AFTER the layer 1 virtual network state is cleared due
+	// to becoming irrelevant, this function must not update the layer 1 virtual
+	// network state associated to vni (vniL1VNState), because such state either
+	// no longer exists or is for a newer virtual network with the same vni as
+	// the handler's. This check detectes such cases.
+	if vniL1VNState != attL1VNState {
 		return
 	}
 
