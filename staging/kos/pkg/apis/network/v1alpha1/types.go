@@ -139,16 +139,20 @@ type NetworkAttachmentErrors struct {
 
 // ExecReport reports on what happened when a command was execd.
 type ExecReport struct {
+	// Command is the command whose execution is summarized by this ExecReport.
+	// +patchStrategy=replace
+	Command []string `json:"command" protobuf:"bytes,1,opt,name=command" patchStrategy:"replace"`
+
 	// ExitStatus is the Linux exit status from the command, or a
 	// negative number to signal a prior problem (detailed in StdErr).
-	ExitStatus int32 `json:"exitStatus" protobuf:"bytes,1,name=exitStatus"`
+	ExitStatus int32 `json:"exitStatus" protobuf:"bytes,2,name=exitStatus"`
 
-	StartTime metav1.Time `json:"startTime,omitempty" protobuf:"bytes,2,name=startTime"`
+	StartTime metav1.Time `json:"startTime,omitempty" protobuf:"bytes,3,name=startTime"`
 
-	StopTime metav1.Time `json:"stopTime,omitempty" protobuf:"bytes,3,name=stopTime"`
+	StopTime metav1.Time `json:"stopTime,omitempty" protobuf:"bytes,4,name=stopTime"`
 
-	StdOut string `json:"stdOut" protobuf:"bytes,4,name=stdOut"`
-	StdErr string `json:"stdErr" protobuf:"bytes,5,name=stdErr"`
+	StdOut string `json:"stdOut" protobuf:"bytes,5,name=stdOut"`
+	StdErr string `json:"stdErr" protobuf:"bytes,6,name=stdErr"`
 }
 
 // Equiv tests whether the two referenced ExecReports say the same

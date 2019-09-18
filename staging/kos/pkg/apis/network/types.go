@@ -135,6 +135,9 @@ type NetworkAttachmentErrors struct {
 
 // ExecReport reports on what happened when a command was execd.
 type ExecReport struct {
+	// Command is the command whose execution is summarized by this ExecReport.
+	Command []string
+
 	// ExitStatus is the Linux exit status from the command, or a
 	// negative number to signal a prior problem (detailed in StdErr).
 	ExitStatus int32

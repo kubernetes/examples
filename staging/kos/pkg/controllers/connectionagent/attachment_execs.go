@@ -80,6 +80,7 @@ func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, ifc netfabr
 	err := cmd.Run()
 	stopTime := time.Now()
 	cr := &netv1a1.ExecReport{
+		Command:   append(urcmd[:1], expanded...),
 		StartTime: k8smetav1.Time{startTime},
 		StopTime:  k8smetav1.Time{stopTime},
 		StdOut:    stdout.String(),
