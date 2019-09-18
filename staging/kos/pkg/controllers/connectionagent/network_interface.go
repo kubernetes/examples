@@ -42,6 +42,7 @@ type networkInterface interface {
 	// only the main goroutine is running, because implementers access
 	// mutex-protected state without holding the mutex.
 	getOwner(*ConnectionAgent) (*netv1a1.NetworkAttachment, error)
+	matchToOwner(*netv1a1.NetworkAttachment, *ConnectionAgent)
 	canBeOwnedByAttachment(*netv1a1.NetworkAttachment, string) bool
 	delete(k8stypes.NamespacedName, *ConnectionAgent) error
 	String() string
@@ -86,20 +87,6 @@ type localNetworkInterface struct {
 
 var _ networkInterface = &localNetworkInterface{}
 
-func (ifc *localNetworkInterface) delete(owner k8stypes.NamespacedName, ca *ConnectionAgent) error {
-	tBefore := time.Now()
-	err := ca.netFabric.DeleteLocalIfc(ifc.LocalNetIfc)
-	tAfter := time.Now()
-
-	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
-	if err == nil {
-		ca.localAttachmentsGauge.Dec()
-		ca.launchCommand(owner, ifc.LocalNetIfc, ifc.postDeleteExec, nil, "postDelete", true)
-	}
-
-	return err
-}
-
 func (ifc *localNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
 	indexer := ca.localAttsInformer.GetIndexer()
 	vniAndIP := strconv.FormatUint(uint64(ifc.VNI), 16) + "/" + ifc.GuestIP.String()
@@ -114,11 +101,35 @@ func (ifc *localNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Networ
 	return nil, nil
 }
 
+func (ifc *localNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
+	ifc.postDeleteExec = owner.Spec.PostDeleteExec
+	if owner.Status.PostCreateExecReport != nil {
+		ifc.postCreateExecReport = &execReport{
+			report: owner.Status.PostCreateExecReport,
+		}
+	}
+	ca.assignNetworkInterface(parse.AttNSN(owner), ifc)
+}
+
 func (ifc *localNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, localNode string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
 		localNode == att.Spec.Node
+}
+
+func (ifc *localNetworkInterface) delete(owner k8stypes.NamespacedName, ca *ConnectionAgent) error {
+	tBefore := time.Now()
+	err := ca.netFabric.DeleteLocalIfc(ifc.LocalNetIfc)
+	tAfter := time.Now()
+
+	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		ca.localAttachmentsGauge.Dec()
+		ca.launchCommand(owner, ifc.LocalNetIfc, ifc.postDeleteExec, nil, "postDelete", true)
+	}
+
+	return err
 }
 
 func (ifc *localNetworkInterface) String() string {
@@ -130,19 +141,6 @@ type remoteNetworkInterface struct {
 }
 
 var _ networkInterface = &remoteNetworkInterface{}
-
-func (ifc *remoteNetworkInterface) delete(_ k8stypes.NamespacedName, ca *ConnectionAgent) error {
-	tBefore := time.Now()
-	err := ca.netFabric.DeleteRemoteIfc(ifc.RemoteNetIfc)
-	tAfter := time.Now()
-
-	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
-	if err == nil {
-		ca.remoteAttachmentsGauge.Dec()
-	}
-
-	return err
-}
 
 func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
 	indexer := ca.getRemoteAttsIndexer(ifc.VNI)
@@ -161,11 +159,28 @@ func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Netwo
 	return nil, nil
 }
 
+func (ifc *remoteNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
+	ca.assignNetworkInterface(parse.AttNSN(owner), ifc)
+}
+
 func (ifc *remoteNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, _ string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
 		ifc.HostIP.Equal(gonet.ParseIP(att.Status.HostIP))
+}
+
+func (ifc *remoteNetworkInterface) delete(_ k8stypes.NamespacedName, ca *ConnectionAgent) error {
+	tBefore := time.Now()
+	err := ca.netFabric.DeleteRemoteIfc(ifc.RemoteNetIfc)
+	tAfter := time.Now()
+
+	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "DeleteRemoteIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
+	if err == nil {
+		ca.remoteAttachmentsGauge.Dec()
+	}
+
+	return err
 }
 
 func (ifc *remoteNetworkInterface) String() string {

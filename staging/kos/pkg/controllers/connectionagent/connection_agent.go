@@ -585,16 +585,8 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 		// the mistake by realizing the network interface does not match the
 		// attachment and creating a correct interface after deleting the old one.
 		if !ownerAlreadyHasInterface {
-			ca.assignNetworkInterface(ifcOwnerNSN, ifc)
+			ifc.matchToOwner(ifcOwner, ca)
 			klog.V(3).Infof("Matched pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
-			if localIfc, ifcIsLocal := ifc.(*localNetworkInterface); ifcIsLocal {
-				localIfc.postDeleteExec = ifcOwner.Spec.PostDeleteExec
-				if ifcOwner.Status.PostCreateExecReport != nil {
-					localIfc.postCreateExecReport = &execReport{
-						report: ifcOwner.Status.PostCreateExecReport,
-					}
-				}
-			}
 			return nil
 		}
 	}
