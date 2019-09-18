@@ -52,12 +52,12 @@ import (
 )
 
 const (
-	// localAttsCacheID is the ID for the local NetworkAttachments informer's
-	// cache. Remote NetworkAttachments informers are partitioned by VNI so
-	// their VNI can be used as the ID, but the local NetworkAttachments
+	// localAttsListerID is the ID of the lister backed by the informer on local
+	// NetworkAttachments. Remote NetworkAttachments informers are partitioned
+	// by VNI so their VNI can be used as the ID, but the local NetworkAttachments
 	// informer is not associated to a single VNI. Pick 0 because it's not a
 	// valid VNI value: there's no overlapping with the other IDs.
-	localAttsCacheID cacheID = 0
+	localAttsListerID = 0
 
 	// Name of the indexer used to match pre-existing network interfaces to
 	// network attachments.
@@ -90,10 +90,6 @@ const (
 	metricsSubsystem = "agent"
 )
 
-// cacheID models the ID of an informer's cache. Used to keep track of which
-// informer's cache NetworkAttachments were seen in and should be looked up in.
-type cacheID uint32
-
 // layer1VirtualNetworkState is the first layer of state associated with a
 // single relevant virtual network.
 type layer1VirtualNetworkState struct {
@@ -117,9 +113,10 @@ type layer1VirtualNetworkState struct {
 type layer1VirtualNetworksState struct {
 	sync.RWMutex
 
-	// attToSeenInCaches maps NetworkAttachments namespaced names to the list
-	// of IDs of the Informer's caches where the attachments have been seen.
-	attToSeenInCaches map[k8stypes.NamespacedName]map[cacheID]struct{}
+	// attToListersIDs maps NetworkAttachments namespaced names to the list
+	// of IDs of the listers backed by the informers where the attachments have
+	// been seen.
+	attToListersIDs map[k8stypes.NamespacedName]map[uint32]struct{}
 
 	// vniToVNState maps a VNI to its layer1VirtualNetworkState.
 	vniToVNState map[uint32]*layer1VirtualNetworkState
@@ -369,8 +366,8 @@ func New(node string,
 		workers:       workers,
 		netFabric:     netFabric,
 		l1VirtNetsState: layer1VirtualNetworksState{
-			attToSeenInCaches: make(map[k8stypes.NamespacedName]map[cacheID]struct{}),
-			vniToVNState:      make(map[uint32]*layer1VirtualNetworkState),
+			attToListersIDs: make(map[k8stypes.NamespacedName]map[uint32]struct{}),
+			vniToVNState:    make(map[uint32]*layer1VirtualNetworkState),
 		},
 		l2VirtNetsState: layer2VirtualNetworksState{
 			localAttToLayer2VNI: make(map[k8stypes.NamespacedName]uint32),
@@ -474,20 +471,20 @@ func (ca *ConnectionAgent) updateL1VNStateForLocalAtt(att k8stypes.NamespacedNam
 	ca.l1VirtNetsState.Lock()
 	defer ca.l1VirtNetsState.Unlock()
 
-	attSeenInCaches := ca.l1VirtNetsState.attToSeenInCaches[att]
+	attListersIDs := ca.l1VirtNetsState.attToListersIDs[att]
 
 	if attExists {
-		if attSeenInCaches == nil {
-			attSeenInCaches = make(map[cacheID]struct{}, 1)
-			ca.l1VirtNetsState.attToSeenInCaches[att] = attSeenInCaches
+		if attListersIDs == nil {
+			attListersIDs = make(map[uint32]struct{}, 1)
+			ca.l1VirtNetsState.attToListersIDs[att] = attListersIDs
 		}
-		attSeenInCaches[localAttsCacheID] = struct{}{}
+		attListersIDs[localAttsListerID] = struct{}{}
 		return
 	}
 
-	delete(attSeenInCaches, localAttsCacheID)
-	if len(attSeenInCaches) == 0 {
-		delete(ca.l1VirtNetsState.attToSeenInCaches, att)
+	delete(attListersIDs, localAttsListerID)
+	if len(attListersIDs) == 0 {
+		delete(ca.l1VirtNetsState.attToListersIDs, att)
 	}
 }
 
@@ -692,21 +689,22 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) (att *netv1a1.NetworkAttachment, haltProcessing bool) {
 	// Get the lister backed by the Informer's cache where the NetworkAttachment
 	// was seen. There could more than one.
-	attSeenInCache, seenInMoreThanOneCache := ca.getSeenInCache(attNSN)
+	attLister, moreThanOneLister := ca.getLister(attNSN)
 
-	if seenInMoreThanOneCache {
-		// If the NetworkAttachment was seen in more than one informer's cache
-		// the most up-to-date version is unkown. Halt processing until future
-		// delete notifications from the informers storing stale versions arrive
-		// and reveal the current state of the NetworkAttachment.
+	if moreThanOneLister {
+		// If more than one lister was found the NetworkAttachment was seen in
+		// more than one informer and the most up-to-date version is unkown.
+		// Halt processing until future delete notifications from the informers
+		// storing stale versions arrive and reveal the current state of the
+		// NetworkAttachment.
 		klog.V(4).Infof("Cannot process NetworkAttachment %s because it was seen in more than one informer.", attNSN)
 		haltProcessing = true
 		return
 	}
 
-	if attSeenInCache == nil {
-		// The NetworkAttachment was seen in no informer's cache: it must have
-		// been deleted.
+	if attLister == nil {
+		// No lister for the NetworkAttachment was found, hence it's in no
+		// informer: it must have been deleted.
 		return
 	}
 
@@ -714,7 +712,7 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	// ? What happens if this .Get hits the cache after the associated Informer
 	// has been stopped? I suspect nothing worth special care, but double-check
 	// to make sure.
-	att, err := attSeenInCache.Get(attNSN.Name)
+	att, err := attLister.Get(attNSN.Name)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		klog.Errorf("Failed to look up NetworkAttachment %s: %s. This should never happen, there will be no retry.", attNSN, err.Error())
 		haltProcessing = true
@@ -723,30 +721,30 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	return
 }
 
-func (ca *ConnectionAgent) getSeenInCache(att k8stypes.NamespacedName) (seenInCache koslisterv1a1.NetworkAttachmentNamespaceLister, seenInMoreThanOneCache bool) {
+func (ca *ConnectionAgent) getLister(att k8stypes.NamespacedName) (lister koslisterv1a1.NetworkAttachmentNamespaceLister, moreThanOneLister bool) {
 	ca.l1VirtNetsState.RLock()
 	defer ca.l1VirtNetsState.RUnlock()
 
-	seenInCachesIDs := ca.l1VirtNetsState.attToSeenInCaches[att]
+	listersIDs := ca.l1VirtNetsState.attToListersIDs[att]
 
-	if len(seenInCachesIDs) > 1 {
-		seenInMoreThanOneCache = true
+	if len(listersIDs) > 1 {
+		moreThanOneLister = true
 		return
 	}
 
-	if len(seenInCachesIDs) == 0 {
+	if len(listersIDs) == 0 {
 		return
 	}
 
-	var seenInCacheID cacheID
-	for seenInCacheID = range seenInCachesIDs {
+	var listerID uint32
+	for listerID = range listersIDs {
 	}
 
-	if seenInCacheID == localAttsCacheID {
-		seenInCache = ca.localAttsLister.NetworkAttachments(att.Namespace)
+	if listerID == localAttsListerID {
+		lister = ca.localAttsLister.NetworkAttachments(att.Namespace)
 	} else {
-		attLayer1VNState := ca.l1VirtNetsState.vniToVNState[uint32(seenInCacheID)]
-		seenInCache = attLayer1VNState.remoteAttsLister
+		attLayer1VNState := ca.l1VirtNetsState.vniToVNState[listerID]
+		lister = attLayer1VNState.remoteAttsLister
 	}
 	return
 }
@@ -862,10 +860,10 @@ func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
 	for aRemoteAtt := range layer1VNState.remoteAtts {
 		aRemoteAttNSN := k8stypes.NamespacedName{Namespace: namespace,
 			Name: aRemoteAtt}
-		aRemoteAttSeenInCaches := ca.l1VirtNetsState.attToSeenInCaches[aRemoteAttNSN]
-		delete(aRemoteAttSeenInCaches, cacheID(vni))
-		if len(aRemoteAttSeenInCaches) == 0 {
-			delete(ca.l1VirtNetsState.attToSeenInCaches, aRemoteAttNSN)
+		aRemoteAttListersIDs := ca.l1VirtNetsState.attToListersIDs[aRemoteAttNSN]
+		delete(aRemoteAttListersIDs, vni)
+		if len(aRemoteAttListersIDs) == 0 {
+			delete(ca.l1VirtNetsState.attToListersIDs, aRemoteAttNSN)
 		}
 		ca.queue.Add(aRemoteAttNSN)
 	}
@@ -928,18 +926,18 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 		return
 	}
 
-	attSeenInCaches := ca.l1VirtNetsState.attToSeenInCaches[att]
+	attListersIDs := ca.l1VirtNetsState.attToListersIDs[att]
 	if attExists {
-		if attSeenInCaches == nil {
-			attSeenInCaches = make(map[cacheID]struct{}, 1)
-			ca.l1VirtNetsState.attToSeenInCaches[att] = attSeenInCaches
+		if attListersIDs == nil {
+			attListersIDs = make(map[uint32]struct{}, 1)
+			ca.l1VirtNetsState.attToListersIDs[att] = attListersIDs
 		}
-		attSeenInCaches[cacheID(vni)] = struct{}{}
+		attListersIDs[vni] = struct{}{}
 		attL1VNState.remoteAtts[att.Name] = struct{}{}
 	} else {
-		delete(attSeenInCaches, cacheID(vni))
-		if len(attSeenInCaches) == 0 {
-			delete(ca.l1VirtNetsState.attToSeenInCaches, att)
+		delete(attListersIDs, vni)
+		if len(attListersIDs) == 0 {
+			delete(ca.l1VirtNetsState.attToListersIDs, att)
 		}
 		delete(attL1VNState.remoteAtts, att.Name)
 	}
