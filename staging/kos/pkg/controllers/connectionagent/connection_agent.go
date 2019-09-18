@@ -493,9 +493,9 @@ func (ca *ConnectionAgent) updateL1VNStateForLocalAtt(att k8stypes.NamespacedNam
 
 func (ca *ConnectionAgent) syncPreExistingNetworkInterfaces() error {
 	// Start all the remote attachments informers because to choose whether to
-	// keep a pre-existing remote network interface we need to look for a
-	// remote network attachment that can own it in the informer cache for the
-	// VNI of the network interface.
+	// keep a pre-existing remote network interface we need to look for a remote
+	// network attachment that can own it in the informer cache for the VNI of
+	// the network interface.
 	err := ca.startRemoteAttsInformers()
 	if err != nil {
 		return fmt.Errorf("failed to sync pre-existing network interfaces: %s", err.Error())
@@ -523,9 +523,26 @@ func (ca *ConnectionAgent) startRemoteAttsInformers() error {
 	}
 
 	for _, att := range localAtts {
-		// Adding the local NetworkAttachment to the L2 virtual network state
-		// entails starting the remote attachments informer for the attachment's
-		// vni.
+		// Adding `att` to the L2 virtual network state entails starting the
+		// remote attachments informer for `att`'s vni. addLocalAttToL2VNState
+		// returns an error (and does not perform the addition) if `att`'s
+		// namespace differs from the one recorded in the L2VNState for `att`'s
+		// vni. The namespace recorded in such L2VNState is the namespace of the
+		// first attachment added to it. If an error is returned, we're during a
+		// transient where two or more NetworkAttachments with same VNI but
+		// different namespace exist, caused by a virtual network being deleted
+		// and replaced with same VNI but different namespace. Attachments with
+		// the most recent namespace should be added to the L2VNState while the
+		// others should be not added or removed if they are already there, but
+		// it's unkown which namespace is the most recent one, `att`'s or the
+		// one stored in the L2VNState. Thus, if an error is returned it is
+		// ignored and `att` is not added to the L2VNState: the namespace
+		// already recorded in the L2VNState is chosen for simplicity. Even if
+		// that turns out to be the wrong choice, after the workers are started
+		// delete notifications for all the attachments in the L2VNState will
+		// arrive causing its deletion and the attachments which were not added
+		// (such as `att`) will be processed and added to a new L2VNState with
+		// the most recent namespace.
 		ca.addLocalAttToL2VNState(parse.AttNSN(att), att.Status.AddressVNI)
 		l2VNState := ca.l2VirtNetsState.vniToVNState[att.Status.AddressVNI]
 		if !l2VNState.remoteAttsInformer.HasSynced() && !k8scache.WaitForCacheSync(l2VNState.remoteAttsInformerStopCh, l2VNState.remoteAttsInformer.HasSynced) {
