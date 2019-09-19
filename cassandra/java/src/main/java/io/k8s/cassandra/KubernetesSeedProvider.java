@@ -67,7 +67,8 @@ public class KubernetesSeedProvider implements SeedProvider {
 		String namespace = getEnvOrDefault("POD_NAMESPACE", "default");
 
 		String initialSeeds = getEnvOrDefault("CASSANDRA_SEEDS", "");
-		if (initialSeeds.equals("")) {
+
+		if ("".equals(initialSeeds)) {
 			initialSeeds = getEnvOrDefault("POD_IP", "");
 		}
 
@@ -79,11 +80,11 @@ public class KubernetesSeedProvider implements SeedProvider {
 
 		try {
 			Endpoints endpoints = mapper.readValue(data, Endpoints.class);
-			logger.info("cassandra seeds: " + endpoints.ips.toString());
+			logger.info("cassandra seeds: {}", endpoints.ips.toString());
 			return Collections.unmodifiableList(endpoints.ips);
 		} catch (IOException e) {
 			// This should not happen
-			logger.error("unexpected error building cassandra seeds: " + e.getMessage());
+			logger.error("unexpected error building cassandra seeds: {}" , e.getMessage());
 			return Collections.emptyList();
 		}
 	}
