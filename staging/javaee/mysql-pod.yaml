@@ -7,22 +7,16 @@ metadata:
     context: docker-k8s-lab
 spec:
   containers:
-    -
-      name: mysql
+    - name: mysql
       image: mysql:latest
       env:
-        -
-          name: "MYSQL_USER"
+        - name: "MYSQL_USER"
           value: "mysql"
-        -
-          name: "MYSQL_PASSWORD"
+        - name: "MYSQL_PASSWORD"
           value: "mysql"
-        -
-          name: "MYSQL_DATABASE"
+        - name: "MYSQL_DATABASE"
           value: "sample"
-        -
-          name: "MYSQL_ROOT_PASSWORD"
+        - name: "MYSQL_ROOT_PASSWORD"
           value: "supersecret"
       ports:
-        -
-          containerPort: 3306
+        - containerPort: 3306
