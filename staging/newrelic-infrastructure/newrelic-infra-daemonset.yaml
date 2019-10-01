@@ -26,7 +26,10 @@ spec:
             privileged: true
           image: newrelic/infrastructure
           name: newrelic
-          command: [ "bash", "-c", "source /etc/kube-nr-infra/config && /usr/bin/newrelic-infra" ]
+          command:
+            - /bin/sh
+            - -c
+            - source /etc/kube-nr-infra/config && /usr/bin/newrelic-infra
           volumeMounts:
             - name: newrelic-config
               mountPath: /etc/kube-nr-infra
