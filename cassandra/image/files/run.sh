@@ -24,7 +24,7 @@ if [ -z "$CASSANDRA_SEEDS" ]; then
   CASSANDRA_SEEDS=$(hostname -f)
 fi
 
-# The following vars relate to there counter parts in $CASSANDRA_CFG
+# The following vars relate to their counter parts in $CASSANDRA_CFG
 # for instance rpc_address
 CASSANDRA_RPC_ADDRESS="${CASSANDRA_RPC_ADDRESS:-0.0.0.0}"
 CASSANDRA_NUM_TOKENS="${CASSANDRA_NUM_TOKENS:-32}"
