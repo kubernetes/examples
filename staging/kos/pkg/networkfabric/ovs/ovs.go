@@ -23,7 +23,6 @@ limitations under the License.
 package ovs
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
 	"os/exec"
@@ -510,7 +509,7 @@ func (f *ovsFabric) addRemoteIfcFlows(tunID uint32, dlDst net.HardwareAddr, tunD
 	// fields in the two flows created do not overlap. Without it it's
 	// impossible to pair remote flows that were originated by the same interface,
 	// but we need this coupling at remote interfaces list time.
-	cookie, _ := binary.Uvarint(dlDst)
+	cookie := convert.MACAddressToUint64(dlDst)
 
 	dlTrafficFlow := fmt.Sprintf("table=1,cookie=%d,tun_id=%#x,dl_dst=%s,actions=set_field:%s->tun_dst,output:%d",
 		cookie,
