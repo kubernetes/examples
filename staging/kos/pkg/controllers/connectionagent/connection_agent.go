@@ -1053,7 +1053,7 @@ func (ca *ConnectionAgent) unassignNetworkInterface(att k8stypes.NamespacedName)
 
 // localAttSelector returns a fields selector that matches local
 // NetworkAttachments for whom a network interface can be created.
-func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
+func (ca *ConnectionAgent) localAttSelector() k8sfields.Selector {
 	// The NetworkAttachment must be local.
 	localAtt := k8sfields.OneTermEqualSelector(attNodeField, ca.node)
 
@@ -1063,13 +1063,13 @@ func (ca *ConnectionAgent) localAttSelector() fieldsSelector {
 
 	// Return a selector given by the logical AND between localAtt and
 	// attWithAnIP.
-	return fieldsSelector{k8sfields.AndSelectors(localAtt, attWithAnIP)}
+	return k8sfields.AndSelectors(localAtt, attWithAnIP)
 }
 
 // remoteAttSelector returns a fields selector that matches remote
 // NetworkAttachments in the virtual network identified by `vni` for whom a
 // network interface can be created.
-func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
+func (ca *ConnectionAgent) remoteAttSelector(vni uint32) k8sfields.Selector {
 	// The NetworkAttachment must be remote.
 	remoteAtt := k8sfields.OneTermNotEqualSelector(attNodeField, ca.node)
 
@@ -1085,11 +1085,11 @@ func (ca *ConnectionAgent) remoteAttSelector(vni uint32) fieldsSelector {
 
 	// Return a selector given by the logical AND between all the selectors
 	// defined above.
-	return fieldsSelector{k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)}
+	return k8sfields.AndSelectors(remoteAtt, attInSpecificVN, attWithAnIP, attWithHostIP)
 }
 
-func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs fieldsSelector, indexer k8scache.IndexFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
-	tloFunc := fs.toTweakListOptionsFunc()
+func (ca *ConnectionAgent) newInformerAndLister(resyncPeriod time.Duration, ns string, fs k8sfields.Selector, indexer k8scache.IndexFunc) (k8scache.SharedIndexInformer, koslisterv1a1.NetworkAttachmentLister) {
+	tloFunc := fsToTweakListOptionsFunc(fs)
 	networkAttachments := kosinformers.NewSharedInformerFactoryWithOptions(ca.kcs, resyncPeriod, kosinformers.WithNamespace(ns), kosinformers.WithTweakListOptions(tloFunc)).Network().V1alpha1().NetworkAttachments()
 
 	// Add indexer used at start up to match pre-existing network interfaces to

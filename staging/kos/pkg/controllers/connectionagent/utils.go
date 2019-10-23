@@ -43,11 +43,7 @@ func (x sliceOfString) Equal(y sliceOfString) bool {
 	return true
 }
 
-type fieldsSelector struct {
-	k8sfields.Selector
-}
-
-func (fs fieldsSelector) toTweakListOptionsFunc() kosinternalifcs.TweakListOptionsFunc {
+func fsToTweakListOptionsFunc(fs k8sfields.Selector) kosinternalifcs.TweakListOptionsFunc {
 	return func(options *k8smetav1.ListOptions) {
 		optionsFieldSelector := options.FieldSelector
 
