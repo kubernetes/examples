@@ -436,7 +436,7 @@ func (ca *ConnectionAgent) initLocalAttsInformerAndLister() {
 
 func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 	att := obj.(*netv1a1.NetworkAttachment)
-	klog.V(5).Infof("Local NetworkAttachments cache: notified of addition of %#+v", att)
+	klog.V(5).Infof("Local NetworkAttachments informer: notified of addition of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
 	ca.updateL1VNStateForLocalAtt(attNSN, true)
@@ -445,7 +445,6 @@ func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 
 func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 	oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
-	klog.V(5).Infof("Local NetworkAttachments cache: notified of update from %#+v to %#+v", oldAtt, att)
 
 	// Enqueue if the UID changed because if a local NetworkAttachment is
 	// deleted and replaced the status.hostIP field of the newer attachment is
@@ -454,13 +453,16 @@ func (ca *ConnectionAgent) onLocalAttUpdate(oldObj, obj interface{}) {
 	// can be seen changing by this function are status.ipv4 and
 	// status.addressVNI, so enqueue if they changed.
 	if oldAtt.UID != att.UID || oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.AddressVNI != att.Status.AddressVNI {
+		klog.V(5).Infof("Local NetworkAttachments informer: notified of update from %#+v to %#+v. Relevant state changed, the attachment will be re-processed.", oldAtt, att)
 		ca.queue.Add(parse.AttNSN(att))
+	} else {
+		klog.V(5).Infof("Local NetworkAttachments informer: notified of update from %#+v to %#+v. The update will be ignored because nothing relevant changed.", oldAtt, att)
 	}
 }
 
 func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
-	klog.V(5).Infof("Local NetworkAttachments cache: notified of removal of %#+v", att)
+	klog.V(5).Infof("Local NetworkAttachments informer: notified of removal of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
 	ca.updateL1VNStateForLocalAtt(attNSN, false)
@@ -864,7 +866,7 @@ func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
 func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetworkState) k8scache.ResourceEventHandlerFuncs {
 	onRemoteAttAdd := func(obj interface{}) {
 		att := obj.(*netv1a1.NetworkAttachment)
-		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
+		klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
 		ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
@@ -873,19 +875,21 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 
 	onRemoteAttUpdate := func(oldObj, obj interface{}) {
 		oldAtt, att := oldObj.(*netv1a1.NetworkAttachment), obj.(*netv1a1.NetworkAttachment)
-		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of update from %#+v to %#+v.", att.Status.AddressVNI, oldAtt, att)
 
 		// The only fields affecting remote network interfaces handling that can
 		// be seen changing by this function are status.ipv4 and status.hostIP,
 		// so enqueue only if they changed.
 		if oldAtt.Status.IPv4 != att.Status.IPv4 || oldAtt.Status.HostIP != att.Status.HostIP {
+			klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of update from %#+v to %#+v. Relevant state changed, the attachment will be reprocessed.", att.Status.AddressVNI, oldAtt, att)
 			ca.queue.Add(parse.AttNSN(att))
+		} else {
+			klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of update from %#+v to %#+v. The update will be ignored because nothing relevant changed.", att.Status.AddressVNI, oldAtt, att)
 		}
 	}
 
 	onRemoteAttDelete := func(obj interface{}) {
 		att := parse.Peel(obj).(*netv1a1.NetworkAttachment)
-		klog.V(5).Infof("Remote NetworkAttachments cache for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
+		klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
 		removed := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, false)
