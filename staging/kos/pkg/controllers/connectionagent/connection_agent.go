@@ -44,7 +44,7 @@ import (
 	netv1a1 "k8s.io/examples/staging/kos/pkg/apis/network/v1alpha1"
 	kosclientset "k8s.io/examples/staging/kos/pkg/client/clientset/versioned"
 	kosscheme "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/scheme"
-	netvifc1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
+	netifcv1a1 "k8s.io/examples/staging/kos/pkg/client/clientset/versioned/typed/network/v1alpha1"
 	kosinformers "k8s.io/examples/staging/kos/pkg/client/informers/externalversions"
 	koslisterv1a1 "k8s.io/examples/staging/kos/pkg/client/listers/network/v1alpha1"
 	netfabric "k8s.io/examples/staging/kos/pkg/networkfabric"
@@ -180,7 +180,7 @@ type ConnectionAgent struct {
 	node          string
 	hostIP        gonet.IP
 	kcs           *kosclientset.Clientset
-	netv1a1Ifc    netvifc1a1.NetworkV1alpha1Interface
+	netv1a1Ifc    netifcv1a1.NetworkV1alpha1Interface
 	eventRecorder k8seventrecord.EventRecorder
 	queue         k8sworkqueue.RateLimitingInterface
 	workers       int
