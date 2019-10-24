@@ -28,7 +28,6 @@ import (
 
 	k8scorev1api "k8s.io/api/core/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
-	k8scorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
@@ -123,21 +122,12 @@ func main() {
 	clientCfg.Burst = clientBurst
 	clientCfg = rest.AddUserAgent(clientCfg, nodeName)
 
-	var eventIfc k8scorev1client.EventInterface
-	pause := time.Second
-	for {
-		k8sclientset, err := k8sclient.NewForConfig(clientCfg)
-		if err == nil {
-			eventIfc = k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
-			break
-		}
+	k8sclientset, err := k8sclient.NewForConfig(clientCfg)
+	if err != nil {
 		klog.Errorf("Failed to create Kubernetes clientset: %s", err.Error())
-		time.Sleep(pause)
-		pause = 2 * pause
-		if pause > time.Minute {
-			pause = time.Minute
-		}
+		os.Exit(6)
 	}
+	eventIfc := k8sclientset.CoreV1().Events(k8scorev1api.NamespaceAll)
 
 	clientCfg.Host = networkAPIHost + ":" + networkAPIPort
 	if caFile != "" {
@@ -153,7 +143,7 @@ func main() {
 	kcs, err := kosclientset.NewForConfig(clientCfg)
 	if err != nil {
 		klog.Errorf("Failed to build KOS clientset for kubeconfig=%q: %s", kubeconfigFilename, err.Error())
-		os.Exit(6)
+		os.Exit(7)
 	}
 
 	// TODO think whether the rate limiter parameters make sense
