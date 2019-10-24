@@ -52,12 +52,13 @@ import (
 )
 
 const (
-	// localAttsListerID is the ID of the lister backed by the informer on local
-	// NetworkAttachments. Remote NetworkAttachments informers are partitioned
-	// by VNI so their VNI can be used as the ID, but the local NetworkAttachments
-	// informer is not associated to a single VNI. Pick 0 because it's not a
-	// valid VNI value: there's no overlapping with the other IDs.
-	localAttsListerID = 0
+	// localAttsInformerFakeVNI is the fake VNI used to identify the informer on
+	// local NetworkAttachments. Remote NetworkAttachments informers are
+	// partitioned by VNI so they can be identified via their VNI, but the local
+	// NetworkAttachments informer is not associated to a single VNI. Pick 0
+	// because it's not a valid VNI: there's no overlapping with remote
+	// NetworkAttachments informers' VNIs.
+	localAttsInformerFakeVNI = 0
 
 	// Name of the indexer used to match pre-existing network interfaces to
 	// network attachments.
@@ -113,10 +114,23 @@ type layer1VirtualNetworkState struct {
 type layer1VirtualNetworksState struct {
 	sync.RWMutex
 
-	// attToListersIDs maps NetworkAttachments namespaced names to the list
-	// of IDs of the listers backed by the informers where the attachments have
-	// been seen.
-	attToListersIDs map[k8stypes.NamespacedName]map[uint32]struct{}
+	// For a namespaced name X, attToVNIs[X] stores the list of VNIs of the
+	// informers whose cache stores* a NetworkAttachment with namespaced name X.
+	// A VNI Y is added to attToVNIs[X] when a create notification for a
+	// NetworkAttachment with namespaced name X is received by the informer
+	// associated to VNI Y and is removed from attToVNIs[X] when a delete
+	// notification for a NetworkAttachment with namespaced name X is received
+	// by the informer associated to VNI Y. Notice that the local
+	// NetworkAttachments informer is not associated to a single VNI. To
+	// represent it in attToVNIs, 0 is used as a fake VNI, as it's not a valid
+	// VNI: there's no risk of collisions with the VNIs of remote attachments'
+	// informers (which are characterized by a 1-to-1 relationship with VNIs).
+	//
+	// * The actual addition/deletion of VNIs to/from attToVNIs is done by
+	// informers' notification handlers, which execute after the corresponding
+	// cache modification. This means that attToVNIs lags behind the actual
+	// content of the informers' caches.
+	attToVNIs map[k8stypes.NamespacedName]map[uint32]struct{}
 
 	// vniToVNState maps a VNI to its layer1VirtualNetworkState.
 	vniToVNState map[uint32]*layer1VirtualNetworkState
@@ -366,8 +380,8 @@ func New(node string,
 		workers:       workers,
 		netFabric:     netFabric,
 		l1VirtNetsState: layer1VirtualNetworksState{
-			attToListersIDs: make(map[k8stypes.NamespacedName]map[uint32]struct{}),
-			vniToVNState:    make(map[uint32]*layer1VirtualNetworkState),
+			attToVNIs:    make(map[k8stypes.NamespacedName]map[uint32]struct{}),
+			vniToVNState: make(map[uint32]*layer1VirtualNetworkState),
 		},
 		l2VirtNetsState: layer2VirtualNetworksState{
 			localAttToLayer2VNI: make(map[k8stypes.NamespacedName]uint32),
@@ -439,7 +453,7 @@ func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 	klog.V(5).Infof("Local NetworkAttachments informer: notified of addition of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
-	ca.updateL1VNState(attNSN, localAttsListerID, nil, true)
+	ca.updateL1VNState(attNSN, localAttsInformerFakeVNI, nil, true)
 	ca.queue.Add(attNSN)
 }
 
@@ -465,7 +479,7 @@ func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	klog.V(5).Infof("Local NetworkAttachments informer: notified of removal of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
-	ca.updateL1VNState(attNSN, localAttsListerID, nil, false)
+	ca.updateL1VNState(attNSN, localAttsInformerFakeVNI, nil, false)
 	ca.queue.Add(attNSN)
 }
 
@@ -694,29 +708,29 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	return
 }
 
-func (ca *ConnectionAgent) getLister(att k8stypes.NamespacedName) (lister koslisterv1a1.NetworkAttachmentNamespaceLister, moreThanOneLister bool) {
+func (ca *ConnectionAgent) getLister(att k8stypes.NamespacedName) (lister koslisterv1a1.NetworkAttachmentNamespaceLister, moreThanOneVNI bool) {
 	ca.l1VirtNetsState.RLock()
 	defer ca.l1VirtNetsState.RUnlock()
 
-	listersIDs := ca.l1VirtNetsState.attToListersIDs[att]
+	attVNIs := ca.l1VirtNetsState.attToVNIs[att]
 
-	if len(listersIDs) > 1 {
-		moreThanOneLister = true
+	if len(attVNIs) > 1 {
+		moreThanOneVNI = true
 		return
 	}
 
-	if len(listersIDs) == 0 {
+	if len(attVNIs) == 0 {
 		return
 	}
 
-	var listerID uint32
-	for listerID = range listersIDs {
+	var attVNI uint32
+	for attVNI = range attVNIs {
 	}
 
-	if listerID == localAttsListerID {
+	if attVNI == localAttsInformerFakeVNI {
 		lister = ca.localAttsLister.NetworkAttachments(att.Namespace)
 	} else {
-		attLayer1VNState := ca.l1VirtNetsState.vniToVNState[listerID]
+		attLayer1VNState := ca.l1VirtNetsState.vniToVNState[attVNI]
 		lister = attLayer1VNState.remoteAttsLister
 	}
 	return
@@ -833,10 +847,10 @@ func (ca *ConnectionAgent) clearLayer1VNState(vni uint32, namespace string) {
 	for aRemoteAtt := range layer1VNState.remoteAtts {
 		aRemoteAttNSN := k8stypes.NamespacedName{Namespace: namespace,
 			Name: aRemoteAtt}
-		aRemoteAttListersIDs := ca.l1VirtNetsState.attToListersIDs[aRemoteAttNSN]
-		delete(aRemoteAttListersIDs, vni)
-		if len(aRemoteAttListersIDs) == 0 {
-			delete(ca.l1VirtNetsState.attToListersIDs, aRemoteAttNSN)
+		aRemoteAttVNIs := ca.l1VirtNetsState.attToVNIs[aRemoteAttNSN]
+		delete(aRemoteAttVNIs, vni)
+		if len(aRemoteAttVNIs) == 0 {
+			delete(ca.l1VirtNetsState.attToVNIs, aRemoteAttNSN)
 		}
 		ca.queue.Add(aRemoteAttNSN)
 	}
@@ -906,21 +920,21 @@ func (ca *ConnectionAgent) updateL1VNState(att k8stypes.NamespacedName, vni uint
 		return
 	}
 
-	attListersIDs := ca.l1VirtNetsState.attToListersIDs[att]
+	attVNIs := ca.l1VirtNetsState.attToVNIs[att]
 	if attExists {
-		if attListersIDs == nil {
-			attListersIDs = make(map[uint32]struct{}, 1)
-			ca.l1VirtNetsState.attToListersIDs[att] = attListersIDs
+		if attVNIs == nil {
+			attVNIs = make(map[uint32]struct{}, 1)
+			ca.l1VirtNetsState.attToVNIs[att] = attVNIs
 		}
-		attListersIDs[vni] = struct{}{}
+		attVNIs[vni] = struct{}{}
 		if attL1VNState != nil {
 			// attL1VNState is non-nil only for remote attachments.
 			attL1VNState.remoteAtts[att.Name] = struct{}{}
 		}
 	} else {
-		delete(attListersIDs, vni)
-		if len(attListersIDs) == 0 {
-			delete(ca.l1VirtNetsState.attToListersIDs, att)
+		delete(attVNIs, vni)
+		if len(attVNIs) == 0 {
+			delete(ca.l1VirtNetsState.attToVNIs, att)
 		}
 		if attL1VNState != nil {
 			// attL1VNState is non-nil only for remote attachments.
