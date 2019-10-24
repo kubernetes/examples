@@ -439,7 +439,7 @@ func (ca *ConnectionAgent) onLocalAttAdd(obj interface{}) {
 	klog.V(5).Infof("Local NetworkAttachments informer: notified of addition of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
-	ca.updateL1VNStateForLocalAtt(attNSN, true)
+	ca.updateL1VNState(attNSN, localAttsListerID, nil, true)
 	ca.queue.Add(attNSN)
 }
 
@@ -465,29 +465,8 @@ func (ca *ConnectionAgent) onLocalAttDelete(obj interface{}) {
 	klog.V(5).Infof("Local NetworkAttachments informer: notified of removal of %#+v", att)
 
 	attNSN := parse.AttNSN(att)
-	ca.updateL1VNStateForLocalAtt(attNSN, false)
+	ca.updateL1VNState(attNSN, localAttsListerID, nil, false)
 	ca.queue.Add(attNSN)
-}
-
-func (ca *ConnectionAgent) updateL1VNStateForLocalAtt(att k8stypes.NamespacedName, attExists bool) {
-	ca.l1VirtNetsState.Lock()
-	defer ca.l1VirtNetsState.Unlock()
-
-	attListersIDs := ca.l1VirtNetsState.attToListersIDs[att]
-
-	if attExists {
-		if attListersIDs == nil {
-			attListersIDs = make(map[uint32]struct{}, 1)
-			ca.l1VirtNetsState.attToListersIDs[att] = attListersIDs
-		}
-		attListersIDs[localAttsListerID] = struct{}{}
-		return
-	}
-
-	delete(attListersIDs, localAttsListerID)
-	if len(attListersIDs) == 0 {
-		delete(ca.l1VirtNetsState.attToListersIDs, att)
-	}
 }
 
 func (ca *ConnectionAgent) syncPreExistingNetworkInterfaces() error {
@@ -869,7 +848,7 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, true)
+		ca.updateL1VNState(attNSN, att.Status.AddressVNI, l1VNS, true)
 		ca.queue.Add(attNSN)
 	}
 
@@ -892,7 +871,7 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of deletion of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		removed := ca.updateL1VNStateForRemoteAtt(attNSN, att.Status.AddressVNI, l1VNS, false)
+		removed := ca.updateL1VNState(attNSN, att.Status.AddressVNI, l1VNS, false)
 		if removed {
 			ca.queue.Add(attNSN)
 		}
@@ -905,19 +884,24 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 	}
 }
 
-func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedName, vni uint32, attL1VNState *layer1VirtualNetworkState, attExists bool) (updated bool) {
+func (ca *ConnectionAgent) updateL1VNState(att k8stypes.NamespacedName, vni uint32, attL1VNState *layer1VirtualNetworkState, attExists bool) (l1VNStateUpdated bool) {
 	ca.l1VirtNetsState.Lock()
 	defer ca.l1VirtNetsState.Unlock()
 
+	// vniL1VNState will always be nil if `att` is local because there's no
+	// layer 1 virtual network state for local attachments; it might be non-nil
+	// if `att`is remote.
 	vniL1VNState := ca.l1VirtNetsState.vniToVNState[vni]
 
-	// This function executes within a notification handler bound to an informer
-	// associated to a layer 1 virtual network state (attL1VNState). If the
-	// handler executes AFTER the layer 1 virtual network state is cleared due
-	// to becoming irrelevant, this function must not update the layer 1 virtual
-	// network state associated to vni (vniL1VNState), because such state either
-	// no longer exists or is for a newer virtual network with the same vni as
-	// the handler's. This check detectes such cases.
+	// If `att` is local this check is always false. If `att` is remote this
+	// check is needed because this function executes within a notification
+	// handler bound to an informer associated to a layer 1 virtual network
+	// state (attL1VNState). If the handler executes AFTER the layer 1 virtual
+	// network state is cleared due to becoming irrelevant, this function must
+	// not update the layer 1 virtual network state associated to vni
+	// (vniL1VNState), because such state either no longer exists or is for a
+	// newer virtual network with the same vni as the handler's. This check
+	// detects such cases.
 	if vniL1VNState != attL1VNState {
 		return
 	}
@@ -929,16 +913,22 @@ func (ca *ConnectionAgent) updateL1VNStateForRemoteAtt(att k8stypes.NamespacedNa
 			ca.l1VirtNetsState.attToListersIDs[att] = attListersIDs
 		}
 		attListersIDs[vni] = struct{}{}
-		attL1VNState.remoteAtts[att.Name] = struct{}{}
+		if attL1VNState != nil {
+			// attL1VNState is non-nil only for remote attachments.
+			attL1VNState.remoteAtts[att.Name] = struct{}{}
+		}
 	} else {
 		delete(attListersIDs, vni)
 		if len(attListersIDs) == 0 {
 			delete(ca.l1VirtNetsState.attToListersIDs, att)
 		}
-		delete(attL1VNState.remoteAtts, att.Name)
+		if attL1VNState != nil {
+			// attL1VNState is non-nil only for remote attachments.
+			delete(attL1VNState.remoteAtts, att.Name)
+		}
 	}
 
-	updated = true
+	l1VNStateUpdated = true
 	return
 }
 
