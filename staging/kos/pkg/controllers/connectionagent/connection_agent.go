@@ -862,8 +862,10 @@ func (ca *ConnectionAgent) newRemoteAttsEventHandler(l1VNS *layer1VirtualNetwork
 		klog.V(5).Infof("Remote NetworkAttachments informer for VNI %06x: notified of addition of %#+v", att.Status.AddressVNI, att)
 
 		attNSN := parse.AttNSN(att)
-		ca.updateL1VNState(attNSN, att.Status.AddressVNI, l1VNS, true)
-		ca.queue.Add(attNSN)
+		added := ca.updateL1VNState(attNSN, att.Status.AddressVNI, l1VNS, true)
+		if added {
+			ca.queue.Add(attNSN)
+		}
 	}
 
 	onRemoteAttUpdate := func(oldObj, obj interface{}) {

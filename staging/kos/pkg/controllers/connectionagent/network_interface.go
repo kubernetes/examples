@@ -160,7 +160,18 @@ func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Netwo
 }
 
 func (ifc *remoteNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
-	ca.assignNetworkInterface(parse.AttNSN(owner), ifc)
+	ownerNSN := parse.AttNSN(owner)
+	ca.assignNetworkInterface(ownerNSN, ifc)
+
+	// There's no guarantee that the add notification handler for the owner has
+	// executed yet, neither as for when it will execute. If that has not
+	// happened by the time a worker processes the deletion of the last local
+	// NetworkAttachment in the owner's virtual network, the layer 1 of the
+	// virtual network state is cleared before the owner's namespaced name could
+	// be recorded in it. This means the owner is not processed, hence its
+	// network interface is not deleted even if it should. To avoid this,
+	// enqueue the owner to force its processing.
+	ca.queue.Add(ownerNSN)
 }
 
 func (ifc *remoteNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, _ string) bool {
