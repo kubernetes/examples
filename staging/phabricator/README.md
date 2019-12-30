@@ -41,7 +41,7 @@ Raw MySQL Error: Attempt to connect to root@1.2.3.4 failed with error
 
 ### Step Three: Turn up the phabricator
 
-To start Phabricator server use the file [`examples/phabricator/phabricator-controller.json`](phabricator-controller.json) which describes a [replication controller](https://kubernetes.io/docs/user-guide/replication-controller.md) with a single [pod](https://kubernetes.io/docs/user-guide/pods.md) running an Apache server with Phabricator PHP source:
+To start Phabricator server use the file [`examples/phabricator/phabricator-controller.json`](phabricator-controller.json) which describes a [replication controller](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/) with a single [pod](https://kubernetes.io/docs/user-guide/pods.md) running an Apache server with Phabricator PHP source:
 
 <!-- BEGIN MUNGE: EXAMPLE phabricator-controller.json -->
 
