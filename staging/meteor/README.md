@@ -169,7 +169,7 @@ Here we can see the MongoDB host and port information being passed
 into the Meteor app. The `MONGO_SERVICE...` environment variables are
 set by Kubernetes, and point to the service named `mongo` specified in
 [`mongo-service.json`](mongo-service.json). See the [environment
-documentation](https://kubernetes.io/docs/user-guide/container-environment.md) for more details.
+documentation](https://kubernetes.io/docs/concepts/containers/container-environment-variables/) for more details.
 
 As you may know, Meteor uses long lasting connections, and requires
 _sticky sessions_. With Kubernetes you can scale out your app easily
