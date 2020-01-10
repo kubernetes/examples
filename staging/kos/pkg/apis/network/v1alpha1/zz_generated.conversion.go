@@ -169,6 +169,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_ExecReport_To_network_ExecReport(in *ExecReport, out *network.ExecReport, s conversion.Scope) error {
+	out.Command = *(*[]string)(unsafe.Pointer(&in.Command))
 	out.ExitStatus = in.ExitStatus
 	out.StartTime = in.StartTime
 	out.StopTime = in.StopTime
@@ -183,6 +184,7 @@ func Convert_v1alpha1_ExecReport_To_network_ExecReport(in *ExecReport, out *netw
 }
 
 func autoConvert_network_ExecReport_To_v1alpha1_ExecReport(in *network.ExecReport, out *ExecReport, s conversion.Scope) error {
+	out.Command = *(*[]string)(unsafe.Pointer(&in.Command))
 	out.ExitStatus = in.ExitStatus
 	out.StartTime = in.StartTime
 	out.StopTime = in.StopTime

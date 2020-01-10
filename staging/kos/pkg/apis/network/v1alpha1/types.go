@@ -44,18 +44,20 @@ type NetworkAttachmentSpec struct {
 	Subnet string `json:"subnet" protobuf:"bytes,2,name=subnet"`
 
 	// PostCreateExec is a command to exec inside the attachment
-	// host's connection agent container after the Linux network
-	// interface is created.  Precisely: if a local NetworkAttachment
-	// is in the network fabric, has a non-empty PostCreateExec, and
-	// that command has not yet been launched then the command is
-	// launched and, upon completion, the results reported through the
-	// NetworkAttachmentStatus PostCreateExecReport field.  The
-	// connection agent is configured with a set of allowed programs
-	// to invoke.  If a non-allowed program is requested then the
-	// result will report an error.  Each argument is subjected to a
-	// very restricted form of variable expansion.  The only allowed
-	// syntax is `${variableName}` and the only variables are
-	// `ifname`, `ipv4`, and `mac`.
+	// host's connection agent container after a new Linux network
+	// interface for the attachment is created with a network fabric
+	// operation. By definition, it is not guaranteed to execute;
+	// if the Linux network interface for the attachment previously
+	// belonged to another attachment and was recycled as opposed to
+	// being created, PostCreateExec will not execute. After PostCreateExec
+	// has executed the results of the execution are reported through the
+	// NetworkAttachmentStatus PostCreateExecReport field.
+	// The connection agent is configured with a set of allowed programs
+	// to invoke. If a non-allowed program is requested then the result
+	// will report an error.  Each argument is subjected to a very
+	// restricted form of variable expansion.  The only allowed syntax
+	// is `${variableName}` and the only variables are `ifname`, `ipv4`,
+	// and `mac`.
 	// PostCreateExec is immutable: attempts to update it will fail.
 	// +optional
 	// +patchStrategy=replace
@@ -110,7 +112,15 @@ type NetworkAttachmentStatus struct {
 	HostIP string `json:"hostIP,omitempty" protobuf:"bytes,7,opt,name=hostIP"`
 
 	// PostCreateExecReport, if non-nil, reports on the run of the
-	// PostCreateExec.
+	// PostCreateExec that was launched when the Linux network
+	// interface owned by the attachment was created. Notice that
+	// such PostCreateExec might differ from the one in the
+	// NetworkAttachmentSpec PostCreateExec field of the attachment;
+	// precisely, if the Linux network interface for the attachment
+	// was recycled as opposed to being created with a network fabric
+	// operation, PostCreateExecReport reports on the run of the
+	// PostCreateExec of the attachment for whom the Linux network
+	// interface was first created.
 	// +optional
 	PostCreateExecReport *ExecReport `json:"postCreateExecReport,omitempty" protobuf:"bytes,8,opt,name=postCreateExecReport"`
 }
@@ -129,16 +139,20 @@ type NetworkAttachmentErrors struct {
 
 // ExecReport reports on what happened when a command was execd.
 type ExecReport struct {
+	// Command is the command whose execution is summarized by this ExecReport.
+	// +patchStrategy=replace
+	Command []string `json:"command" protobuf:"bytes,1,opt,name=command" patchStrategy:"replace"`
+
 	// ExitStatus is the Linux exit status from the command, or a
 	// negative number to signal a prior problem (detailed in StdErr).
-	ExitStatus int32 `json:"exitStatus" protobuf:"bytes,1,name=exitStatus"`
+	ExitStatus int32 `json:"exitStatus" protobuf:"bytes,2,name=exitStatus"`
 
-	StartTime metav1.Time `json:"startTime,omitempty" protobuf:"bytes,2,name=startTime"`
+	StartTime metav1.Time `json:"startTime,omitempty" protobuf:"bytes,3,name=startTime"`
 
-	StopTime metav1.Time `json:"stopTime,omitempty" protobuf:"bytes,3,name=stopTime"`
+	StopTime metav1.Time `json:"stopTime,omitempty" protobuf:"bytes,4,name=stopTime"`
 
-	StdOut string `json:"stdOut" protobuf:"bytes,4,name=stdOut"`
-	StdErr string `json:"stdErr" protobuf:"bytes,5,name=stdErr"`
+	StdOut string `json:"stdOut" protobuf:"bytes,5,name=stdOut"`
+	StdErr string `json:"stdErr" protobuf:"bytes,6,name=stdErr"`
 }
 
 // Equiv tests whether the two referenced ExecReports say the same
