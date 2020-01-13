@@ -62,6 +62,8 @@ const (
 
 	// Name of the indexer used to match pre-existing network interfaces to
 	// network attachments.
+	// In the informer for local NetworkAttachments the indexed values are <VNI>/<GuestIP>.
+	// In an informer for remote NetworkAttachments the indexed values are <HostIP>/<GuestIP>.
 	ifcOwnerDataIndexerName = "ifcOwnerData"
 
 	// Field names of NetworkAttachments used to build field selectors.
@@ -490,12 +492,12 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterfaces() error {
 	// the network interface.
 	err := ca.startRemoteAttsInformers()
 	if err != nil {
-		return fmt.Errorf("failed to sync pre-existing network interfaces: %s", err.Error())
+		return fmt.Errorf("failed to start remote attachment informers during sync of pre-existing network interfaces: %s", err.Error())
 	}
 
 	ifcs, err := ca.listPreExistingNetworkInterfaces()
 	if err != nil {
-		return fmt.Errorf("failed to sync pre-existing network interfaces: %s", err.Error())
+		return fmt.Errorf("failed to list pre-existing network interfaces: %s", err.Error())
 	}
 
 	for _, ifc := range ifcs {
@@ -546,7 +548,7 @@ func (ca *ConnectionAgent) startRemoteAttsInformers() error {
 }
 
 func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface) error {
-	ifcOwner, err := ifc.getOwner(ca)
+	ifcOwner, err := ifc.findOwner(ca)
 	if err != nil {
 		return fmt.Errorf("failed to sync pre-existing network interface %s: %s", ifc, err.Error())
 	}
@@ -555,6 +557,7 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 		ifcOwnerNSN := parse.AttNSN(ifcOwner)
 		_, ownerAlreadyHasInterface := ca.getNetworkInterface(ifcOwnerNSN)
 
+		//TODO: Reword this.
 		// Pre-existing Network interfaces are matched to network attachments
 		// on the basis of the VNI, the IP and the host of the attachment. But
 		// these fields can be seen changing even if the namespaced name is
@@ -580,8 +583,8 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 		// the mistake by realizing the network interface does not match the
 		// attachment and creating a correct interface after deleting the old one.
 		if !ownerAlreadyHasInterface {
-			ifc.matchToOwner(ifcOwner, ca)
-			klog.V(3).Infof("Matched pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
+			ifc.linkToOwner(ifcOwner, ca)
+			klog.V(3).Infof("Linked pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
 			return nil
 		}
 	}
@@ -950,7 +953,7 @@ func (ca *ConnectionAgent) updateL1VNState(att k8stypes.NamespacedName, vni uint
 
 func (ca *ConnectionAgent) syncNetworkInterface(attNSN k8stypes.NamespacedName, att *netv1a1.NetworkAttachment) (ifc networkInterface, statusErrs sliceOfString, err error) {
 	oldIfc, oldIfcFound := ca.getNetworkInterface(attNSN)
-	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedByAttachment(att, ca.node)
+	oldIfcCanBeUsed := oldIfcFound && oldIfc.canBeOwnedBy(att, ca.node)
 
 	if oldIfcFound && !oldIfcCanBeUsed {
 		err = oldIfc.delete(attNSN, ca)

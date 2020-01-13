@@ -34,16 +34,21 @@ import (
 	"k8s.io/examples/staging/kos/pkg/util/parse"
 )
 
-// networkInterface provides access to the local networking state of
-// NetworkAttachments.
+// networkInterface is the operations that a connection agent needs to perform
+// on a fabric LocalNetIfc or RemoteNetIfc.
 type networkInterface interface {
-	// getOwner returns a NetworkAttachment eligible to own the network
+	// findOwner returns a NetworkAttachment eligible to own the network
 	// interface, if one exists. Invoke only BEFORE workers are started, when
 	// only the main goroutine is running, because implementers access
 	// mutex-protected state without holding the mutex.
-	getOwner(*ConnectionAgent) (*netv1a1.NetworkAttachment, error)
-	matchToOwner(*netv1a1.NetworkAttachment, *ConnectionAgent)
-	canBeOwnedByAttachment(*netv1a1.NetworkAttachment, string) bool
+	findOwner(*ConnectionAgent) (*netv1a1.NetworkAttachment, error)
+	linkToOwner(*netv1a1.NetworkAttachment, *ConnectionAgent)
+	// canBeOwnedBy returns `true` if `potentialOwner` can own the network
+	// interface, that is, if their fields match.
+	// `localNode` is the name of the node the connection agent runs on. It is
+	// needed to determine whether `potentialOwner` is a local network attachment
+	// or not (when this method is invoked on a local network interface).
+	canBeOwnedBy(potentialOwner *netv1a1.NetworkAttachment, localNode string) bool
 	delete(k8stypes.NamespacedName, *ConnectionAgent) error
 	String() string
 }
@@ -87,7 +92,7 @@ type localNetworkInterface struct {
 
 var _ networkInterface = &localNetworkInterface{}
 
-func (ifc *localNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
+func (ifc *localNetworkInterface) findOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
 	indexer := ca.localAttsInformer.GetIndexer()
 	vniAndIP := strconv.FormatUint(uint64(ifc.VNI), 16) + "/" + ifc.GuestIP.String()
 	ownerObj, err := indexer.ByIndex(ifcOwnerDataIndexerName, vniAndIP)
@@ -101,7 +106,7 @@ func (ifc *localNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Networ
 	return nil, nil
 }
 
-func (ifc *localNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
+func (ifc *localNetworkInterface) linkToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
 	ifc.postDeleteExec = owner.Spec.PostDeleteExec
 	if owner.Status.PostCreateExecReport != nil {
 		ifc.postCreateExecReport = &execReport{
@@ -111,7 +116,7 @@ func (ifc *localNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment,
 	ca.assignNetworkInterface(parse.AttNSN(owner), ifc)
 }
 
-func (ifc *localNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, localNode string) bool {
+func (ifc *localNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment, localNode string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
@@ -142,7 +147,7 @@ type remoteNetworkInterface struct {
 
 var _ networkInterface = &remoteNetworkInterface{}
 
-func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
+func (ifc *remoteNetworkInterface) findOwner(ca *ConnectionAgent) (*netv1a1.NetworkAttachment, error) {
 	indexer := ca.getRemoteAttsIndexer(ifc.VNI)
 	if indexer == nil {
 		return nil, nil
@@ -159,7 +164,7 @@ func (ifc *remoteNetworkInterface) getOwner(ca *ConnectionAgent) (*netv1a1.Netwo
 	return nil, nil
 }
 
-func (ifc *remoteNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
+func (ifc *remoteNetworkInterface) linkToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
 	ownerNSN := parse.AttNSN(owner)
 	ca.assignNetworkInterface(ownerNSN, ifc)
 
@@ -174,7 +179,7 @@ func (ifc *remoteNetworkInterface) matchToOwner(owner *netv1a1.NetworkAttachment
 	ca.queue.Add(ownerNSN)
 }
 
-func (ifc *remoteNetworkInterface) canBeOwnedByAttachment(att *netv1a1.NetworkAttachment, _ string) bool {
+func (ifc *remoteNetworkInterface) canBeOwnedBy(att *netv1a1.NetworkAttachment, _ string) bool {
 	return att != nil &&
 		ifc.VNI == att.Status.AddressVNI &&
 		ifc.GuestIP.Equal(gonet.ParseIP(att.Status.IPv4)) &&
@@ -199,7 +204,15 @@ func (ifc *remoteNetworkInterface) String() string {
 }
 
 func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttachment) (ifc *localNetworkInterface, statusErrs sliceOfString, err error) {
-	ifc = ca.newLocalNetworkInterfaceForAttachment(att)
+	ifc = &localNetworkInterface{}
+	ifc.VNI = att.Status.AddressVNI
+	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
+	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
+	ifc.Name = generateIfcName(ifc.GuestMAC)
+	ifc.postDeleteExec = att.Spec.PostDeleteExec
+	if len(att.Spec.PostCreateExec) > 0 {
+		ifc.postCreateExecReport = &execReport{}
+	}
 
 	tBefore := time.Now()
 	err = ca.netFabric.CreateLocalIfc(ifc.LocalNetIfc)
@@ -219,7 +232,11 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 }
 
 func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAttachment) (*remoteNetworkInterface, error) {
-	ifc := ca.newRemoteNetworkInterfaceForAttachment(att)
+	ifc := &remoteNetworkInterface{}
+	ifc.VNI = att.Status.AddressVNI
+	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
+	ifc.HostIP = gonet.ParseIP(att.Status.HostIP)
+	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
 
 	tBefore := time.Now()
 	err := ca.netFabric.CreateRemoteIfc(ifc.RemoteNetIfc)
@@ -232,28 +249,6 @@ func (ca *ConnectionAgent) createRemoteNetworkInterface(att *netv1a1.NetworkAtta
 	}
 
 	return ifc, err
-}
-
-func (ca *ConnectionAgent) newLocalNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) *localNetworkInterface {
-	ifc := &localNetworkInterface{}
-	ifc.VNI = att.Status.AddressVNI
-	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
-	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
-	ifc.Name = generateIfcName(ifc.GuestMAC)
-	ifc.postDeleteExec = att.Spec.PostDeleteExec
-	if len(att.Spec.PostCreateExec) > 0 {
-		ifc.postCreateExecReport = &execReport{}
-	}
-	return ifc
-}
-
-func (ca *ConnectionAgent) newRemoteNetworkInterfaceForAttachment(att *netv1a1.NetworkAttachment) *remoteNetworkInterface {
-	ifc := &remoteNetworkInterface{}
-	ifc.VNI = att.Status.AddressVNI
-	ifc.GuestIP = gonet.ParseIP(att.Status.IPv4)
-	ifc.HostIP = gonet.ParseIP(att.Status.HostIP)
-	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
-	return ifc
 }
 
 func (ca *ConnectionAgent) listPreExistingNetworkInterfaces() ([]networkInterface, error) {
