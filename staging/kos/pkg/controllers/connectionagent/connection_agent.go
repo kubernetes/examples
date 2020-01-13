@@ -557,31 +557,40 @@ func (ca *ConnectionAgent) syncPreExistingNetworkInterface(ifc networkInterface)
 		ifcOwnerNSN := parse.AttNSN(ifcOwner)
 		_, ownerAlreadyHasInterface := ca.getNetworkInterface(ifcOwnerNSN)
 
-		//TODO: Reword this.
-		// Pre-existing Network interfaces are matched to network attachments
-		// on the basis of the VNI, the IP and the host of the attachment. But
-		// these fields can be seen changing even if the namespaced name is
-		// steady, for instance by deleting the network attachment and creating
-		// one with same namespaced name and a different VNI. This means that
-		// two network interfaces could be matched to the same namespaced name,
-		// where each match would correspond to two different versions of the
-		// same network attachment, or two different network attachments with
-		// the same namespaced name. In such cases, the interface to keep is the
-		// one matching the most recent version of the network attachment, while
-		// the other should be deleted. Notice that the order in which the
-		// matches took place does not say which match should be kept, because
-		// the two versions of the matched network attachment might come from
-		// different informers and there are no cross-informer ordering
-		// guarantees. There are ways to always take the optimal choice, but
-		// they make for really complex code and yield little advantage because
-		// attachments can change: if an attachment is matched and it changes 1
-		// sec later, the match was useless. For this reason, this code does not
-		// attempt to always take the optimal choice: in cases of collisions the
-		// interface that was matched first is taken and the other is deleted.
-		// Collisions should be a rare event anyway. Even if the wrong choice is
-		// taken during normal operation the connection agent will rectify the
-		// the mistake by realizing the network interface does not match the
-		// attachment and creating a correct interface after deleting the old one.
+		// Pre-existing network interfaces are linked to their owners. The owner
+		// of an interface is a network attachment that matches the interface
+		// VNI, guest IP and host. If an interface I is linked to an attachment
+		// with namespaced name A, the association is stored by the connection
+		// agent as the pair (I, A), that is, the association keeps only the
+		// namespaced name of the attachment. The attachment fields that are
+		// used to link attachments and interfaces can be updated, and
+		// attachments can be deleted and re-created with the same namespaced
+		// name but different field values. This means that two interfaces could
+		// be linked to the same namespaced name, where each link would be
+		// associated to two different versions of the same attachment, or two
+		// attachments with the same namespaced name (for the remainder of this
+		// explanation only the first case will be considered, but the arguments
+		// that are made apply to the second argument as well). In such case,
+		// the interface to keep is the one associated to the most recent
+		// version of the attachment, while the other interface should be
+		// deleted. Note that the order in which the two associations were made
+		// does not necessarily reflect the order of the versions of the
+		// attachment: the out-of-date version might be the one in the
+		// association that was made last. The reason is that the two versions
+		// of the attachment might come from two different informers, and there
+		// are no cross-informer ordering guarantees. There are ways to always
+		// take the optimal choice, but they make for really complex code and
+		// yield little advantage: if an attachment is linked to an interface
+		// and 1 sec later it is updated, the association is no longer valid.
+		// For this reason, this code does not attempt to always take the
+		// optimal choice: in case of collisions the interface that was linked
+		// first is kept, while the other is deleted. First, collisions should
+		// be rare. Second, even if the wrong interface is kept, when the
+		// connection agent starts normal operation (i.e. after this sync) it
+		// will process the attachment linked to the interface, and it will
+		// detect that their fields do not match. This will trigger deletion of
+		// the interface and a new one which matches the attachment will be
+		// created and linked to the attachment.
 		if !ownerAlreadyHasInterface {
 			ifc.linkToOwner(ifcOwner, ca)
 			klog.V(3).Infof("Linked pre-existing network interface %s with attachment %s", ifc, ifcOwnerNSN)
