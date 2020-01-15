@@ -724,9 +724,6 @@ func (ca *ConnectionAgent) getNetworkAttachment(attNSN k8stypes.NamespacedName) 
 	}
 
 	// Retrieve the NetworkAttachment.
-	// ? What happens if this .Get hits the cache after the associated Informer
-	// has been stopped? I suspect nothing worth special care, but double-check
-	// to make sure.
 	att, err := attLister.Get(attNSN.Name)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		klog.Errorf("Failed to look up NetworkAttachment %s: %s. This should never happen, there will be no retry.", attNSN, err.Error())
