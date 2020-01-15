@@ -48,7 +48,7 @@ const (
 // stored into the attachment's status if it still should be.  If `!saveReport`
 // then the ExecReport is just logged (but probably should be emitted in an
 // Event).
-func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, cmd []string, execReportReceiver *execReport, what string, doit bool) sliceOfString {
+func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, cmd []string, setExecReport func(er interface{}), what string, doit bool) sliceOfString {
 	if len(cmd) == 0 {
 		return nil
 	}
@@ -60,11 +60,11 @@ func (c *ConnectionAgent) launchCommand(attNSN k8stypes.NamespacedName, ifc netf
 		return nil
 	}
 	klog.V(4).Infof("Will launch attachment command: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, cmd=%#v", attNSN, ifc.VNI, ifc.GuestIP, ifc.Name, ifc.GuestMAC, what, cmd)
-	go func() { c.runCommand(attNSN, ifc, cmd, execReportReceiver, what) }()
+	go func() { c.runCommand(attNSN, ifc, cmd, setExecReport, what) }()
 	return nil
 }
 
-func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, urcmd []string, execReportReceiver *execReport, what string) {
+func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, ifc netfabric.LocalNetIfc, urcmd []string, setExecReport func(er interface{}), what string) {
 	expanded := make([]string, len(urcmd)-1)
 	for i, argi := range urcmd[1:] {
 		argi = strings.Replace(argi, "${ifname}", ifc.Name, -1)
@@ -107,7 +107,8 @@ func (c *ConnectionAgent) runCommand(attNSN k8stypes.NamespacedName, ifc netfabr
 	c.attachmentExecDurationHistograms.With(prometheus.Labels{"what": what}).Observe(stopTime.Sub(startTime).Seconds())
 	c.attachmentExecStatusCounts.With(prometheus.Labels{"what": what, "exitStatus": strconv.FormatInt(int64(cr.ExitStatus), 10)}).Inc()
 	klog.V(4).Infof("Exec report: att=%s, vni=%06x, ipv4=%s, ifcName=%s, mac=%s, what=%s, report=%#+v", attNSN, ifc.VNI, ifc.GuestIP, ifc.Name, ifc.GuestMAC, what, cr)
-	if set := execReportReceiver.setReport(cr); set {
+	if setExecReport != nil {
+		setExecReport(cr)
 		c.queue.Add(attNSN)
 	}
 }

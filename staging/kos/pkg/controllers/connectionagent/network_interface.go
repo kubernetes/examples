@@ -20,7 +20,7 @@ import (
 	"fmt"
 	gonet "net"
 	"strconv"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,40 +53,11 @@ type networkInterface interface {
 	String() string
 }
 
-type execReport struct {
-	sync.RWMutex
-	report *netv1a1.ExecReport
-}
-
-func (er *execReport) getReport() *netv1a1.ExecReport {
-	if er == nil {
-		return nil
-	}
-
-	er.RLock()
-	defer er.RUnlock()
-
-	return er.report
-}
-
-func (er *execReport) setReport(report *netv1a1.ExecReport) (set bool) {
-	if er == nil {
-		return
-	}
-	set = true
-
-	er.Lock()
-	defer er.Unlock()
-
-	er.report = report
-	return
-}
-
 // localNetworkInterface wraps a network fabric LocalNetIfc and adds to it state
 // that the network fabric ignores but is relevant to the connection agent.
 type localNetworkInterface struct {
 	netfabric.LocalNetIfc
-	postCreateExecReport *execReport
+	postCreateExecReport atomic.Value
 	postDeleteExec       []string
 }
 
@@ -109,9 +80,7 @@ func (ifc *localNetworkInterface) findOwner(ca *ConnectionAgent) (*netv1a1.Netwo
 func (ifc *localNetworkInterface) linkToOwner(owner *netv1a1.NetworkAttachment, ca *ConnectionAgent) {
 	ifc.postDeleteExec = owner.Spec.PostDeleteExec
 	if owner.Status.PostCreateExecReport != nil {
-		ifc.postCreateExecReport = &execReport{
-			report: owner.Status.PostCreateExecReport,
-		}
+		ifc.postCreateExecReport.Store(owner.Status.PostCreateExecReport)
 	}
 	ca.assignNetworkInterface(parse.AttNSN(owner), ifc)
 }
@@ -210,9 +179,6 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 	ifc.GuestMAC = generateMACAddr(ifc.VNI, ifc.GuestIP)
 	ifc.Name = generateIfcName(ifc.GuestMAC)
 	ifc.postDeleteExec = att.Spec.PostDeleteExec
-	if len(att.Spec.PostCreateExec) > 0 {
-		ifc.postCreateExecReport = &execReport{}
-	}
 
 	tBefore := time.Now()
 	err = ca.netFabric.CreateLocalIfc(ifc.LocalNetIfc)
@@ -220,7 +186,7 @@ func (ca *ConnectionAgent) createLocalNetworkInterface(att *netv1a1.NetworkAttac
 
 	ca.fabricLatencyHistograms.With(prometheus.Labels{"op": "CreateLocalIfc", "err": formatErrVal(err != nil)}).Observe(tAfter.Sub(tBefore).Seconds())
 	if err == nil {
-		statusErrs = ca.launchCommand(parse.AttNSN(att), ifc.LocalNetIfc, att.Spec.PostCreateExec, ifc.postCreateExecReport, "postCreate", true)
+		statusErrs = ca.launchCommand(parse.AttNSN(att), ifc.LocalNetIfc, att.Spec.PostCreateExec, ifc.postCreateExecReport.Store, "postCreate", true)
 		if att.Status.IfcName == "" {
 			ca.attachmentCreateToLocalIfcHistogram.Observe(tAfter.Truncate(time.Second).Sub(att.CreationTimestamp.Time).Seconds())
 		}

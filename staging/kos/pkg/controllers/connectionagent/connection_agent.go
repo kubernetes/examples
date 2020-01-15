@@ -687,7 +687,7 @@ func (ca *ConnectionAgent) processNetworkAttachment(attNSN k8stypes.NamespacedNa
 	// network interface are local.
 	localIfc := ifc.(*localNetworkInterface)
 	ifcMAC := localIfc.GuestMAC.String()
-	ifcPCER := localIfc.postCreateExecReport.getReport()
+	ifcPCER, _ := localIfc.postCreateExecReport.Load().(*netv1a1.ExecReport)
 	if ca.localAttachmentIsUpToDate(att, ifcMAC, localIfc.Name, statusErrs, ifcPCER) {
 		return nil
 	}
