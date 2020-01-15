@@ -108,9 +108,15 @@ type stage1VirtualNetworkState struct {
 
 // stage1VirtualNetworksState is the first stage of the state associated with
 // all the relevant virtual networks.
-// Its main purposes are retrieval of remote NetworkAttachments by workers and
-// deletion of network interfaces of those remote NetworkAttachments when the
-// virtual network becomes irrelevant.
+// Its first purpose is telling a queue worker that popped a namespaced name N
+// in which informer I to retrieve the whole NetworkAttachment API object whose
+// namespaced name is N. This information is added by the notification handler
+// triggered by the addition of the NetworkAttachment to I; because
+// stage1VirtualNetworksState is populated by notifications handlers, it is
+// engineered to be accessed promptly and briefly. Another purpose is tracking
+// which remote NetworkAttachments belong to each virtual network, so that when
+// a virtual network becomes irrelevant the hard state of its remote
+// NetworkAttachments can be scheduled for deletion (by queue workers).
 // All operations on a stage1VirtualNetworksState must be done while holding
 // its mutex's lock.
 type stage1VirtualNetworksState struct {
@@ -160,13 +166,16 @@ type stage2VirtualNetworkState struct {
 }
 
 // stage2VirtualNetworksState is the second stage of the state associated with
-// all the relevant virtual networks. Its main purposes are set up of
-// stage1VNState when a virtual network becomes relevant and clearing such
-// stage1VNState when the associated virtual network becomes irrelevant (and
-// this in turn triggers deletion of the network interfaces of remote
-// NetworkAttachments in that virtual network).
-// All operations on a stage2VirtualNetworksState while queue workers are
-// running must be done with the mutex locked.
+// all the relevant virtual networks.
+// Its purpose is tracking relevance of virtual networks, it does so by
+// recording which local NetworkAttachments belong to each virtual network. A
+// virtual network is relevant as long as there is at least one local
+// NetworkAttachment in it. The information on which local NetworkAttachment
+// belongs to which virtual network is kept up to date by queue workers that
+// process local NetworkAttachments.
+// All operations on stage2VirtualNetworksState must be done while holding its
+// mutex except before the queue workers are started (when there's only one
+// thread running).
 type stage2VirtualNetworksState struct {
 	sync.Mutex
 
@@ -208,16 +217,23 @@ type ConnectionAgent struct {
 	localAttsInformer k8scache.SharedIndexInformer
 	localAttsLister   koslisterv1a1.NetworkAttachmentLister
 
-	// First stage of the state associated with all relevant virtual networks.
-	// Always access while holding its mutex.
-	// Never attempt to lock s2VirtNetsState's mutex while holding
-	// s1VirtNetsState's, it can lead to deadlock.
+	// s1VirtNetsState and s2VirtNetsState are jointly responsible for
+	// synthesizing the effect of one dynamically selective informer from a
+	// dynamic collection of statically selective informers. The dynamic
+	// selectivity is needed because as local NetworkAttachments are created
+	// (deleted) their virtual networks become relevant (irrelevant). When a new
+	// virtual network becomes relevant, the ConnectionAgent becomes interested
+	// in the remote NetworkAttachments in that virtual network, but none of its
+	// informers is configured to receive notifications on those
+	// NetworkAttachments, hence a new informer with the appropriate selector
+	// must be started. Symmetrically, when a virtual network becomes irrelevant
+	// the ConnectionAgent is no longer interested in the remote
+	// NetworkAttachments in that virtual network, hence the informer on those
+	// NetworkAttachments must be stopped.
+	// When both s1VirtNetsState's and s2VirtNetsState's lock need to be
+	// acquired, the order of acquisition is s2VirtNetsState's and then
+	// s1VirtNetsState's, doing otherwise can lead to deadlock.
 	s1VirtNetsState stage1VirtualNetworksState
-
-	// Second stage of the state associated with all relevant virtual networks.
-	// Always access while holding its mutex.
-	// It is safe to attempt to lock s1VirtNetsState's mutex while holding
-	// s2VirtNetsState's.
 	s2VirtNetsState stage2VirtualNetworksState
 
 	// attToNetworkInterface maps NetworkAttachments namespaced names to their
