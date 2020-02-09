@@ -1,5 +1,4 @@
 Install K8s:
-
 2. Become root and update and upgrade the system, install docker.
   student@lfs458-node-1a0a:~$ sudo -i
   root@lfs458-node-1a0a:~# apt-get update && apt-get upgrade -y
@@ -97,7 +96,20 @@ Deploy A Simple Application:
     student@lfs458-node-1a0a:~$ kubectl create deployment nginx --image=nginx
 3. View the basic steps the cluster took in order to pull and deploy the new application.
    student@lfs458-node-1a0a:~$ kubectl get events
-   
+7. Create the deployment:
+   student@lfs458-node-1a0a:~$ kubectl create -f first.yaml
+   student@lfs458-node-1a0a:~$ kubectl create deployment two --image=nginx --dry-run -o yaml
+   student@lfs458-node-1a0a:~$ kubectl replace -f first.yaml
+13. Now try to gain access to the web server.
+    student@lfs458-node-1a0a:~$ kubectl expose deployment/nginx
+21. Now scale up the deployment from one to three web servers.
+    student@lfs458-node-1a0a:~$ kubectl scale deployment nginx --replicas=3
+    
+    
+    
+    
+    
+    
 
 
 
