@@ -87,6 +87,8 @@ Deploy A Simple Application:
    student@lfs458-node-1a0a:~$ kubectl replace -f first.yaml
 13. Now try to gain access to the web server.
     student@lfs458-node-1a0a:~$ kubectl expose deployment/nginx
+18. Verify the service conﬁguration.
+    student@lfs458-node-1a0a:~$ kubectl get svc,ep
 21. Now scale up the deployment from one to three web servers.
     student@lfs458-node-1a0a:~$ kubectl scale deployment nginx --replicas=3
     
