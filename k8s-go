@@ -1,4 +1,5 @@
 Install K8s:
+
 2. Become root and update and upgrade the system, install docker.
   student@lfs458-node-1a0a:~$ sudo -i
   root@lfs458-node-1a0a:~# apt-get update && apt-get upgrade -y
@@ -54,3 +55,43 @@ Install K8s:
     
 18. View other values we could have included in the kubeadm-config.yaml ﬁle when creating the cluster.
     student@lfs458-node-1a0a:~$ sudo kubeadm config print init-defaults
+
+
+Grow the cluster:
+1. Using the same process as before connect to a second node.
+  student@lfs458-worker:~$ sudo -i 
+  root@lfs458-worker:~# apt-get update && apt-get upgrade -y 
+  root@lfs458-worker:~# apt-get install -y docker.io 
+  root@lfs458-worker:~# vim /etc/apt/sources.list.d/kubernetes.list 
+      deb http://apt.kubernetes.io/ kubernetes-xenial main
+  root@lfs458-worker:~# curl -s \ https://packages.cloud.google.com/apt/doc/apt-key.gpg \ | apt-key add -
+  root@lfs458-worker:~# apt-get update root@lfs458-worker:~# apt-get install -y \ kubeadm=1.15.1-00 kubelet=1.15.1-00 kubectl=1.15.1-00 
+  root@lfs458-worker:~# exit
+  
+3. At this point we could copy and paste the join command from the master node.
+   student@lfs458-node-1a0a:~$ sudo kubeadm token list
+4. Only if the token has expired, you can create a new token, to use as part of the join command.
+   student@lfs458-node-1a0a:~$ sudo kubeadm token create   
+   
+5. Starting in v1.9 you should create and use a Discovery Token CA Cert Hash created from the master to ensure the node joins the cluster in a secure manner.
+   student@lfs458-node-1a0a:~$ openssl x509 -pubkey \
+   -in /etc/kubernetes/pki/ca.crt | openssl rsa \
+   -pubin -outform der 2>/dev/null | openssl dgst \
+   -sha256 -hex | sed 's/^.* //'
+
+6. On the worker node add a local DNS alias for the master server.
+   root@lfs458-worker:~# vim /etc/hosts
+   10.128.0.3 k8smaster #<-- Add this line
+   
+7. Use the token and hash, in this case as sha256:long-hash to join the cluster from the second/worker node.
+   root@lfs458-worker:~# kubeadm join \
+   --token {{token}} \ k8smaster:6443 \
+   --discovery-token-ca-cert-hash \ sha256:{{ca cert hash}}
+   
+ Finish Cluster Setup:
+ 1. Note the minus sign (-) at the end, which is the syntax to remove a taint.
+    student@lfs458-node-1a0a:~$ kubectl taint nodes \ --all node-role.kubernetes.io/master-
+   
+
+
+
