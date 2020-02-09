@@ -92,7 +92,7 @@ Deploy A Simple Application:
     
 Access from Outside the Cluster:
 2. use the exec command to run printenv inside the pod.
-   student@lfs458-node-1a0a:~$ kubectl exec nginx-1423793266-13p69 \ -- printenv |grep KUBERNETES
+   student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} \ -- printenv |grep KUBERNETES
 5. Create the service again, but this time pass the LoadBalancer type.
    student@lfs458-node-1a0a:~$ kubectl expose deployment nginx --type=LoadBalancer
     
