@@ -73,7 +73,7 @@ Grow the cluster:
 4. Only if the token has expired, you can create a new token, to use as part of the join command.
    student@lfs458-node-1a0a:~$ sudo kubeadm token create   
    
-5. Starting in v1.9 you should create and use a Discovery Token CA Cert Hash created from the master to ensure the node joins the cluster in a secure manner.
+5. Starting in v1.9 you should create and use a Discovery Token CA Cert Hash (ca cert hash) created from the master to ensure the node joins the cluster in a secure manner.
    student@lfs458-node-1a0a:~$ openssl x509 -pubkey \
    -in /etc/kubernetes/pki/ca.crt | openssl rsa \
    -pubin -outform der 2>/dev/null | openssl dgst \
