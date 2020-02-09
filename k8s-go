@@ -3,29 +3,22 @@ Install K8s:
   student@lfs458-node-1a0a:~$ sudo -i
   root@lfs458-node-1a0a:~# apt-get update && apt-get upgrade -y
   root@lfs458-node-1a0a:~# apt-get install -y docker.io
-
 3. Add new Repo for k8s:
   root@lfs458-node-1a0a:~# vim /etc/apt/sources.list.d/kubernetes.list
-  deb http://apt.kubernetes.io/ kubernetes-xenial main
-  
+  deb http://apt.kubernetes.io/ kubernetes-xenial main  
 5. Add a GPG key for the packages. The command spans three lines. You can omit the backslash when you type. The OK is the expected output, not part of the command.
   root@lfs458-node-1a0a:~# curl -s \
-  https://packages.cloud.google.com/apt/doc/apt-key.gpg \ | apt-key add -
-  
+  https://packages.cloud.google.com/apt/doc/apt-key.gpg \ | apt-key add -  
 6. Update with the new repo declared, which will download updated repo information.
    root@lfs458-node-1a0a:~# apt-get update
-
 7. Install the software.
-   root@lfs458-node-1a0a:~# apt-get install -y \ kubeadm=1.15.1-00 kubelet=1.15.1-00 kubectl=1.15.1-00
-   
+   root@lfs458-node-1a0a:~# apt-get install -y \ kubeadm=1.15.1-00 kubelet=1.15.1-00 kubectl=1.15.1-00   
 8. Download pod network:
    root@lfs458-node-1a0a:~# wget https://tinyurl.com/yb4xturm -O rbac-kdd.yaml 
    root@lfs459-node-1a0a:~# wget https://tinyurl.com/y8lvqc9g -O calico.yaml
-
 11. Add an local DNS alias for our master server.
     root@lfs458-node-1a0a:~# vim /etc/hosts
-    10.128.0.3 k8smaster #<-- Add this line
-    
+    10.128.0.3 k8smaster #<-- Add this line    
 12. Create a conﬁguration ﬁle for the cluster.
     vim kubeadm-config.yaml
     apiVersion: kubeadm.k8s.io/v1beta2 
@@ -33,25 +26,21 @@ Install K8s:
     kubernetesVersion: 1.15.1 
     controlPlaneEndpoint: "k8smaster:6443" 
     networking:
-      podSubnet: 192.168.0.0/16
-      
+      podSubnet: 192.168.0.0/16      
 13. Initialize the master.
-    root@lfs458-node-1a0a:~# kubeadm init --config=kubeadm-config.yaml --upload-certs \ | tee kubeadm-init.out
-    
+    root@lfs458-node-1a0a:~# kubeadm init --config=kubeadm-config.yaml --upload-certs \ | tee kubeadm-init.out    
 14. allow a non-root user admin level access to the cluster.
     root@lfs458-node-1a0a:~# exit
       logout
     student@lfs458-node-1a0a:~$ mkdir -p $HOME/.kube
     student@lfs458-node-1a0a:~$ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     student@lfs458-node-1a0a:~$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
-    student@lfs458-node-1a0a:~$ less .kube/config
-    
+    student@lfs458-node-1a0a:~$ less .kube/config    
 15. Apply the network plugin conﬁguration to your cluster.
     student@lfs458-node-1a0a:~$ sudo cp /root/rbac-kdd.yaml .
     student@lfs458-node-1a0a:~$ kubectl apply -f rbac-kdd.yaml
     student@lfs458-node-1a0a:~$ sudo cp /root/calico.yaml .
-    student@lfs458-node-1a0a:~$ kubectl apply -f calico.yaml
-    
+    student@lfs458-node-1a0a:~$ kubectl apply -f calico.yaml    
 18. View other values we could have included in the kubeadm-config.yaml ﬁle when creating the cluster.
     student@lfs458-node-1a0a:~$ sudo kubeadm config print init-defaults
 
@@ -65,23 +54,19 @@ Grow the cluster:
       deb http://apt.kubernetes.io/ kubernetes-xenial main
   root@lfs458-worker:~# curl -s \ https://packages.cloud.google.com/apt/doc/apt-key.gpg \ | apt-key add -
   root@lfs458-worker:~# apt-get update root@lfs458-worker:~# apt-get install -y \ kubeadm=1.15.1-00 kubelet=1.15.1-00 kubectl=1.15.1-00 
-  root@lfs458-worker:~# exit
-  
+  root@lfs458-worker:~# exit  
 3. At this point we could copy and paste the join command from the master node.
    student@lfs458-node-1a0a:~$ sudo kubeadm token list
 4. Only if the token has expired, you can create a new token, to use as part of the join command.
    student@lfs458-node-1a0a:~$ sudo kubeadm token create   
-   
 5. Starting in v1.9 you should create and use a Discovery Token CA Cert Hash (ca cert hash) created from the master to ensure the node joins the cluster in a secure manner.
    student@lfs458-node-1a0a:~$ openssl x509 -pubkey \
    -in /etc/kubernetes/pki/ca.crt | openssl rsa \
    -pubin -outform der 2>/dev/null | openssl dgst \
    -sha256 -hex | sed 's/^.* //'
-
 6. On the worker node add a local DNS alias for the master server.
    root@lfs458-worker:~# vim /etc/hosts
-   10.128.0.3 k8smaster #<-- Add this line
-   
+   10.128.0.3 k8smaster #<-- Add this line   
 7. Use the token and hash, in this case as sha256:long-hash to join the cluster from the second/worker node.
    root@lfs458-worker:~# kubeadm join \
    --token {{token}} \ k8smaster:6443 \
