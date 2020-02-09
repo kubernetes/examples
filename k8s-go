@@ -88,9 +88,15 @@ Grow the cluster:
    --token {{token}} \ k8smaster:6443 \
    --discovery-token-ca-cert-hash \ sha256:{{ca cert hash}}
    
- Finish Cluster Setup:
+Finish Cluster Setup:
  1. Note the minus sign (-) at the end, which is the syntax to remove a taint.
     student@lfs458-node-1a0a:~$ kubectl taint nodes \ --all node-role.kubernetes.io/master-
+    
+Deploy A Simple Application:
+1. Create a new deployment, which is an Kubernetes object
+    student@lfs458-node-1a0a:~$ kubectl create deployment nginx --image=nginx
+3. View the basic steps the cluster took in order to pull and deploy the new application.
+   student@lfs458-node-1a0a:~$ kubectl get events
    
 
 
