@@ -124,7 +124,17 @@ student@lfs458-node-1a0a:~$ sudo docker ps | wc -l
 4.One way to do this is to drain, or cordon
 student@lfs458-node-1a0a:~$ kubectl drain {{node-name}} --ignore-daemonsets --delete-local-data
 student@lfs458-node-1a0a:~$ kubectl uncordon {{node-name}}
-    
+
+Conﬁguring TLS Access:
+student@lfs458-node-1a0a:~$ less ~/.kube/config
+student@lfs458-node-1a0a:~$ export client=$(grep client-certificate-data ~/.kube/config |cut -d" " -f 6)
+student@lfs458-node-1a0a:~$ export key=$(grep client-key-data ~/.kube/config |cut -d " " -f 6)
+student@lfs458-node-1a0a:~$ export auth=$(grep certificate-authority-data ~/.kube/config |cut -d " " -f 6)
+student@lfs458-node-1a0a:~$ echo $client | base64 -d - > ./client.pem
+student@lfs458-node-1a0a:~$ echo $key | base64 -d - > ./client-key.pem 
+student@lfs458-node-1a0a:~$ echo $auth | base64 -d - > ./ca.pem
+student@lfs458-node-1a0a:~$ kubectl config view |grep server (get the server name: https://k8smaster:6443 for example)
+student@lfs458-node-1a0a:~$ curl --cert ./client.pem --key ./client-key.pem --cacert ./ca.pem https://k8smaster:6443/{{uri}}
     
     
 
