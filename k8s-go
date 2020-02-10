@@ -135,6 +135,9 @@ student@lfs458-node-1a0a:~$ echo $key | base64 -d - > ./client-key.pem
 student@lfs458-node-1a0a:~$ echo $auth | base64 -d - > ./ca.pem
 student@lfs458-node-1a0a:~$ kubectl config view |grep server (get the server name: https://k8smaster:6443 for example)
 student@lfs458-node-1a0a:~$ curl --cert ./client.pem --key ./client-key.pem --cacert ./ca.pem https://k8smaster:6443/{{uri}}
+
+2. view file in json format:
+student@lfs458-node-1a0a:.$ python -m json.tool v1/serverresources.json
     
     
 
