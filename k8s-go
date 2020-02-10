@@ -78,7 +78,7 @@ Finish Cluster Setup:
     
 Deploy A Simple Application:
 1. Create a new deployment, which is an Kubernetes object
-    student@lfs458-node-1a0a:~$ kubectl create deployment nginx --image=nginx
+    student@lfs458-node-1a0a:~$ kubectl [--namespace={{namespace-name}}] create deployment nginx --image=nginx
 3. View the basic steps the cluster took in order to pull and deploy the new application.
    student@lfs458-node-1a0a:~$ kubectl get events
 7. Create the deployment:
@@ -114,6 +114,11 @@ args:
 - "100Mi"
 - -mem-alloc-sleep
 - "1s"
+
+2. Begin by creating a new namespace .
+student@lfs458-node-1a0a:~$ kubectl create namespace {{namespace-name}}
+
+3. 
     
     
     
