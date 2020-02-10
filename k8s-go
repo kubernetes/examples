@@ -84,7 +84,7 @@ Deploy A Simple Application:
 7. Create the deployment:
    student@lfs458-node-1a0a:~$ kubectl create -f first.yaml
    student@lfs458-node-1a0a:~$ kubectl create deployment two --image=nginx --dry-run -o yaml
-   student@lfs458-node-1a0a:~$ kubectl replace -f first.yaml
+   student@lfs458-node-1a0a:~$ kubectl replace -f first.yaml (replace the deployment)
 13. Now try to gain access to the web server.
     student@lfs458-node-1a0a:~$ kubectl expose deployment/nginx
 18. Verify the service conﬁguration.
@@ -98,8 +98,22 @@ Access from Outside the Cluster:
 5. Create the service again, but this time pass the LoadBalancer type.
    student@lfs458-node-1a0a:~$ kubectl expose deployment nginx --type=LoadBalancer
     
-    
-    
+Working with CPU and Memory Constraints:
+1. set limit for a deployment
+resources:
+  limits:
+    memory: 4Gi
+  requests:
+    memory: 2500Mi
+args:
+- -cpus
+- "2"
+- -mem-total
+- "950Mi"
+- -mem-alloc-size
+- "100Mi"
+- -mem-alloc-sleep
+- "1s"
     
     
     
