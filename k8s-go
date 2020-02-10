@@ -118,7 +118,12 @@ args:
 2. Begin by creating a new namespace .
 student@lfs458-node-1a0a:~$ kubectl create namespace {{namespace-name}}
 
-3. 
+3. get a count of the current docker containers.
+student@lfs458-node-1a0a:~$ sudo docker ps | wc -l
+
+4.One way to do this is to drain, or cordon
+student@lfs458-node-1a0a:~$ kubectl drain {{node-name}} --ignore-daemonsets --delete-local-data
+student@lfs458-node-1a0a:~$ kubectl uncordon {{node-name}}
     
     
     
