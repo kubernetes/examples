@@ -157,8 +157,13 @@ Working with jobs:
 1.completions: 5 (how many pods are started)
   parallelism: 2 (how many pods in parallel)
   activeDeadlineSeconds: 15 (parameter which will stop the job after a certain number of seconds)
+  
+Working with ReplicaSets
+12. Now view the pods with the label key of system
+student@lfs458-node-1a0a:~$ kubectl get po -L system
 
-
+15. Delete the remaining Pod using the label.
+student@lfs458-node-1a0a:~$ kubectl delete po -l system=IsolatedPod
 
 
 
