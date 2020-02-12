@@ -149,6 +149,10 @@ student@lfs458-node-1a0a:~$ export token=$(kubectl describe \ secret {{secret-na
 3. Test to see if you can get basic API information from your cluster. The token and use the -k option to avoid using a cert.
 student@lfs458-node-1a0a:~$ curl https://k8smaster:6443/apis \ --header "Authorization: Bearer $token" -k
 
+4. Start the proxy while setting the API preﬁx, and put it in the background.
+student@lfs458-node-1a0a:~$ kubectl proxy --api-prefix=/ &
+student@lfs458-node-1a0a:~$ curl http://{{localhost:port}}/api/
+
 
 
 
