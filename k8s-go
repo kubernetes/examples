@@ -165,6 +165,15 @@ student@lfs458-node-1a0a:~$ kubectl get po -L system
 15. Delete the remaining Pod using the label.
 student@lfs458-node-1a0a:~$ kubectl delete po -l system=IsolatedPod
 
+Rolling Updates and Rollbacks
+updateStrategy.type: [RollingUpdate | OnDelete]
+
+3. update the ds to use a newer version
+student@lfs458-node-1a0a:~$ kubectl set image ds ds-one nginx=nginx:1.12.1-alpine
+
+7. View the history of changes for the DaemonSet.
+student@lfs458-node-1a0a:~$ kubectl rollout history ds {{ds-name}}
+
 
 
 
