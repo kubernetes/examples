@@ -138,8 +138,30 @@ student@lfs458-node-1a0a:~$ curl --cert ./client.pem --key ./client-key.pem --ca
 
 2. view file in json format:
 student@lfs458-node-1a0a:.$ python -m json.tool v1/serverresources.json
-    
-    
+
+RESTful API Access:
+1.Use kubectl conﬁg view to get overall cluster conﬁguration
+student@lfs458-node-1a0a:~$ kubectl config view
+
+2. Using your mouse to cut and paste,
+student@lfs458-node-1a0a:~$ export token=$(kubectl describe \ secret {{secret-name}} |grep ^token |cut -f7 -d ' ')    
+
+3. Test to see if you can get basic API information from your cluster. The token and use the -k option to avoid using a cert.
+student@lfs458-node-1a0a:~$ curl https://k8smaster:6443/apis \ --header "Authorization: Bearer $token" -k
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
