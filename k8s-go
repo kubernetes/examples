@@ -153,6 +153,11 @@ student@lfs458-node-1a0a:~$ curl https://k8smaster:6443/apis \ --header "Authori
 student@lfs458-node-1a0a:~$ kubectl proxy --api-prefix=/ &
 student@lfs458-node-1a0a:~$ curl http://{{localhost:port}}/api/
 
+Working with jobs:
+1.completions: 5 (how many pods are started)
+  parallelism: 2 (how many pods in parallel)
+  activeDeadlineSeconds: 15 (parameter which will stop the job after a certain number of seconds)
+
 
 
 
