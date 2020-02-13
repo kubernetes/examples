@@ -171,8 +171,15 @@ updateStrategy.type: [RollingUpdate | OnDelete]
 3. update the ds to use a newer version
 student@lfs458-node-1a0a:~$ kubectl set image ds ds-one nginx=nginx:1.12.1-alpine
 
-7. View the history of changes for the DaemonSet.
+7. View the history of changes and status for the DaemonSet.
 student@lfs458-node-1a0a:~$ kubectl rollout history ds {{ds-name}}
+student@lfs458-node-1a0a:~$ kubectl rollout status ds ds-two
+
+8. View the settings for the various versions of the DaemonSet.
+student@lfs458-node-1a0a:~$ kubectl rollout history ds ds-one --revision=1
+
+9. Use kubectl rollout undo to change the DaemonSet back to an earlier version.
+student@lfs458-node-1a0a:~$ kubectl rollout undo ds ds-one --to-revision=1
 
 
 
