@@ -191,6 +191,11 @@ student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker \ system=secondOne
 5. Remove the label from the secondary node.
 student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker key-
 
+6. get into pod
+student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} -- /bin/bash
+
+7. ConfigMap available to pod as env, envFrom, mounted Volumes
+
 
 
 
