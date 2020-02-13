@@ -73,7 +73,8 @@ Grow the cluster:
    --discovery-token-ca-cert-hash \ sha256:{{ca cert hash}}
    
 Finish Cluster Setup:
- 1. Note the minus sign (-) at the end, which is the syntax to remove a taint.
+1. Note the minus sign (-) at the end, which is the syntax to remove a taint.
+(from Taints: node-role.kubernetes.io/master:NoSchedule)
     student@lfs458-node-1a0a:~$ kubectl taint nodes \ --all node-role.kubernetes.io/master-
     
 Deploy A Simple Application:
@@ -186,6 +187,9 @@ student@lfs458-node-1a0a:~$ kubectl get nodes --show-labels
 
 7. Label the secondary node.
 student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker \ system=secondOne
+
+5. Remove the label from the secondary node.
+student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker key-
 
 
 
