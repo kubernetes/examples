@@ -162,8 +162,8 @@ Working with ReplicaSets
 12. Now view the pods with the label key of system
 student@lfs458-node-1a0a:~$ kubectl get po -L system
 
-15. Delete the remaining Pod using the label.
-student@lfs458-node-1a0a:~$ kubectl delete po -l system=IsolatedPod
+15. Delete or get the remaining Pod using the label.
+student@lfs458-node-1a0a:~$ kubectl [delete|get] po -l system=IsolatedPod
 
 Rolling Updates and Rollbacks
 updateStrategy.type: [RollingUpdate | OnDelete]
@@ -183,6 +183,9 @@ student@lfs458-node-1a0a:~$ kubectl rollout undo ds ds-one --to-revision=1
 
 2. View the existing labels on the nodes in the cluster.
 student@lfs458-node-1a0a:~$ kubectl get nodes --show-labels
+
+7. Label the secondary node.
+student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker \ system=secondOne
 
 
 
