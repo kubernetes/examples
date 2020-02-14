@@ -197,6 +197,10 @@ student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} -- /bin/bash
 7. ConfigMap available to pod as env, envFrom, mounted Volumes
 
 Using a ResourceQuota to Limit PVC Count and Usage:
+19. We will use kubectl patch to change the retention policy to Delete.
+student@lfs458-node-1a0a:~$ kubectl patch pv pvvol-1 -p \ '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
+
+20. persistentVolumeReclaimPolicy: Retain, Delete, Recycle
 
 
 
