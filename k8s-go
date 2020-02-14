@@ -196,6 +196,9 @@ student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} -- /bin/bash
 
 7. ConfigMap available to pod as env, envFrom, mounted Volumes
 
+Using a ResourceQuota to Limit PVC Count and Usage:
+
+
 
 
 
