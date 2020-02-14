@@ -202,6 +202,9 @@ student@lfs458-node-1a0a:~$ kubectl patch pv pvvol-1 -p \ '{"spec":{"persistentV
 
 20. persistentVolumeReclaimPolicy: Retain, Delete, Recycle
 
+21. As we have RBAC conﬁgured we need to make sure the controller will run and be able to work with all necessary ports,
+endpoints and resources. (see clusterrole and clusterrolebinding)
+
 
 
 
