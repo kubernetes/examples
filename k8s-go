@@ -192,7 +192,7 @@ student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker \ system=secondOne
 student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker key-
 
 6. get into pod
-student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} -- /bin/bash
+student@lfs458-node-1a0a:~$ kubectl exec -it {{pod-name}} -- /bin/bash
 
 7. ConfigMap available to pod as env, envFrom, mounted Volumes
 
@@ -205,6 +205,8 @@ student@lfs458-node-1a0a:~$ kubectl patch pv pvvol-1 -p \ '{"spec":{"persistentV
 21. As we have RBAC conﬁgured we need to make sure the controller will run and be able to work with all necessary ports,
 endpoints and resources. (see clusterrole and clusterrolebinding)
 student@lfs458-node-1a0a:~$ find . -name {{file-name}}
+
+
 
 
 
