@@ -75,7 +75,7 @@ Grow the cluster:
 Finish Cluster Setup:
 1. Note the minus sign (-) at the end, which is the syntax to remove a taint.
 (from Taints: node-role.kubernetes.io/master:NoSchedule)
-    student@lfs458-node-1a0a:~$ kubectl taint nodes \ --all node-role.kubernetes.io/master-
+    student@lfs458-node-1a0a:~$ kubectl taint nodes --all node-role.kubernetes.io/master-
     
 Deploy A Simple Application:
 1. Create a new deployment, which is an Kubernetes object
@@ -95,7 +95,7 @@ Deploy A Simple Application:
     
 Access from Outside the Cluster:
 2. use the exec command to run printenv inside the pod.
-   student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} \ -- printenv |grep KUBERNETES
+   student@lfs458-node-1a0a:~$ kubectl exec {{pod-name}} -- printenv |grep KUBERNETES
 5. Create the service again, but this time pass the LoadBalancer type.
    student@lfs458-node-1a0a:~$ kubectl expose deployment nginx --type=LoadBalancer
     
@@ -148,7 +148,7 @@ student@lfs458-node-1a0a:~$ kubectl config view
 student@lfs458-node-1a0a:~$ export token=$(kubectl describe \ secret {{secret-name}} |grep ^token |cut -f7 -d ' ')    
 
 3. Test to see if you can get basic API information from your cluster. The token and use the -k option to avoid using a cert.
-student@lfs458-node-1a0a:~$ curl https://k8smaster:6443/apis \ --header "Authorization: Bearer $token" -k
+student@lfs458-node-1a0a:~$ curl https://k8smaster:6443/apis --header "Authorization: Bearer $token" -k
 
 4. Start the proxy while setting the API preﬁx, and put it in the background.
 student@lfs458-node-1a0a:~$ kubectl proxy --api-prefix=/ &
@@ -186,10 +186,10 @@ student@lfs458-node-1a0a:~$ kubectl rollout undo ds ds-one --to-revision=1
 student@lfs458-node-1a0a:~$ kubectl get nodes --show-labels
 
 7. Label the secondary node.
-student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker \ system=secondOne
+student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker {{key}}={{value}}
 
 5. Remove the label from the secondary node.
-student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker key-
+student@lfs458-node-1a0a:~$ kubectl label node lfs458-worker {{key}}-
 
 6. get into pod
 student@lfs458-node-1a0a:~$ kubectl exec -it {{pod-name}} -- /bin/bash
@@ -206,7 +206,19 @@ student@lfs458-node-1a0a:~$ kubectl patch pv pvvol-1 -p \ '{"spec":{"persistentV
 endpoints and resources. (see clusterrole and clusterrolebinding)
 student@lfs458-node-1a0a:~$ find . -name {{file-name}}
 
+Assign Pods Using Labels
+nodeSelector: 
+   key: value
+   
+student@lfs458-node-1a0a:~$ sed -i s/vip/other/g other.yaml: change all occurences of vip to other in the file other.yaml
 
+Using Taints to Control Pod Deployment
+There are three taints, NoSchedule, PreferNoSchedule and NoExecute.
+student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{keyname}}=value:PreferNoSchedule
+
+8. Remove the taint, then verify it was removed
+student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{key}}-
+student@lfs458-node-1a0a:~$ kubectl describe node |grep Taint
 
 
 
