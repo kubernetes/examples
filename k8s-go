@@ -214,7 +214,7 @@ student@lfs458-node-1a0a:~$ sed -i s/vip/other/g other.yaml: change all occurenc
 
 Using Taints to Control Pod Deployment
 There are three taints, NoSchedule, PreferNoSchedule and NoExecute.
-student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{keyname}}=value:PreferNoSchedule
+student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{key}}=value:PreferNoSchedule
 
 8. Remove the taint, then verify it was removed
 student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{key}}-
