@@ -234,6 +234,12 @@ Viewing Logs Output
 2. View the logs associated with various infrastructure pods.
 student@lfs458-node-1a0a:~$ kubectl -n kube-system logs <Tab><Tab>
 
+3. viewing pod and node metrics.
+student@lfs458-node-1a0a:~$ kubectl top pod --all-namespaces
+student@lfs458-node-1a0a:~$ kubectl top nodes
+
+Create a Custom Resource Deﬁnition
+
 
 
 
