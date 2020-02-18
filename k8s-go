@@ -220,6 +220,26 @@ student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{key}}=value:Pref
 student@lfs458-node-1a0a:~$ kubectl taint nodes lfs458-worker {{key}}-
 student@lfs458-node-1a0a:~$ kubectl describe node |grep Taint
 
+Review Log File Locations
+1. If using a systemd.based Kubernetes cluster, view the node level logs for kubelet, the local Kubernetes agent.
+student@lfs458-node-1a0a:~$ journalctl -u kubelet |less
+
+2. Use the ﬁnd command to locate the kube-apiserver log.
+student@lfs458-node-1a0a:~$ sudo find / -name "*apiserver*log"
+
+5. If not on a Kubernetes cluster using systemd which collects logs via journalctl y
+ls /var/log/ <Tab> <Tab>
+
+Viewing Logs Output
+2. View the logs associated with various infrastructure pods.
+student@lfs458-node-1a0a:~$ kubectl -n kube-system logs <Tab><Tab>
+
+
+
+
+
+
+
 
 
 
