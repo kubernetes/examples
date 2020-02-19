@@ -247,6 +247,18 @@ student@lfs458-node-1a0a:~$ systemctl status kubelet.service
 4. Other agents on the master node interact with the kube-apiserver.
 student@lfs458-node-1a0a:~$ sudo ls /etc/kubernetes/manifests/
 
+5. view an object as yaml file:
+kubectl -n {{namespace}} get {{object}} {{object-name}} -o yaml
+
+7. The kubectl conﬁg command can also be used to view and update parameters.
+student@lfs458-node-1a0a:~$ kubectl config view
+
+8. kubectl config -h: modify kubeconfig files using subcommands.
+
+9. sudo kubeadm config -h / sudo kubeadm token -h
+
+11. Review the cluster default conﬁguration settings.
+student@lfs458-node-1a0a:~$ sudo kubeadm config print init-defaults
 
 
 
