@@ -238,7 +238,16 @@ student@lfs458-node-1a0a:~$ kubectl -n kube-system logs <Tab><Tab>
 student@lfs458-node-1a0a:~$ kubectl top pod --all-namespaces
 student@lfs458-node-1a0a:~$ kubectl top nodes
 
-Create a Custom Resource Deﬁnition
+Create a Custom Resource Deﬁnition:
+
+Working with TLS:
+1. The kube-apiserver also shows security information such as certiﬁcates and authorization mode
+student@lfs458-node-1a0a:~$ systemctl status kubelet.service
+
+4. Other agents on the master node interact with the kube-apiserver.
+student@lfs458-node-1a0a:~$ sudo ls /etc/kubernetes/manifests/
+
+
 
 
 
