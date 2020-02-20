@@ -260,6 +260,65 @@ student@lfs458-node-1a0a:~$ kubectl config view
 11. Review the cluster default conﬁguration settings.
 student@lfs458-node-1a0a:~$ sudo kubeadm config print init-defaults
 
+Authentication and Authorization
+3. Create a new user DevDan and assign a password (DevDan is the username)
+student@lfs458-node-1a0a:~$ sudo useradd -s /bin/bash DevDan
+student@lfs458-node-1a0a:~$ sudo passwd DevDan
+
+4. Generate a private key then Certiﬁcate Signing Request (CSR) for DevDan.
+student@lfs458-node-1a0a:~$ openssl genrsa -out DevDan.key 2048
+student@lfs458-node-1a0a:~$ openssl req -new -key DevDan.key \ -out DevDan.csr -subj "/CN=DevDan/O=development"
+
+5. Using the newly created request generate a self-signed certiﬁcate using the x509 protocol.
+Use the CA keys for the Kubernetes cluster and set a 45 day expiration.
+student@lfs458-node-1a0a:~$ sudo openssl x509 -req -in DevDan.csr \ -CA /etc/kubernetes/pki/ca.crt \
+-CAkey /etc/kubernetes/pki/ca.key \-CAcreateserial \-out DevDan.crt -days 45
+
+6. Update the access conﬁg ﬁle to reference the new key and certiﬁcate. 
+Normally we would move them to a safe directory instead of a non-root user’s home.
+student@lfs458-node-1a0a:~$ kubectl config set-credentials DevDan \
+--client-certificate=/home/student/DevDan.crt \--client-key=/home/student/DevDan.key
+
+8. We will now create a context. For this we will need the name of the cluster, namespace 
+and CN of the user we set or saw in previous steps.
+student@lfs458-node-1a0a:~$ kubectl config set-context DevDan-context \--cluster=kubernetes \--namespace=development \
+--user=DevDan
+
+9. Attempt to view the Pods inside the DevDan-context
+student@lfs458-node-1a0a:~$ kubectl --context=DevDan-context get pods
+16. Create a new pod inside a context
+student@lfs458-node-1a0a:~$ kubectl --context=DevDan-context \ create deployment nginx --image=nginx
+
+12. We will now create a YAML ﬁle to associate RBAC rights to a particular namespace and Role.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: development
+  name: developer
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["deployments", "replicasets", "pods"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"] # You can also use ["*"]
+
+14. Now we create a RoleBinding to associate the Role we just created with a user.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: developer-role-binding
+  namespace: development
+subjects:
+- kind: User
+  name: DevDan
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: ""
+
+Admission Controllers
+View the current admission controller settings. Unlike earlier versions of Kubernetes 
+the controllers are now compiled into the server, instead of being passed at run-time. 
+student@lfs458-node-1a0a:~$ sudo grep admission \ /etc/kubernetes/manifests/kube-apiserver.yaml
 
 
 
