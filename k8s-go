@@ -26,7 +26,7 @@ Install K8s:
     kubernetesVersion: 1.15.1 
     controlPlaneEndpoint: "k8smaster:6443" 
     networking:
-      podSubnet: 192.168.0.0/16      
+      podSubnet: 192.168.0.0/16 #<-- Match the IP range from the Calico config file (use less calico.yaml, value under - name: CALICO_IPV4POOL_CIDR)
 13. Initialize the master.
     root@lfs458-node-1a0a:~# kubeadm init --config=kubeadm-config.yaml --upload-certs \ | tee kubeadm-init.out    
 14. allow a non-root user admin level access to the cluster.
