@@ -17,5 +17,5 @@ spec:
     # Replace with correct storage share name
     shareName: k8stest
     # In case the secret is stored in a different namespace
-    #shareNamespace: default
+    #secretNamespace: default
     readOnly: false
