@@ -5,6 +5,9 @@ Get a pod: Kubectl get pod
 Delete Pod: kubectl delete pod webapp
 Edit a pod: kubectl edit pod redis
 
+Practice Tests ReplicaSets:
+scale replicaSets: kubectl scale or kubectl edit
+
 
 
 
