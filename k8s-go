@@ -1,29 +1,3 @@
-https://kubernetes.io/docs/reference/kubectl/conventions/
-
-Practice Tests Pods:
-Run the command 'kubectl describe pod newpod-<id>' or 'kubectl get pods -o wide' and look under the containers section.
-Get a pod: kubectl get pods --all-namespaces
-Delete Pod: kubectl delete pod webapp
-Edit a pod: kubectl edit pod redis
-
-Practice Tests ReplicaSets:
-scale replicaSets: kubectl scale or kubectl edit
-
-Create an NGINX Pod
-kubectl run --generator=run-pod/v1 nginx --image=nginx
-
-Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
-kubectl run --generator=run-pod/v1 nginx --image=nginx --dry-run -o yaml
-
-Create a deployment
-kubectl create deployment --image=nginx nginx
-
-Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
-kubectl create deployment --image=nginx nginx --dry-run -o yaml
-
-Generate Deployment YAML file (-o yaml). Don't create it(--dry-run) with 4 Replicas (--replicas=4)
-kubectl create deployment --image=nginx nginx --dry-run -o yaml > nginx-deployment.yaml
-
 Install K8s:
 2. Become root and update and upgrade the system, install docker.
   student@lfs458-node-1a0a:~$ sudo -i
