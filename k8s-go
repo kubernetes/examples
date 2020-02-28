@@ -2,7 +2,7 @@ https://kubernetes.io/docs/reference/kubectl/conventions/
 
 Practice Tests Pods:
 Run the command 'kubectl describe pod newpod-<id>' or 'kubectl get pods -o wide' and look under the containers section.
-Get a pod: Kubectl get pod
+Get a pod: kubectl get pods --all-namespaces
 Delete Pod: kubectl delete pod webapp
 Edit a pod: kubectl edit pod redis
 
