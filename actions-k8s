@@ -76,6 +76,7 @@ Service
 Create a Service named redis-service of type ClusterIP to expose pod redis on port 6379
 
 kubectl expose pod redis --port=6379 --name redis-service --dry-run -o yaml
+kubectl expose deployment webapp --type=NodePort --port=8080 --name=webapp-service --dry-run -o yaml > webapp-service.yaml (add spec.ports.nodePort: number)
 
 (This will automatically use the pod's labels as selectors)
 
