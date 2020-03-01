@@ -12,6 +12,7 @@ kubectl run --generator=run-pod/v1 nginx --image=nginx
 
 Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
 kubectl run --generator=run-pod/v1 nginx --image=nginx --dry-run -o yaml
+kubectl run --generator=run-pod/v1 redis --image=redis:alpine -l tier=db (with label)
 
 Create a deployment
 kubectl create deployment --image=nginx nginx
