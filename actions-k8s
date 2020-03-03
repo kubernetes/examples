@@ -101,3 +101,13 @@ Both the above commands have their own challenges. While one of it cannot accept
 Reference:
 
 https://kubernetes.io/docs/reference/kubectl/conventions/
+
+kubectl taint nodes master node-role.kubernetes.io/master:NoSchedule-
+
+https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-default-namespace/
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/
+https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/
+
+Kubectl label node {{node-name}} {{key}}={{value}}
