@@ -111,3 +111,7 @@ https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-defa
 https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/
 
 Kubectl label node {{node-name}} {{key}}={{value}}
+
+ps -aux | grep kubelet and identify the config file - --config=/var/lib/kubelet/config.yaml
+
+kubectl run --restart=Never --image=busybox static-busybox --dry-run -o yaml --command -- sleep 1000 > /etc/kubernetes/manifests/static-busybox.yaml
