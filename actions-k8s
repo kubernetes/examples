@@ -116,3 +116,6 @@ ps -aux | grep kubelet and identify the config file - --config=/var/lib/kubelet/
 
 kubectl run --restart=Never --image=busybox static-busybox --dry-run -o yaml --command -- sleep 1000 > /etc/kubernetes/manifests/static-busybox.yaml
 
+InitContainers:
+https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#using-init-containers
+
