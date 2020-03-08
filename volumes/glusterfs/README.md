@@ -18,19 +18,18 @@ have a working GlusterFS volume ready to use in the containers.
 #### Create endpoints
 
 The first step is to create the GlusterFS endpoints definition in Kubernetes.
-Here is a snippet of [glusterfs-endpoints.json](glusterfs-endpoints.json):
+Here is a snippet of [glusterfs-endpoints.yaml](glusterfs-endpoints.yaml):
 
-```
-  "subsets": [
-    {
-      "addresses": [{ "ip": "10.240.106.152" }],
-      "ports": [{ "port": 1 }]
-    },
-    {
-      "addresses": [{ "ip": "10.240.79.157" }],
-      "ports": [{ "port": 1 }]
-    }
-  ]
+```yaml
+subsets:
+- addresses:
+  - ip: 10.240.106.152
+  ports:
+  - port: 1
+- addresses:
+  - ip: 10.240.79.157
+  ports:
+  - port: 1
 ```
 
 The `subsets` field should be populated with the addresses of the nodes in the
@@ -40,7 +39,7 @@ the `port` field.
 Create the endpoints:
 
 ```sh
-$ kubectl create -f examples/volumes/glusterfs/glusterfs-endpoints.json
+$ kubectl create -f examples/volumes/glusterfs/glusterfs-endpoints.yaml
 ```
 
 You can verify that the endpoints are successfully created by running
@@ -54,31 +53,27 @@ glusterfs-cluster   10.240.106.152:1,10.240.79.157:1
 We also need to create a service for these endpoints, so that they will
 persist. We will add this service without a selector to tell Kubernetes we want
 to add its endpoints manually. You can see
-[glusterfs-service.json](glusterfs-service.json) for details.
+[glusterfs-service.yaml](glusterfs-service.yaml) for details.
 
 Use this command to create the service:
 
 ```sh
-$ kubectl create -f examples/volumes/glusterfs/glusterfs-service.json
+$ kubectl create -f examples/volumes/glusterfs/glusterfs-service.yaml
 ```
 
 
 #### Create a Pod
 
-The following *volume* spec in [glusterfs-pod.json](glusterfs-pod.json)
+The following *volume* spec in [glusterfs-pod.yaml](glusterfs-pod.yaml)
 illustrates a sample configuration:
 
-```json
-"volumes": [
-  {
-    "name": "glusterfsvol",
-    "glusterfs": {
-      "endpoints": "glusterfs-cluster",
-      "path": "kube_vol",
-      "readOnly": true
-    }
-  }
-]
+```yaml
+volumes:
+- name: glusterfsvol
+  glusterfs:
+    endpoints: glusterfs-cluster
+    path: kube_vol
+    readOnly: true
 ```
 
 The parameters are explained as the followings.
@@ -93,7 +88,7 @@ The parameters are explained as the followings.
 Create a pod that has a container using Glusterfs volume,
 
 ```sh
-$ kubectl create -f examples/volumes/glusterfs/glusterfs-pod.json
+$ kubectl create -f examples/volumes/glusterfs/glusterfs-pod.yaml
 ```
 
 You can verify that the pod is running:
