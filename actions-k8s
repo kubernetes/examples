@@ -126,3 +126,5 @@ and then kubeadm upgrade apply v1.17.0 (for master, but try on worker)
 and then apt install kubelet=1.17.0-00 to upgrade the kubelet on the master node
 kubectl uncordon node
 
+Restore etcd:
+https://github.com/mmumshad/kubernetes-the-hard-way/blob/master/practice-questions-answers/cluster-maintenance/backup-etcd/etcd-backup-and-restore.md
