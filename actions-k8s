@@ -119,3 +119,10 @@ kubectl run --restart=Never --image=busybox static-busybox --dry-run -o yaml --c
 InitContainers:
 https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#using-init-containers
 
+Upgrade Node: 
+kubectl drain node (mark it as unschedulable)
+Run the command apt install kubeadm=1.17.0-00
+and then kubeadm upgrade apply v1.17.0 (for master, but try on worker)
+and then apt install kubelet=1.17.0-00 to upgrade the kubelet on the master node
+kubectl uncordon node
+
