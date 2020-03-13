@@ -129,3 +129,4 @@ kubectl uncordon node
 Restore etcd:
 https://github.com/mmumshad/kubernetes-the-hard-way/blob/master/practice-questions-answers/cluster-maintenance/backup-etcd/etcd-backup-and-restore.md
 https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/recovery.md
+https://kubernetes.io/docs/concepts/services-networking/network-policies/
