@@ -138,3 +138,14 @@ https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application/
 https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
 
 Run the command 'kubectl exec webapp cat /log/app.log'
+
+Check Nodes:
+top
+df -h
+
+Check Kubelet status:
+service kubelet status
+sudo journalctl -u kubelet
+
+Check Certificates:
+openssl x509 -in /var/lib/kubelet/worker.crt -text -noout
