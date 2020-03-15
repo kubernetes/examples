@@ -135,5 +135,6 @@ https://kubernetes.io/docs/concepts/services-networking/ingress/
 https://kubernetes.io/docs/concepts/cluster-administration/networking/#how-to-implement-the-kubernetes-networking-model
 https://www.objectif-libre.com/en/blog/2018/07/05/k8s-network-solutions-comparison/
 https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application/
+https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
 
 Run the command 'kubectl exec webapp cat /log/app.log'
