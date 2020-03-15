@@ -147,7 +147,7 @@ Check Kubelet status:
 service kubelet status
 sudo journalctl -u kubelet -> Start the stopped services. ssh node01 "service kubelet start"
 journalctl -u kubelet -f -> fix the issue in the file
-kubectl cluster-info (on Master Node) -> Check the kubelet.conf file at /etc/kubernetes/kubelet.conf
+kubectl cluster-info (on Master Node) -> Check the kubelet.conf file at /etc/kubernetes/kubelet.conf (for server ip)
 
 Check Certificates:
 openssl x509 -in /var/lib/kubelet/worker.crt -text -noout
