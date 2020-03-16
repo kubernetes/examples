@@ -151,3 +151,18 @@ kubectl cluster-info (on Master Node) -> Check the kubelet.conf file at /etc/kub
 
 Check Certificates:
 openssl x509 -in /var/lib/kubelet/worker.crt -text -noout
+
+JSON Path Criteria:
+$[?( @ > 40 | @ in [40,41,42] | @ nin [40,41] )]
+
+JSON Path Examples:
+kubectl get nodes -o=jsonpath='{.item[*].metadata.name} {"\n"} {"\t"}'
+
+JSON Path for Sort:
+kubectl get node -o json
+kubectl get nodes -o=custom-columns=NODE:.metadata.name,CPU:.status.capacity.cpu
+kubectl get nodes --sort-by=.metadata.name
+
+
+
+
