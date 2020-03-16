@@ -163,6 +163,8 @@ kubectl get node -o json
 kubectl get nodes -o=custom-columns=NODE:.metadata.name,CPU:.status.capacity.cpu
 kubectl get nodes --sort-by=.metadata.name
 
+Loop Ranges:
+kubectl get nodes -o=jsonpath='{range .item[*]}{.metadata.name}{"\t"}{.status.capacity.cpu}{"\n"}{end}'
 
 
 
