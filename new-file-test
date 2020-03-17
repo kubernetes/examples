@@ -156,7 +156,7 @@ JSON Path Criteria:
 $[?( @ > 40 | @ in [40,41,42] | @ nin [40,41] )]
 
 JSON Path Examples:
-kubectl get nodes -o=jsonpath='{.item[*].metadata.name} {"\n"} {"\t"}'
+kubectl get nodes -o=jsonpath='{.items[*].metadata.name} {"\n"} {"\t"}'
 
 JSON Path for Sort:
 kubectl get node -o json
@@ -164,7 +164,9 @@ kubectl get nodes -o=custom-columns=NODE:.metadata.name,CPU:.status.capacity.cpu
 kubectl get nodes --sort-by=.metadata.name
 
 Loop Ranges:
-kubectl get nodes -o=jsonpath='{range .item[*]}{.metadata.name}{"\t"}{.status.capacity.cpu}{"\n"}{end}'
+kubectl get nodes -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.capacity.cpu}{"\n"}{end}'
+
+kubectl config view --kubeconfig=/root/my-kube-config
 
 
 
