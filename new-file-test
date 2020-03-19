@@ -119,13 +119,6 @@ kubectl run --restart=Never --image=busybox static-busybox --dry-run -o yaml --c
 InitContainers:
 https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#using-init-containers
 
-Upgrade Node: 
-kubectl drain node (mark it as unschedulable)
-Run the command apt install kubeadm=1.17.0-00
-and then kubeadm upgrade apply v1.17.0 (for master, but try on worker)
-and then apt install kubelet=1.17.0-00 to upgrade the kubelet on the master node
-kubectl uncordon node
-
 Restore etcd:
 https://github.com/mmumshad/kubernetes-the-hard-way/blob/master/practice-questions-answers/cluster-maintenance/backup-etcd/etcd-backup-and-restore.md
 https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/recovery.md
@@ -172,6 +165,35 @@ Take the backup of ETCD at the location /opt/etcd-backup.db on the master node:
 export ETCDCTL_API=3
 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt
 --key=/etc/kubernetes/pki/etcd/server.key --endpoints=127.0.0.1:2379 /opt/etcd-backup.db
+
+Upgrade Node:
+(
+Upgrade Node: 
+kubectl drain node (mark it as unschedulable)
+Run the command apt install kubeadm=1.17.0-00
+and then kubeadm upgrade apply v1.17.0 (for master, but try on worker)
+and then apt install kubelet=1.17.0-00 to upgrade the kubelet on the master node
+kubectl uncordon node
+)
+- Master Node:
+kubectl drain node master --ignore-daemonsets
+apt install kubeadm=1.17.0-00
+kubeadm upgrade plan v1.17.0
+kubeadm upgrade apply v1.17.0
+apt-get install kubelet=1.17.0-00
+kubectl uncordon master
+kubectl drain node01 --ignore-daemonsets
+- Node01 Node:
+apt install kubeadm=1.17.0-00
+kubeadm upgrade node --kubelet-version v1.17.0
+apt-get install kubelet=1.17.0-00
+- Back on Master:
+kubectl uncordon node01
+kubectl get pods -o wide | grep gold (make sure it is scheduled on master)
+
+
+
+
 
 
 
