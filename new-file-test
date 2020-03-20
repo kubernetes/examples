@@ -5,7 +5,7 @@ Delete Pod: kubectl delete pod webapp
 Edit a pod: kubectl edit pod redis
 
 Practice Tests ReplicaSets:
-scale replicaSets: kubectl scale or kubectl edit
+scale replicaSets: kubectl scale deployment.v1.apps/nginx-deployment --replicas=10 (scaling a deployment)
 
 Create an NGINX Pod
 kubectl run --generator=run-pod/v1 nginx --image=nginx
@@ -129,6 +129,7 @@ https://kubernetes.io/docs/concepts/cluster-administration/networking/#how-to-im
 https://www.objectif-libre.com/en/blog/2018/07/05/k8s-network-solutions-comparison/
 https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application/
 https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
+https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 
 Run the command 'kubectl exec webapp cat /log/app.log'
 
@@ -191,6 +192,11 @@ apt-get install kubelet=1.17.0-00
 kubectl uncordon node01
 kubectl get pods -o wide | grep gold (make sure it is scheduled on master)
 
+Another resources:
+kubectl exec -it ubuntu-sleeper -- date -s '19 APR 2012 11:14:00’
+kubectl create serviceaccount ingress-serviceaccount --namespace ingress-space
+kubectl expose deployment -n ingress-space ingress-controller --type=NodePort --port=80 --name=ingress --dry-run -o yaml >ingress.yaml
+kubectl api-resources --namaspaces=true 
 
 
 
