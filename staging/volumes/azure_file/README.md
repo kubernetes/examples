@@ -31,7 +31,6 @@ In the pod, you need to provide the following information:
 - `secretName`:  the name of the secret that contains both Azure storage account name and key.
 - `shareName`: The share name to be used.
 - `readOnly`: Whether the filesystem is used as readOnly.
-- `secretNamespace`: (optional) The namespace in which the secret was created; `default` is used if not set
 
 Create the secret:
 
