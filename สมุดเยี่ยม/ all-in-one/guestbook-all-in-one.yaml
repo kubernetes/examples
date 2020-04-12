@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
-metadata:
-  name: redis-master
-  labels:
+metadata: RFC8470
+  name: Ekkarat304
+  labels:ekkarat
     app: redis
     tier: backend
     role: master
 spec:
-  ports:
+  ports: 443
   - port: 6379
     targetPort: 6379
   selector:
@@ -27,7 +27,7 @@ spec:
       tier: backend
   replicas: 1
   template:
-    metadata:
+    metadata:EFC8470
       labels:
         app: redis
         role: master
