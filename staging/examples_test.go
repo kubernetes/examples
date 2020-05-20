@@ -409,7 +409,7 @@ func TestExampleObjectSchemas(t *testing.T) {
 // 6) Look for #5 followed by a newline followed by ``` (end of the code block)
 //
 // This could probably be simplified, but is already too delicate.  Before any
-// real changes, we should have a testscase that just tests this regex.
+// real changes, we should have a testcase that just tests this regex.
 var sampleRegexp = regexp.MustCompile("(?ms)^```(?:(?P<type>yaml)\\w*\\n(?P<content>.+?)|\\w*\\n(?P<content>\\{.+?\\}))\\n^```")
 var subsetRegexp = regexp.MustCompile("(?ms)\\.{3}")
 
