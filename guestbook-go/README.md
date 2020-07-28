@@ -30,7 +30,7 @@ Use the `examples/guestbook-go/redis-master-controller.json` file to create a [r
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-master-controller.json
-    replicationcontrollers/redis-master
+   
     ```
 
 2. To verify that the redis-master controller is up, list the replication controllers you created in the cluster with the `kubectl get rc` command(if you don't specify a `--namespace`, the `default` namespace will be used. The same below):
@@ -77,7 +77,7 @@ Services find the pods to load balance based on pod labels. The pod that you cre
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-master-service.json
-    services/redis-master
+   
     ```
 
 2. To verify that the redis-master service is up, list the services you created in the cluster with the `kubectl get services` command:
@@ -100,7 +100,7 @@ The Redis master we created earlier is a single pod (REPLICAS = 1), while the Re
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-slave-controller.json
-    replicationcontrollers/redis-slave
+    
     ```
 
 2. To verify that the redis-slave controller is running, run the `kubectl get rc` command:
@@ -143,7 +143,7 @@ Just like the master, we want to have a service to proxy connections to the read
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-slave-service.json
-    services/redis-slave
+   
     ```
 
 2. To verify that the redis-slave service is up, list the services you created in the cluster with the `kubectl get services` command:
@@ -168,7 +168,7 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
 
     ```console
     $ kubectl create -f examples/guestbook-go/guestbook-controller.json
-    replicationcontrollers/guestbook
+    
     ```
 
  Tip: If you want to modify the guestbook code open the `_src` of this example and read the README.md and the Makefile. If you have pushed your custom image be sure to update the `image` accordingly in the guestbook-controller.json.
