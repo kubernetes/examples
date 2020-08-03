@@ -2,6 +2,9 @@ apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and befor
 kind: Deployment
 metadata:
   name: frontend
+  labels:
+    app: guestbook
+    tier: frontend
 spec:
   selector:
     matchLabels:
@@ -15,8 +18,10 @@ spec:
         tier: frontend
     spec:
       containers:
-      - name: php-redis
-        image: gcr.io/google-samples/gb-frontend:v4
+      - name: guestbook
+        image: paulczar/gb-frontend:v5
+        imagePullPolicy: Always
+        # image: gcr.io/google-samples/gb-frontend:v4
         resources:
           requests:
             cpu: 100m

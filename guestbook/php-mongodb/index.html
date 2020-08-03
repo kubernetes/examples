@@ -1,18 +1,19 @@
-<html ng-app="redis">
+<html ng-app="guestbook">
   <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
     <title>Guestbook</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.12/angular.min.js"></script>
     <script src="controllers.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.13.0/ui-bootstrap-tpls.js"></script>
   </head>
-  <body ng-controller="RedisCtrl">
+  <body ng-controller="guestbookCtrl">
     <div style="width: 50%; margin-left: 20px">
       <h2>Guestbook</h2>
     <form>
     <fieldset>
     <input ng-model="msg" placeholder="Messages" class="form-control" type="text" name="input"><br>
-    <button type="button" class="btn btn-primary" ng-click="controller.onRedis()">Submit</button>
+    <button type="button" class="btn btn-primary" ng-click="controller.onguestbook()">Submit</button>
     </fieldset>
     </form>
     <div>
