@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM php:5-apache
+FROM php:7-apache
 
-RUN pear channel-discover pear.nrk.io
-RUN pear install nrk/Predis
+# RUN pear channel-discover pear.nrk.io
+# RUN pear install nrk/Predis
+
+RUN pecl install mongodb && docker-php-ext-enable mongodb
+# RUN echo "extension=mongo.so" > /usr/local/etc/php/conf.d/mongo.ini
+# RUN composer require mongodb/mongodb
 
 # If the container's stdio is connected to systemd-journald,
 # /proc/self/fd/{1,2} are Unix sockets and apache will not be able to open()

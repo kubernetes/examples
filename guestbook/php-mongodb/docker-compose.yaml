@@ -1,0 +1,10 @@
+version: "2"
+services:
+  guestbook:
+    build: .
+    ports:
+      - "8080:80"
+    links:
+      - "mongo:mongo"
+  mongo:
+    image: mongo:4.2
