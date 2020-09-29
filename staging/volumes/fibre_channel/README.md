@@ -1,71 +1,90 @@
-## Step 1. Setting up Fibre Channel Target
+# Consuming Fibre Channel Storage on Kubernetes
 
-On your FC SAN Zone manager, allocate and mask LUNs so Kubernetes hosts can access them.
+## Table of Contents
 
-## Step 2. Creating the Pod with Fibre Channel persistent storage
+- [Example Parameters](#example-parameters)
+- [Step-by-Step](#step-by-step)
+- [Multipath Considerations](#multipath-considerations)
 
-Once you have installed Fibre Channel initiator and new Kubernetes, you can create a pod based on my example [fc.yaml](fc.yaml). In the pod JSON, you need to provide *targetWWNs* (array of Fibre Channel target's World Wide Names), *lun*, and the type of the filesystem that has been created on the lun, and *readOnly* boolean.
+## Example Parameters
 
-Once your pod is created, run it on the Kubernetes master:
-
-```console
-kubectl create -f ./your_new_pod.json
+```yaml
+ fc:
+   targetWWNs:
+     - '500a0982991b8dc5'
+     - '500a0982891b8dc5'
+   lun: 2
+   fsType: ext4
+   readOnly: true
 ```
 
-Here is my command and output:
+[API Reference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#fcvolumesource-v1-core)
+
+## Step-by-Step
+
+### Set up a Fibre Channel Target
+
+Using your Fibre Channel SAN Zone manager you must allocate and mask LUNs so that all hosts in the Kubernetes cluster can access them
+
+### Prepare nodes in your Kubernetes cluster
+
+You will need to install and configured a Fibre Channel initiator on the hosts within your Kubernetes cluster.
+
+### Create a Pod using Fibre Channel persistent storage
+
+Create a pod manifest based on  [fc.yaml](fc.yaml). You will need to provide *targetWWNs* (array of Fibre Channel target's World Wide Names), *lun*, and the type of the filesystem that has been created on the LUN if it is not _ext4_
+
+Once you have created a pod manifest you can deploy it by running:
 
 ```console
-# kubectl create -f examples/volumes/fibre_channel/fc.yaml
-# kubectl get pods
-NAME      READY     STATUS    RESTARTS   AGE
-fcpd      2/2       Running   0          10m
+kubectl apply -f ./your_new_pod.yaml
 ```
 
-On the Kubernetes host, I got these in mount output
+You can then confirm that the pod hase been sucessfully deployed by running `kubectl get pod fibre-channel-example-pod -o wide`
 
 ```console
-#mount |grep /var/lib/kubelet/plugins/kubernetes.io
-/dev/mapper/360a98000324669436c2b45666c567946 on /var/lib/kubelet/plugins/kubernetes.io/fc/500a0982991b8dc5-lun-2 type ext4 (ro,relatime,seclabel,stripe=16,data=ordered)
-/dev/mapper/360a98000324669436c2b45666c567944 on /var/lib/kubelet/plugins/kubernetes.io/fc/500a0982991b8dc5-lun-1 type ext4 (rw,relatime,seclabel,stripe=16,data=ordered)
+# kubectl get pod fibre-channel-example-pod -o wide
+NAME                        READY   STATUS          RESTARTS   AGE    IP               NODE    NOMINATED NODE   READINESS GATES
+fibre-channel-example-pod   1/1     READY           0          1m8s   192.168.172.11   node0   <none>           <none>
+
 ```
 
-If you ssh to that machine, you can run `docker ps` to see the actual pod.
+If you connect to the console on the Kubernetes node that the pod has been assigned to you can see that the volume is mounted to the pod by running `mount | grep /var/lib/kubelet/plugins/kubernetes.io/fc/`
 
 ```console
-# docker ps
-CONTAINER ID        IMAGE                                  COMMAND             CREATED             STATUS              PORTS               NAMES
-090ac457ddc2        kubernetes/pause                       "/pause"            12 minutes ago      Up 12 minutes                           k8s_fcpd-rw.aae720ec_fcpd_default_4024318f-4121-11e5-a294-e839352ddd54_99eb5415
-5e2629cf3e7b        kubernetes/pause                       "/pause"            12 minutes ago      Up 12 minutes                           k8s_fcpd-ro.857720dc_fcpd_default_4024318f-4121-11e5-a294-e839352ddd54_c0175742
-2948683253f7        k8s.gcr.io/pause:0.8.0   "/pause"            12 minutes ago      Up 12 minutes                           k8s_POD.7be6d81d_fcpd_default_4024318f-4121-11e5-a294-e839352ddd54_8d9dd7bf
-```
+# mount | grep /var/lib/kubelet/plugins/kubernetes.io/fc/
+/dev/mapper/360a98000324669436c2b45666c567946 on /var/lib/kubelet/plugins/kubernetes.io/fc/500a0982991b8dc5-lun-2 type ext4 (relatime,seclabel,stripe=16,data=ordered)
+  ```
 
-## Multipath
+## Multipath Considerations
 
-To leverage multiple paths for block storage, it is important to perform the
+To leverage multiple paths for block storage, it is important to perform
 multipath configuration on the host.
 If your distribution does not provide `/etc/multipath.conf`, then you can
 either use the following minimalistic one:
 
-    defaults {
-        find_multipaths yes
-        user_friendly_names yes
-    }
+```
+defaults {
+    find_multipaths yes
+    user_friendly_names yes
+}
+```
 
 or create a new one by running:
 
-    $ mpathconf --enable
+```console
+$ mpathconf --enable
+```
 
 Finally you'll need to ensure to start or reload and enable multipath:
 
-    $ systemctl enable multipathd.service
-    $ systemctl restart multipathd.service
+```console
+$ systemctl enable --now multipathd.service
+```
 
 **Note:** Any change to `multipath.conf` or enabling multipath can lead to
-inaccessible block devices, because they'll be claimed by multipath and
+inaccessible block devices as they will be claimed by multipath and
 exposed as a device in /dev/mapper/*.
-
-Some additional informations about multipath can be found in the
-[iSCSI documentation](../iscsi/README.md)
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
