@@ -14,6 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================ Example ================================
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: busybox
+#   namespace: default
+# spec:
+#   containers:
+#   - name: busybox
+#     image: busybox
+#     command:
+#       - sleep
+#       - "3600"
+#     imagePullPolicy: IfNotPresent
+#     volumeMounts:
+#     - name: test
+#       mountPath: /data
+#   volumes:
+#   - name: test
+#     flexVolume:
+#       driver: "k8s/nfs"
+#       fsType: "nfs"
+#       options:
+#         server: nfs.example.k8s.io
+#         share: "/share/test1"
+# =====================================================================
+
+
 # Notes:
 #  - Please install "jq" package before using this driver.
 usage() {
@@ -44,8 +72,28 @@ ismounted() {
 domount() {
 	MNTPATH=$1
 
-	NFS_SERVER=$(echo $2 | jq -r '.server')
-	SHARE=$(echo $2 | jq -r '.share')
+	local NFS_SERVER=$(echo $2 | jq -r '.server')
+	local SHARE=$(echo $2 | jq -r '.share')
+	local PROTOCOL=$(echo $2 | jq -r '.protocol')
+	local ATIME=$(echo $2 | jq -r '.atime')
+	local READONLY=$(echo $2 | jq -r '.readonly')
+
+	if [ -n "${PROTOCOL}" ]; then
+		PROTOCOL="tcp"
+	fi
+
+	if [ -n "${ATIME}" ]; then
+		ATIME="0"
+	fi
+
+	if [ -n "${READONLY}" ]; then
+		READONLY="0"
+	fi
+
+	if [ "${PROTOCOL}" != "tcp" ] && [ "${PROTOCOL}" != "udp" ] ; then
+		err "{ \"status\": \"Failure\", \"message\": \"Invalid protocol ${PROTOCOL}\"}"
+		exit 1
+	fi
 
 	if [ $(ismounted) -eq 1 ] ; then
 		log '{"status": "Success"}'
@@ -54,7 +102,16 @@ domount() {
 
 	mkdir -p ${MNTPATH} &> /dev/null
 
-	mount -t nfs ${NFS_SERVER}:/${SHARE} ${MNTPATH} &> /dev/null
+	local NFSOPTS="${PROTOCOL},_netdev,soft,timeo=10,intr"
+	if [ "${ATIME}" == "0" ]; then
+		NFSOPTS="${NFSOPTS},noatime"
+	fi
+
+	if [ "${READONLY}" != "0" ]; then
+		NFSOPTS="${NFSOPTS},ro"
+	fi
+
+	mount -t nfs -o${NFSOPTS} ${NFS_SERVER}:/${SHARE} ${MNTPATH} &> /dev/null
 	if [ $? -ne 0 ]; then
 		err "{ \"status\": \"Failure\", \"message\": \"Failed to mount ${NFS_SERVER}:${SHARE} at ${MNTPATH}\"}"
 		exit 1
