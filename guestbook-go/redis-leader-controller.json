@@ -2,29 +2,29 @@
    "kind":"ReplicationController",
    "apiVersion":"v1",
    "metadata":{
-      "name":"redis-master",
+      "name":"redis-leader",
       "labels":{
          "app":"redis",
-         "role":"master"
+         "role":"leader"
       }
    },
    "spec":{
       "replicas":1,
       "selector":{
          "app":"redis",
-         "role":"master"
+         "role":"leader"
       },
       "template":{
          "metadata":{
             "labels":{
                "app":"redis",
-               "role":"master"
+               "role":"leader"
             }
          },
          "spec":{
             "containers":[
                {
-                  "name":"redis-master",
+                  "name":"redis-leader",
                   "image":"k8s.gcr.io/redis:e2e",
                   "ports":[
                      {

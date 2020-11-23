@@ -2,10 +2,10 @@
    "kind":"Service",
    "apiVersion":"v1",
    "metadata":{
-      "name":"redis-master",
+      "name":"redis-leader",
       "labels":{
          "app":"redis",
-         "role":"master"
+         "role":"leader"
       }
    },
    "spec":{
@@ -17,7 +17,7 @@
       ],
       "selector":{
          "app":"redis",
-         "role":"master"
+         "role":"leader"
       }
    }
 }
