@@ -121,6 +121,78 @@ parameters:
 
 For a complete example refer to the ([StorageOS example](../../staging/volumes/storageos/README.md))
 
+#### Storidge
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: cio-default
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: csi.cio.storidge.com
+parameters:
+  level: "2"
+  provision: "thin"
+  iopsMin: "10"
+  iopsMax: "1000000"
+  type: "ssd"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+```
+*  The `provisioner` field determines the volume plugin used, in this case, `csi.cio.storidge.com` which is [Storidge's CSI driver](https://hub.docker.com/_/storidge-csi-driver).
+*  The key value pairs in `parameters` pass the desired volume attributes to the volume plugin.
+*  For dynamically provisioned volumes, the `reclaimPolicy` determines whether the volume is tied to the lifecycle of the pod.
+*  `reclaimPolicy: Delete` will result in the volume being removed when the pod and the persistent volume claim are terminated
+*  `reclaimPolicy: Retain` will preserve the persistent volume beyond the lifecycle of the pod. However the persistent volume and Storidge volume will require manual removal. Kubernetes defaults to `Delete` when no `reclaimPolicy` is defined.
+*  Storidge volumes support both online capacity expansion and auto capacity expansion of btrfs, ext4 and xfs formatted volumes, so the `allowVolumeExpansion` field is set to "true".
+##### Parameters
+Entries in `parameters` are optional as defaults are set for basic attributes. Storidge supports the following volume attributes:
+* `directory:`   bind mount on the host:  [/path/to/volume]
+* `filesystem:`  filesystem on volume:  [btrfs, ext4, xfs*}
+* `iopsmin:`  minimum iops guaranteed (SSD required):  [minimum 30]
+* `iopsmax:`  maximum iops allowed (SSD required):  [10,000,000 max]
+* `level:`  number of replicas for data redundancy:  [1, 2, 3]
+* `profile:`  profile to use for volume creation:  [PROFILENAME]
+* `provision:`  select thick or thin provisioning:  [thin*, thick]
+* `type:`  type of media or backend storage: [ssd, hdd]
+* `snapshot:`  enable snapshot for volume:  [yes, no*]
+* `interval:`  periodic snapshot interval in minutes:  [minimum 1]
+* `snapshotmax:`  maximum number of snapshots to keep:  [99 max]
+##### Example with nginx
+The 'cio-nginx' example below deploys a storage class with desired parameters for an nginx application.
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: cio-nginx
+provisioner: csi.cio.storidge.com
+parameters:
+  iopsmin: "100"
+  iopsmax: "10000"  
+  level: "2"
+  provision: "thin"
+  type: "ssd"
+  snapshot: "yes"
+  interval: "60"
+  snapshotmax: "5"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+```
+If the volume attributes are managed in a profile, the storage class can be expressed in compact form as:
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: cio-nginx
+provisioner: com.storidge.csi.cio
+parameters:
+  profile: NGINX
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+```
+For more examples, refer to: https://github.com/Storidge/csi-cio and https://docs.storidge.com/kubernetes_storage/overview.html
+
 #### GLUSTERFS
 
 ```yaml
