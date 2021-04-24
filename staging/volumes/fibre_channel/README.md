@@ -40,7 +40,7 @@ Once you have created a pod manifest you can deploy it by running:
 kubectl apply -f ./your_new_pod.yaml
 ```
 
-You can then confirm that the pod hase been sucessfully deployed by running `kubectl get pod fibre-channel-example-pod -o wide`
+You can then confirm that the pod hase been successfully deployed by running `kubectl get pod fibre-channel-example-pod -o wide`
 
 ```console
 # kubectl get pod fibre-channel-example-pod -o wide
