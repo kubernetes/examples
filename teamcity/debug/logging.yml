@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: basicpod
+  labels:
+    type: webserver
+spec:
+  volumes:
+    - name: teamcity-server-pv-storage
+      persistentVolumeClaim:
+        claimName: teamcity-server-pv-claim
+  containers:
+  - name: teamcity-server
+    image: jetbrains/teamcity-server:latest
+    ports:
+    - containerPort: 80
+    volumeMounts:
+      - mountPath: "/var/log/nginx/"
+        name: teamcity-server-pv-storage
+  - name: fdlogger
+    image: fluent/fluentd
+    volumeMounts:
+      - mountPath: "/var/log"
+        name: teamcity-server-pv-storage
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: teamcity-server-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/teamcity-server"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: teamcity-server-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: default
+data:
+  fluentd.conf: |
+    <source>
+      @type tail
+      format none
+      path /var/log/access.log
+      tag count.format1
+    </source>
+
+    <match *.**>
+    @type stdout
+    id stdout_output
+    </match>
+---

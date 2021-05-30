@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: teamcity-pod
+spec:
+  securityContext:
+    runAsUser: 1000
+  containers:
+  - name: teamcity-server
+    image: jetbrains/teamcity-server:latest
+    command:
+      - sleep
+      - "3600"
+    securityContext:
+      runAsUser: 2000
+      allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teamcity-service
+  labels:
+    run: teamcity-service
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+  type: NodePort
+  selector:
+    example: teamcity
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysqlpassword
+data:
+  password: bXlzcWxwYXNzd29yZA==
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+ name: teamcity-service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+ name: teamcity-cluster-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+ name: teamcity-role-binding
+subjects:
+- kind: ServiceAccount
+  name: teamcity-service-account
+roleRef:
+ kind: ClusterRole
+ name: teamcity-cluster-role
+ apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-default
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+# - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 192.168.0.0/16
+    ports:
+    - port: 80
+      protocol: TCP
