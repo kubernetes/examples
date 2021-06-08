@@ -15,9 +15,9 @@ In the pod, you need to provide the following information:
 Launch the Pod:
 
 ```console
-    # kubectl create -f examples/volumes/azure_disk/azure.yaml
+    # kubectl create -f examples/staging/volumes/azure_disk/azure.yaml
 ```
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/azure_disk/README.md?pixel)]()
+[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/volumes/azure_disk/README.md?pixel)]()
 <!-- END MUNGE: GENERATED_ANALYTICS -->
