@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: redis-slave
+  name: redis-replica
   labels:
     app: redis
-    role: slave
+    role: replica
     tier: backend
 spec:
   replicas: 2
@@ -12,11 +12,11 @@ spec:
     metadata:
       labels:
         app: redis
-        role: slave
+        role: replica
         tier: backend
     spec:
       containers:
-      - name: slave
+      - name: replica
         image: gcr.io/google_samples/gb-redisslave:v1
         resources:
           requests:
