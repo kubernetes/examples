@@ -13,7 +13,7 @@ A Flocker cluster is required to use Flocker with Kubernetes. A Flocker cluster 
 - *Flocker Dataset Agent(s)*: a convergence agent that modifies the cluster state to match the desired configuration;
 - *Flocker Container Agent(s)*: a convergence agent that modifies the cluster state to match the desired configuration (unused in this configuration but still required in the cluster).
 
-The Flocker cluster can be installed on the same nodes you are using for Kubernetes. For instance, you can install the Flocker Control Service on the same node as Kubernetes Master and Flocker Dataset/Container Agents on every Kubernetes Slave node.
+The Flocker cluster can be installed on the same nodes you are using for Kubernetes. For instance, you can install the Flocker Control Service on the same node as Kubernetes Master and Flocker Dataset/Container Agents on every Kubernetes Replica node.
 
 It is recommended to follow [Installing Flocker](https://docs.clusterhq.com/en/latest/install/index.html) and the instructions below to set-up the Flocker cluster to be used with Kubernetes.
 
