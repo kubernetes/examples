@@ -199,16 +199,16 @@ func TestExampleObjectSchemas(t *testing.T) {
 		},
 		"../examples/guestbook/legacy": {
 			"frontend-controller":     &api.ReplicationController{},
-			"redis-slave-controller":  &api.ReplicationController{},
+			"redis-replica-controller":  &api.ReplicationController{},
 			"redis-master-controller": &api.ReplicationController{},
 		},
 		"../examples/guestbook-go": {
 			"guestbook-controller":    &api.ReplicationController{},
-			"redis-slave-controller":  &api.ReplicationController{},
+			"redis-replica-controller":  &api.ReplicationController{},
 			"redis-master-controller": &api.ReplicationController{},
 			"guestbook-service":       &api.Service{},
 			"redis-master-service":    &api.Service{},
-			"redis-slave-service":     &api.Service{},
+			"redis-replica-service":     &api.Service{},
 		},
 		"../examples/volumes/iscsi": {
 			"chap-secret": &api.Secret{},
