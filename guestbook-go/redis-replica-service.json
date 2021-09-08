@@ -2,10 +2,10 @@
    "kind":"Service",
    "apiVersion":"v1",
    "metadata":{
-      "name":"redis-slave",
+      "name":"redis-replica",
       "labels":{
          "app":"redis",
-         "role":"slave"
+         "role":"replica"
       }
    },
    "spec":{
@@ -17,7 +17,7 @@
       ],
       "selector":{
          "app":"redis",
-         "role":"slave"
+         "role":"replica"
       }
    }
 }
