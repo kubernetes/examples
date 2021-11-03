@@ -16,9 +16,11 @@ spec:
     spec:
       containers:
       - name: selenium-hub
-        image: selenium/hub:3.141
+        image: selenium/hub:4.0
         ports:
           - containerPort: 4444
+          - containerPort: 4443
+          - containerPort: 4442
         resources:
           limits:
             memory: "1000Mi"
