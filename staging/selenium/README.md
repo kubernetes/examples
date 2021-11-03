@@ -96,17 +96,10 @@ Let's run a quick Selenium job to validate our setup.
 
 #### Setup Python Environment
 
-First, we need to start a python container that we can attach to.
+First, we need to start a python container that we can attach to, then get inside this container.
 
 ```console
-kubectl run selenium-python --image=google/python-hello
-```
-
-Next, we need to get inside this container.
-
-```console
-export PODNAME=`kubectl get pods --selector="run=selenium-python" --output=template --template="{{with index .items 0}}{{.metadata.name}}{{end}}"`
-kubectl exec --stdin=true --tty=true $PODNAME bash
+kubectl run selenium-python --tty -i --image=python:slim bash
 ```
 
 Once inside, we need to install the Selenium library
@@ -127,14 +120,17 @@ And paste in the contents of selenium-test.py.
 
 ```python
 from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 def check_browser(browser):
+  if browser == "CHROME":
+    options = webdriver.ChromeOptions()
+  elif browser == "FIREFOX":
+    options = webdriver.FirefoxOptions()
   driver = webdriver.Remote(
     command_executor='http://selenium-hub:4444/wd/hub',
-    desired_capabilities=getattr(DesiredCapabilities, browser)
+    options=options
   )
-  driver.get("http://google.com")
+  driver.get("http://www.google.com")
   assert "google" in driver.page_source
   driver.quit()
   print("Browser %s checks out!" % browser)
@@ -190,7 +186,6 @@ kubectl delete deployment selenium-node-chrome
 kubectl delete deployment selenium-node-firefox
 kubectl delete deployment selenium-python
 kubectl delete svc selenium-hub
-kubectl delete svc selenium-hub-external
 ```
 
 
