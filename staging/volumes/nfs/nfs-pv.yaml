@@ -10,3 +10,5 @@ spec:
   nfs:
     server: nfs-server.default.svc.cluster.local
     path: "/"
+  mountOptions:
+    - nfsvers=4.2
