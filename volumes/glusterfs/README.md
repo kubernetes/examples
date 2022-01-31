@@ -13,7 +13,7 @@ have a working GlusterFS volume ready to use in the containers.
 * Create a GlusterFS volume
 * If you are not using hyperkube, you may need to install the GlusterFS client
   package on the Kubernetes nodes
-  ([Guide](http://gluster.readthedocs.io/en/latest/Administrator%20Guide/))
+  ([Guide](https://docs.gluster.org/en/latest/Administrator-Guide/Setting-Up-Clients/))
 
 #### Create endpoints
 
