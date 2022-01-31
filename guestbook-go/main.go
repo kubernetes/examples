@@ -29,12 +29,12 @@ import (
 
 var (
 	masterPool *simpleredis.ConnectionPool
-	slavePool  *simpleredis.ConnectionPool
+	replicaPool  *simpleredis.ConnectionPool
 )
 
 func ListRangeHandler(rw http.ResponseWriter, req *http.Request) {
 	key := mux.Vars(req)["key"]
-	list := simpleredis.NewList(slavePool, key)
+	list := simpleredis.NewList(replicaPool, key)
 	members := HandleError(list.GetAll()).([]string)
 	membersJSON := HandleError(json.MarshalIndent(members, "", "  ")).([]byte)
 	rw.Write(membersJSON)
@@ -76,8 +76,8 @@ func HandleError(result interface{}, err error) (r interface{}) {
 func main() {
 	masterPool = simpleredis.NewConnectionPoolHost("redis-master:6379")
 	defer masterPool.Close()
-	slavePool = simpleredis.NewConnectionPoolHost("redis-slave:6379")
-	defer slavePool.Close()
+	replicaPool = simpleredis.NewConnectionPoolHost("redis-replica:6379")
+	defer replicaPool.Close()
 
 	r := mux.NewRouter()
 	r.Path("/lrange/{key}").Methods("GET").HandlerFunc(ListRangeHandler)
