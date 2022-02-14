@@ -23,7 +23,7 @@ if (isset($_GET['cmd']) === true) {
     $client->set($_GET['key'], $_GET['value']);
     print('{"message": "Updated"}');
   } else {
-    $host = 'redis-slave';
+    $host = 'redis-replica';
     if (getenv('GET_HOSTS_FROM') == 'env') {
       $host = getenv('REDIS_SLAVE_SERVICE_HOST');
     }
