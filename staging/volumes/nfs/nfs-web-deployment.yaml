@@ -1,14 +1,15 @@
 # This pod mounts the nfs volume claim into /usr/share/nginx/html and
 # serves a simple web page.
 
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: nfs-web
 spec:
   replicas: 2
   selector:
-    role: web-frontend
+    matchLabels:
+      role: web-frontend
   template:
     metadata:
       labels:
