@@ -10,9 +10,6 @@ spec:
       app: minio
   serviceName: minio
   replicas: 4
-  selector:
-    matchLabels:
-      app: minio
   template:
     metadata:
       labels:
