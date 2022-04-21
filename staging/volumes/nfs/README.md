@@ -46,7 +46,7 @@ $ kubectl exec nfs-busybox-jdhf3 -- cat /mnt/index.html
 
 ## Example of NFS based persistent volume
 
-See [NFS Service and Replication Controller](nfs-web-rc.yaml) for a quick example of how to use an NFS
+See [NFS Service and Deployment](nfs-web-deployment.yaml) for a quick example of how to use an NFS
 volume claim in a replication controller. It relies on the
 [NFS persistent volume](nfs-pv.yaml) and
 [NFS persistent volume claim](nfs-pvc.yaml) in this example as well.
@@ -58,7 +58,7 @@ controller and import it into two replication controllers.
 
 ### NFS server part
 
-Define [the NFS Service and Replication Controller](nfs-server-rc.yaml) and
+Define [the NFS Service and Deployment](nfs-server-deployment.yaml) and
 [NFS service](nfs-server-service.yaml):
 
 The NFS server exports an auto-provisioned persistent volume backed by GCE PD or Azure Disk. If you are on GCE, create a GCE PD-based PVC:
@@ -85,7 +85,7 @@ by checking `kubectl get pods -l role=nfs-server`.
 
 ### Create the NFS based persistent volume claim
 
-The [NFS busybox controller](nfs-busybox-rc.yaml) uses a simple script to
+The [NFS busybox controller](nfs-busybox-deployment.yaml) uses a simple script to
 generate data written to the NFS server we just started. First, you'll need to
 find the cluster IP of the server:
 
@@ -110,7 +110,7 @@ $ kubectl create -f examples/staging/volumes/nfs/nfs-pvc.yaml
 
 ## Setup the fake backend
 
-The [NFS busybox controller](nfs-busybox-rc.yaml) updates `index.html` on the
+The [NFS busybox controller](nfs-busybox-deployment.yaml) updates `index.html` on the
 NFS server every 10 seconds. Let's start that now:
 
 ```console
@@ -137,7 +137,7 @@ and make sure the `describe services` command above had endpoints listed
 
 ### Setup the web server
 
-The [web server controller](nfs-web-rc.yaml) is an another simple replication
+The [web server controller](nfs-web-deployment.yaml) is an another simple replication
 controller demonstrates reading from the NFS share exported above as a NFS
 volume and runs a simple web server on it.
 
