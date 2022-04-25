@@ -80,7 +80,7 @@ $ kubectl exec -it my-nginx-luiln -- echo "Europe nginx" >> /usr/share/nginx/htm
 $ kubectl get ep
 NAME         ENDPOINTS
 kubernetes   10.240.249.92:443
-nginxsvc     10.244.0.4:80,10.244.0.4:443
+my-nginx     10.244.0.4:80,10.244.0.4:443
 ```
 
 Just to test reachability, we'll try hitting the Europe nginx from our initial US central cluster. Create a basic curl pod in the US cluster:
