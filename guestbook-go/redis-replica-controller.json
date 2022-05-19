@@ -2,7 +2,7 @@
    "kind":"ReplicationController",
    "apiVersion":"v1",
    "metadata":{
-      "name":"redis-replica",
+      "name":"redis-slave",
       "labels":{
          "app":"redis",
          "role":"replica"
@@ -24,7 +24,7 @@
          "spec":{
             "containers":[
                {
-                  "name":"redis-replica",
+                  "name":"redis-slave",
                   "image":"k8s.gcr.io/redis-slave:v2",
                   "ports":[
                      {
