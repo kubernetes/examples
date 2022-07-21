@@ -30,8 +30,10 @@ Optionally, your Kubernetes cluster should be configured with a Loadbalancer int
 
 ## Step One: Create namespace
 
+Create the namespace by executing the following command using `kubectl`:
+
 ```sh
-$ kubectl create -f examples/staging/spark/namespace-spark-cluster.yaml
+kubectl create -f examples/staging/spark/namespace-spark-cluster.yaml
 ```
 
 Now list all namespaces:
@@ -43,14 +45,14 @@ default       <none>             Active
 spark-cluster name=spark-cluster Active
 ```
 
-To configure kubectl to work with our namespace, we will create a new context using our current context as a base:
+To configure kubectl to work with our namespace, we will create a new context using our current context as a base with the following commands:
 
 ```sh
-$ CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
-$ USER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.user}')
-$ CLUSTER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.cluster}')
-$ kubectl config set-context spark --namespace=spark-cluster --cluster=${CLUSTER_NAME} --user=${USER_NAME}
-$ kubectl config use-context spark
+CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
+USER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.user}')
+CLUSTER_NAME=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"${CURRENT_CONTEXT}"'")].context.cluster}')
+kubectl config set-context spark --namespace=spark-cluster --cluster=${CLUSTER_NAME} --user=${USER_NAME}
+kubectl config use-context spark
 ```
 
 ## Step Two: Start your Master service
@@ -279,7 +281,7 @@ If your Kubernetes cluster does not have a Loadbalancer integration, then we wil
 Take the Zeppelin pod from before and port-forward the WebUI port:
 
 ```console
-$ kubectl port-forward zeppelin-controller-ja09s 8080:8080
+kubectl port-forward zeppelin-controller-ja09s 8080:8080
 ```
 
 This forwards `localhost` 8080 to container port 8080. You can then find
