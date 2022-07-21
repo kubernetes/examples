@@ -98,7 +98,7 @@ If you are using AWS, replace the "volumes" section with this (untested):
             fsType: ext4
 ```
 
-If you don't have a EBS volume in the same region as your cluster, create a new EBS volume in the same region with this command (untested):
+If you don't have an EBS volume in the same region as your cluster, create a new EBS volume in the same region with this command (untested):
 
 ```sh
 ec2-create-volume --size 200 --region $REGION --availability-zone $ZONE
@@ -126,7 +126,7 @@ Note: There is no password protection or auth running on the database by default
 
 ### Creating the Node.js Service
 
-The next step is to create the Node.js service. This service is what will be the endpoint for the web site, and will load balance requests to the Node.js instances.
+The next step is to create the Node.js service. This service is what will be the endpoint for the website, and will load balance requests to the Node.js instances.
 
 ```yaml
 apiVersion: v1
