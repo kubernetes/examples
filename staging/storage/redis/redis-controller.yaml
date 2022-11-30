@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: redis
-        image: k8s.gcr.io/redis:v1
+        image: registry.k8s.io/redis:v1
         ports:
         - containerPort: 6379
         resources:

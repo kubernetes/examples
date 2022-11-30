@@ -25,7 +25,7 @@
             "containers":[
                {
                   "name":"redis-replica",
-                  "image":"k8s.gcr.io/redis-slave:v2",
+                  "image":"registry.k8s.io/redis-slave:v2",
                   "ports":[
                      {
                         "name":"redis-server",

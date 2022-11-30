@@ -45,7 +45,7 @@ The following examples assumes that you already have a running Kubernetes cluste
     name: test-portworx-volume-pod
    spec:
      containers:
-     - image: k8s.gcr.io/test-webserver
+     - image: registry.k8s.io/test-webserver
        name: test-container
        volumeMounts:
        - mountPath: /test-portworx-volume
@@ -181,7 +181,7 @@ The following examples assumes that you already have a running Kubernetes cluste
       spec:
         containers:
         - name: test-container
-          image: k8s.gcr.io/test-webserver
+          image: registry.k8s.io/test-webserver
           volumeMounts:
           - name: test-volume
             mountPath: /test-portworx-volume
@@ -338,7 +338,7 @@ create Portworx volumes out of band and they will be created automatically.
      spec:
        containers:
        - name: test-container
-         image: k8s.gcr.io/test-webserver
+         image: registry.k8s.io/test-webserver
          volumeMounts:
          - name: test-volume
            mountPath: /test-portworx-volume
