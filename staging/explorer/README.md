@@ -2,7 +2,7 @@
 
 Explorer is a little container for examining the runtime environment Kubernetes produces for your pods.
 
-The intended use is to substitute k8s.gcr.io/explorer for your intended container, and then visit it via the proxy.
+The intended use is to substitute registry.k8s.io/explorer for your intended container, and then visit it via the proxy.
 
 Currently, you can look at:
  * The environment variables to make sure Kubernetes is doing what you expect.

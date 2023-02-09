@@ -38,7 +38,7 @@
           name: test-vmdk
         spec:
           containers:
-          - image: k8s.gcr.io/test-webserver
+          - image: registry.k8s.io/test-webserver
             name: test-container
             volumeMounts:
             - mountPath: /test-vmdk
@@ -180,7 +180,7 @@
       spec:
         containers:
         - name: test-container
-          image: k8s.gcr.io/test-webserver
+          image: registry.k8s.io/test-webserver
           volumeMounts:
           - name: test-volume
             mountPath: /test-vmdk
@@ -350,7 +350,7 @@
       spec:
         containers:
         - name: test-container
-          image: k8s.gcr.io/test-webserver
+          image: registry.k8s.io/test-webserver
           volumeMounts:
           - name: test-volume
             mountPath: /test-vmdk
@@ -568,7 +568,7 @@
       spec:
         containers:
         - name: test-container
-          image: k8s.gcr.io/test-webserver
+          image: registry.k8s.io/test-webserver
           volumeMounts:
           - name: test-volume
             mountPath: /test
@@ -653,7 +653,7 @@ vSphere volumes can be consumed by Stateful Sets.
          spec:
            containers:
            - name: nginx
-             image: k8s.gcr.io/nginx-slim:0.8
+             image: registry.k8s.io/nginx-slim:0.8
              ports:
              - containerPort: 80
                name: web

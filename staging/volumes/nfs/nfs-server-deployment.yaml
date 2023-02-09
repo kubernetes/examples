@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: nfs-server
-        image: k8s.gcr.io/volume-nfs:0.8
+        image: registry.k8s.io/volume-nfs:0.8
         ports:
           - name: nfs
             containerPort: 2049
