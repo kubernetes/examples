@@ -24,12 +24,12 @@ This example assumes that you have a working cluster. See the [Getting Started G
 
 ### Step One: Create the Redis master pod<a id="step-one"></a>
 
-Use the `examples/guestbook-go/redis-master-controller.json` file to create a [replication controller](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/) and Redis master [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/). The pod runs a Redis key-value server in a container. Using a replication controller is the preferred way to launch long-running pods, even for 1 replica, so that the pod benefits from the self-healing mechanism in Kubernetes (keeps the pods alive).
+Use the `examples/guestbook-go/redis-master-controller.yaml` file to create a [replication controller](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/) and Redis master [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/). The pod runs a Redis key-value server in a container. Using a replication controller is the preferred way to launch long-running pods, even for 1 replica, so that the pod benefits from the self-healing mechanism in Kubernetes (keeps the pods alive).
 
-1. Use the [redis-master-controller.json](redis-master-controller.json) file to create the Redis master replication controller in your Kubernetes cluster by running the `kubectl create -f` *`filename`* command:
+1. Use the [redis-master-controller.yaml](redis-master-controller.yaml) file to create the Redis master replication controller in your Kubernetes cluster by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/redis-master-controller.json
+    $ kubectl create -f examples/guestbook-go/redis-master-controller.yaml
    
     ```
 
@@ -73,10 +73,10 @@ A Kubernetes [service](https://kubernetes.io/docs/concepts/services-networking/s
 
 Services find the pods to load balance based on pod labels. The pod that you created in Step One has the label `app=redis` and `role=master`. The selector field of the service determines which pods will receive the traffic sent to the service.
 
-1. Use the [redis-master-service.json](redis-master-service.json) file to create the service in your Kubernetes cluster by running the `kubectl create -f` *`filename`* command:
+1. Use the [redis-master-service.yaml](redis-master-service.yaml) file to create the service in your Kubernetes cluster by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/redis-master-service.json
+    $ kubectl create -f examples/guestbook-go/redis-master-service.yaml
    
     ```
 
@@ -96,10 +96,10 @@ Services find the pods to load balance based on pod labels. The pod that you cre
 
 The Redis master we created earlier is a single pod (REPLICAS = 1), while the Redis read replicas we are creating here are 'replicated' pods. In Kubernetes, a replication controller is responsible for managing the multiple instances of a replicated pod.
 
-1. Use the file [redis-replica-controller.json](redis-replica-controller.json) to create the replication controller by running the `kubectl create -f` *`filename`* command:
+1. Use the file [redis-replica-controller.yaml](redis-replica-controller.yaml) to create the replication controller by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/redis-replica-controller.json
+    $ kubectl create -f examples/guestbook-go/redis-replica-controller.yaml
     
     ```
 
@@ -139,10 +139,10 @@ The Redis master we created earlier is a single pod (REPLICAS = 1), while the Re
 
 Just like the master, we want to have a service to proxy connections to the read replicas. In this case, in addition to discovery, the Redis replica service provides transparent load balancing to clients.
 
-1. Use the [redis-replica-service.json](redis-replica-service.json) file to create the Redis replica service by running the `kubectl create -f` *`filename`* command:
+1. Use the [redis-replica-service.yaml](redis-replica-service.yaml) file to create the Redis replica service by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/redis-replica-service.json
+    $ kubectl create -f examples/guestbook-go/redis-replica-service.yaml
    
     ```
 
@@ -164,14 +164,14 @@ Tip: It is helpful to set labels on your services themselves--as we've done here
 
 This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni) based) server that is configured to talk to either the replica or master services depending on whether the request is a read or a write. The pods we are creating expose a simple JSON interface and serves a jQuery-Ajax based UI. Like the Redis replica pods, these pods are also managed by a replication controller.
 
-1. Use the [guestbook-controller.json](guestbook-controller.json) file to create the guestbook replication controller by running the `kubectl create -f` *`filename`* command:
+1. Use the [guestbook-controller.yaml](guestbook-controller.yaml) file to create the guestbook replication controller by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/guestbook-controller.json
+    $ kubectl create -f examples/guestbook-go/guestbook-controller.yaml
     
     ```
 
- Tip: If you want to modify the guestbook code open the `_src` of this example and read the README.md and the Makefile. If you have pushed your custom image be sure to update the `image` accordingly in the guestbook-controller.json.
+ Tip: If you want to modify the guestbook code open the `_src` of this example and read the README.md and the Makefile. If you have pushed your custom image be sure to update the `image` accordingly in the guestbook-controller.yaml.
 
 2. To verify that the guestbook replication controller is running, run the `kubectl get rc` command:
 
@@ -204,10 +204,10 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
 
 Just like the others, we create a service to group the guestbook pods but this time, to make the guestbook front end externally visible, we specify `"type": "LoadBalancer"`.
 
-1. Use the [guestbook-service.json](guestbook-service.json) file to create the guestbook service by running the `kubectl create -f` *`filename`* command:
+1. Use the [guestbook-service.yaml](guestbook-service.yaml) file to create the guestbook service by running the `kubectl create -f` *`filename`* command:
 
     ```console
-    $ kubectl create -f examples/guestbook-go/guestbook-service.json
+    $ kubectl create -f examples/guestbook-go/guestbook-service.yaml
     ```
 
 
