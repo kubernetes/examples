@@ -29,7 +29,7 @@ $ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-gce-pv.y
 # On Azure (create Azure Disk PVC):
 $ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-azure-pv.yaml
 # Common steps after creating either GCE PD or Azure Disk PVC:
-$ kubectl create -f examples/staging/volumes/nfs/nfs-server-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-server-deployment.yaml
 $ kubectl create -f examples/staging/volumes/nfs/nfs-server-service.yaml
 # get the cluster IP of the server using the following command
 $ kubectl describe services nfs-server
@@ -37,7 +37,7 @@ $ kubectl describe services nfs-server
 $ kubectl create -f examples/staging/volumes/nfs/nfs-pv.yaml
 $ kubectl create -f examples/staging/volumes/nfs/nfs-pvc.yaml
 # run a fake backend
-$ kubectl create -f examples/staging/volumes/nfs/nfs-busybox-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-busybox-deployment.yaml
 # get pod name from this command
 $ kubectl get pod -l name=nfs-busybox
 # use the pod name to check the test file
@@ -46,19 +46,19 @@ $ kubectl exec nfs-busybox-jdhf3 -- cat /mnt/index.html
 
 ## Example of NFS based persistent volume
 
-See [NFS Service and Replication Controller](nfs-web-rc.yaml) for a quick example of how to use an NFS
-volume claim in a replication controller. It relies on the
+See [NFS Service and Deployment](nfs-web-deployment.yaml) for a quick example of how to use an NFS
+volume claim in a deployment. It relies on the
 [NFS persistent volume](nfs-pv.yaml) and
 [NFS persistent volume claim](nfs-pvc.yaml) in this example as well.
 
 ## Complete setup
 
-The example below shows how to export a NFS share from a single pod replication
-controller and import it into two replication controllers.
+The example below shows how to export a NFS share from a single pod
+deployment and import it into two deployments.
 
 ### NFS server part
 
-Define [the NFS Service and Replication Controller](nfs-server-rc.yaml) and
+Define [the NFS Service and Deployment](nfs-server-deployment.yaml) and
 [NFS service](nfs-server-service.yaml):
 
 The NFS server exports an auto-provisioned persistent volume backed by GCE PD or Azure Disk. If you are on GCE, create a GCE PD-based PVC:
@@ -76,7 +76,7 @@ $ kubectl create -f examples/staging/volumes/nfs/provisioner/nfs-server-azure-pv
 Then using the created PVC, create an NFS server and service:
 
 ```console
-$ kubectl create -f examples/staging/volumes/nfs/nfs-server-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-server-deployment.yaml
 $ kubectl create -f examples/staging/volumes/nfs/nfs-server-service.yaml
 ```
 
@@ -85,7 +85,7 @@ by checking `kubectl get pods -l role=nfs-server`.
 
 ### Create the NFS based persistent volume claim
 
-The [NFS busybox controller](nfs-busybox-rc.yaml) uses a simple script to
+The [NFS busybox deployment](nfs-busybox-deployment.yaml) uses a simple script to
 generate data written to the NFS server we just started. First, you'll need to
 find the cluster IP of the server:
 
@@ -110,11 +110,11 @@ $ kubectl create -f examples/staging/volumes/nfs/nfs-pvc.yaml
 
 ## Setup the fake backend
 
-The [NFS busybox controller](nfs-busybox-rc.yaml) updates `index.html` on the
+The [NFS busybox deployment](nfs-busybox-deployment.yaml) updates `index.html` on the
 NFS server every 10 seconds. Let's start that now:
 
 ```console
-$ kubectl create -f examples/staging/volumes/nfs/nfs-busybox-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-busybox-deployment.yaml
 ```
 
 Conveniently, it's also a `busybox` pod, so we can get an early check
@@ -137,14 +137,14 @@ and make sure the `describe services` command above had endpoints listed
 
 ### Setup the web server
 
-The [web server controller](nfs-web-rc.yaml) is an another simple replication
-controller demonstrates reading from the NFS share exported above as a NFS
+The [web server deployment](nfs-web-deployment.yaml) is an another simple
+deployment demonstrates reading from the NFS share exported above as a NFS
 volume and runs a simple web server on it.
 
 Define the pod:
 
 ```console
-$ kubectl create -f examples/staging/volumes/nfs/nfs-web-rc.yaml
+$ kubectl create -f examples/staging/volumes/nfs/nfs-web-deployment.yaml
 ```
 
 This creates two pods, each of which serve the `index.html` from above. We can
