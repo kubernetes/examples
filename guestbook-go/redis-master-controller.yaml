@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: redis-master
-        image: k8s.gcr.io/redis:e2e
+        image: registry.k8s.io/redis:e2e
         ports:
         - name: redis-server
           containerPort: 6379
