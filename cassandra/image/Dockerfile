@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM k8s.gcr.io/debian-base-amd64:0.3
+FROM registry.k8s.io/debian-base-amd64:0.3
 
 ARG BUILD_DATE
 ARG VCS_REF
