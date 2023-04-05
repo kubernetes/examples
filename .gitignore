@@ -37,9 +37,6 @@ cscope.*
 # Mercurial files
 **/.hg
 **/.hg*
-
-
 .tags*
-
 /bazel-*
 *.pyc
