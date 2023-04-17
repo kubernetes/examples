@@ -22,7 +22,7 @@ SECRET = /tmp/secret.json
 
 keys:
 	# The CName used here is specific to the service specified in nginx-app.yaml.
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $(KEY) -out $(CERT) -subj "/CN=nginxsvc/O=nginxsvc"
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $(KEY) -out $(CERT) -subj "/CN=my-nginx/O=my-nginx"
 
 container:
 	docker build --pull -t $(PREFIX):$(TAG) .
