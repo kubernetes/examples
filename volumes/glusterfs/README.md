@@ -1,5 +1,10 @@
 ## GlusterFS
 
+
+NOTE: GlusterFS in-tree storage driver ( `kubernetes.io/glusterfs`) which was
+deprecated in kubernetes 1.25 release is removed entirely  in `v1.26`. Volumes
+must be migrated to an alternate storage solution before upgrading to `v1.26`.
+
 [GlusterFS](http://www.gluster.org) is an open source scale-out filesystem.
 These examples provide information about how to allow containers use GlusterFS
 volumes.
