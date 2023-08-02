@@ -16,5 +16,5 @@ jobs:
     - name: Build & Push Image
       run: |
         echo "${{ secrets.DOCKERPW }}" | docker login -u "imprithwish619" --password-stdin
-        docker image build -t imprithwish619/go_application:latest -f guestbook-go/Dockerfile
+        docker build -t imprithwish619/go_application:latest -f guestbook-go/Dockerfile
         docker push imprithwish619/go_application:latest
