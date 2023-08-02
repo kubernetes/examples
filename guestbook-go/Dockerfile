@@ -13,12 +13,9 @@
 # limitations under the License.
 # Prithish added github workflows and testing this 4th time
 FROM golang:1.10.0
-RUN go get github.com/codegangsta/negroni 
-RUN go get github.com/gorilla/mux 
-RUN go get github.com/xyproto/simpleredis
-#RUN go get github.com/codegangsta/negroni \
-  #         github.com/gorilla/mux \
- #          github.com/xyproto/simpleredis
+RUN go get github.com/codegangsta/negroni \
+github.com/gorilla/mux \
+github.com/xyproto/simpleredis
 WORKDIR /app
 ADD ./main.go .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
