@@ -1,5 +1,4 @@
 name: Go application
-
 on:
   push:
    branches:
