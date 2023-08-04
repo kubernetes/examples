@@ -1,25 +1,20 @@
 name: Go application
+
 on:
   push:
-   branches:
-     - master
-     - main 
+   branches: [ master ]
   pull_request:
-    types:
-      - closed
+    branches: [ master ]
+      
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if commit message contains BUILD_CONTAINER_IMAGE
-      - uses: actions/checkout@v2
-      - name: Build & Push Image
-        if: >
-          contains(github.event.head_commit.message, 'BUILD_CONTAINER_IMAGE') ||
-          github.event_name == 'pull_request' && github.event.pull_request.merged == true
-        run: |
-          echo "${{ secrets.DOCKERPW }}" | docker login -u "imprithwish619" --password-stdin
-          docker build ./guestbook-go/ --file ./guestbook-go/Dockerfile -t imprithwish619/go_application:latest 
-          docker push imprithwish619/go_application:latest
+    - uses: actions/checkout@v1
+    - name: Build & Push Image
+      run: |
+        echo "${{ secrets.DOCKERPW }}" | docker login -u "imprithwish619" --password-stdin
+        docker build ./guestbook-go/ --file ./guestbook-go/Dockerfile -t imprithwish619/go_application:latest 
+        docker push imprithwish619/go_application:latest
