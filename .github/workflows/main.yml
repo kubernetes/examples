@@ -17,6 +17,6 @@ jobs:
           contains(github.event.head_commit.message, 'BUILD_CONTAINER_IMAGE') ||
           github.event_name == 'pull_request' && github.event.pull_request.merged == true
       run: |
-        echo "${{ secrets.DOCKERPW }}" | docker login -u "imprithwish619" --password-stdin
+        echo "${{ secrets.DOCKERPW }}" | docker login -u "${{ secrets.DOCKERUSR }}" --password-stdin
         docker build ./guestbook-go/ --file ./guestbook-go/Dockerfile -t imprithwish619/go_application:latest 
         docker push imprithwish619/go_application:latest
