@@ -18,7 +18,7 @@
    readOnly: true
 ```
 
-[API Reference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#fcvolumesource-v1-core)
+[API Reference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#fcvolumesource-v1-core)
 
 ## Step-by-Step
 
