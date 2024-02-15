@@ -1,5 +1,11 @@
 # How to Use it?
 
+NOTE: Ceph RBD in-tree storage driver ( `kubernetes.io/rbd`) has been
+deprecated in kubernetes 1.28 release and will be in removed in subsequent
+releases. The CSI driver for Ceph RBD (https://github.com/ceph/ceph-csi)
+is available for long time now which can be an alternative option for the
+users want to use Ceph RBD volumes in their clusters.
+
 Install Ceph on the Kubernetes host. For example, on Fedora 21
 
     # yum -y install ceph-common
