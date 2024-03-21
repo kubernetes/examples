@@ -6,7 +6,7 @@ metadata:
     app: redis
     role: replica
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     app: redis
     role: replica
