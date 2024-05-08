@@ -10,8 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build container image
-        run: docker build -t your-dockerhub-username/guestbook-go .
+        run: docker build -t althafc/guestbook-go .
       - name: Login to Docker Hub
         run: echo "${{ secrets.althaf69@C}}" | docker login -u ${{ secrets.althafc }} --password-stdin
       - name: Push image to Docker Hub
-        run: docker push your-dockerhub-username/guestbook-go
+        run: docker push althafc/guestbook-go
