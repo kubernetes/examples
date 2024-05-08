@@ -22,6 +22,7 @@ jobs:
 
       - name: Build Docker Image
         run: docker build -t althafc/guestbook-go:latest .
+
       
       - name: Push Docker Image
         run: docker push althafc/guestbook-go:latest
