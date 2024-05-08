@@ -4,7 +4,6 @@
 # OSX trash
 .DS_Store
 
-
 # Eclipse files
 .classpath
 .project
