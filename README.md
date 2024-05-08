@@ -9,7 +9,7 @@ Refer to the [Kubernetes documentation] for how to execute the tutorials.
 
 Maintained Examples are expected to be updated with every Kubernetes release, to
 use the latest and greatest features, current guidelines and best practices,
-and to refresh command syntax, output, changed prerequisites, as needed..
+and to refresh command syntax, output, changed prerequisites, as needed.
 
 |Name | Description | Notable Features Used | Complexity Level|
 ------------- | ------------- | ------------ | ------------ |
