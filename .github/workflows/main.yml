@@ -17,4 +17,4 @@ jobs:
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
       - name: Push image to Docker Hub
-        run: docker push althafc/guestbook-go  # Replace with your username
+        run: docker push althafc/guestbook-go  # Replace 
