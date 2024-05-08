@@ -21,7 +21,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build Docker Image
-        run: docker buildx build  -t althafc/guestbook-go:latest 
+        run: docker buildx build -t althafc/guestbook-go:latest .
         
 
       
