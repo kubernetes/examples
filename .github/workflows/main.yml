@@ -1,20 +1,24 @@
-name: Build and Push Image
-
+name: Build and Push Docker Image
 on:
   push:
-    branches: [ main ]  # Trigger on pushes to the main branch
-
+    branches:
+      - main
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Build container image
-        run: docker build -t althafc/guestbook-go .  # Replace with your username
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Login to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_USERNAME }}
 
-      - name: Push image to Docker Hub
-        run: docker push althafc/guestbook-go  # Replace 
+      - name: Build Docker Image
+        run: docker build -t althafc/guestbook-go:latest .
+      
+      - name: Push Docker Image
+        run: docker push althafc/guestbook-go:latest
