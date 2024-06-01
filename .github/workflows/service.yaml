@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook-go
+spec:
+  selector:
+    app: guestbook-go
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
+
