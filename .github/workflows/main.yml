@@ -1,0 +1,46 @@
+name: Publish Docker Image
+
+on:
+  push:
+    branches: ['master']
+
+jobs:
+  build:
+    name: Push Docker Image to Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker Layers
+        uses: actions/cache@v2
+        with:
+          path: ./guestbook-go/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./guestbook-go
+          file: ./guestbook-go/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/guestbook-go:latest
+            ${{ secrets.DOCKER_USERNAME }}/guestbook-go:${{ github.sha }}
+          cache-from: type=local,src=./guestbook-go/.buildx-cache
+          cache-to: type=local,dest=./guestbook-go/.buildx-cache-new
+
+      - name: Post Build Cleanup
+        run: rm -rf ./guestbook-go/.buildx-cache-new
