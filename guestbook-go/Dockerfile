@@ -1,3 +1,15 @@
+FROM golang:1.16
+
+WORKDIR /app
+
+COPY . .
+
+RUN go mod download
+RUN go build -o /guestbook-go
+
+EXPOSE 3000
+
+CMD ["/guestbook-go"]
 # Copyright 2016 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
