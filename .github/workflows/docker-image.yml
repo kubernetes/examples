@@ -30,4 +30,5 @@ jobs:
       with:
         context: .
         push: true
-        tags: your-dockerhub-username/ridecell-assignment-no1:latest
+        tags: smita050sapar/ridecell-assignment-no1:latest
+
