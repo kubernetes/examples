@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - master # Change this to the branch you want to trigger the action
+      - main  # Change this to the branch you want to trigger the action
 
 jobs:
   build-and-push:
@@ -12,6 +12,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    - name: List files for debugging
+      run: ls -R
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -28,3 +31,4 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/your-image-name:latest
+
