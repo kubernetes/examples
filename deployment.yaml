@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ridecell
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ridecell
+  template:
+    metadata:
+      labels:
+        app: ridecell
+    spec:
+      containers:
+        - name: ride-cell-container
+          image: your-dockerhub-username/your-image-name:latest # Change this to your Docker Hub image
+          ports:
+            - containerPort: 3000
+

@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Build Docker image
+        if: ${{ github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'BUILD_CONTAINER_IMAGE') }}
+        run: |
+          docker build -t ridecell .
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      
+      - name: Push Docker image to Docker Hub
+        if: ${{ github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'BUILD_CONTAINER_IMAGE') }}
+        run: |
+          docker tag ridecell deva0077/ridecell:${{ github.sha }}
+          docker push deva0077/ridecell:${{ github.sha }}
+
+      - name: Login to Google Cloud
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GCP_KEY }}
+          
+      - name: Deploy to GKE
+        if: ${{ github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'BUILD_CONTAINER_IMAGE') }}
+        run: |
+          gcloud container clusters get-credentials chinna-gke --zone us-central1-c --project refined-network-387810
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
+
+  prevent-merge:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Prevent direct merge to main
+        run: |
+          if [[ $(git log --format=%B -n 1 ${{ github.event.pull_request.base.sha }}) != *"BUILD_CONTAINER_IMAGE"* ]]; then
+            echo "ERROR: Direct merge to main is not allowed. Please open a pull request and request a review."
+            exit 1
+          fi
