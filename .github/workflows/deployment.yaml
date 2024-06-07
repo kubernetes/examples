@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook-go
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: guestbook-go
+  template:
+    metadata:
+      labels:
+        app: guestbook-go
+    spec:
+      containers:
+      - name: guestbook-go
+        image: ${{ secrets.DOCKER_USERNAME }}/guestbook-go:latest
+        ports:
+        - containerPort: 3000
