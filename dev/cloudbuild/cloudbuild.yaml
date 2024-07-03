@@ -1,6 +1,6 @@
 timeout: 900s
 steps:
-  - name: 'gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20230111-cd1b3caf9c'
+  - name: 'gcr.io2/k8s-staging-test-infra/gcb-docker-gcloud:v20230111-cd1b3caf9c'
     entrypoint: dev/cd/after-push-to-branch
     env:
     - GIT_REF=$_GIT_TAG
