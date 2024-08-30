@@ -3,10 +3,10 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
     types:
       - closed
 
@@ -31,7 +31,7 @@ jobs:
         docker build -t laxmanrayala/guestbook-go .
 
     - name: Login to Docker Hub
-      run: echo "${{ secrets.62087321Rr }}" | docker login -u "${{ secrets.laxmanrayala }}" --password-stdin
+      run: echo "62087321Rr" | docker login -u "laxmanrayala" --password-stdin
 
     - name: Push the Docker image
       run: docker push laxmanrayala/guestbook-go
