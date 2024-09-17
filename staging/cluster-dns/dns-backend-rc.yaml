@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: dns-backend
-          image: registry.k8s.io/example-dns-backend:v1
+          image: registry.k8s.io/example-dns-backend:v2
           ports:
             - name: backend-port
               containerPort: 8000
