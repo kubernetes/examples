@@ -16,7 +16,7 @@ For a more detailed, step-by-step explanation of this example setup, see the
 
 ### Prerequisites
 
-You'll need to install [Go 1.4+](https://golang.org/doc/install) to build
+You'll need to install [Go 1.4+](https://go.dev/doc/install) to build
 `vtctlclient`, the command-line admin tool for Vitess.
 
 We also assume you have a running Kubernetes cluster with `kubectl` pointing to
