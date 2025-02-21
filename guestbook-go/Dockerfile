@@ -11,20 +11,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# Use Go 1.18 base image
+FROM golang:1.18 AS builder
 
-FROM golang:1.10.0
-RUN go get github.com/codegangsta/negroni \
-           github.com/gorilla/mux \
-           github.com/xyproto/simpleredis/v2
+# Set the working directory
 WORKDIR /app
-ADD ./main.go .
+
+# Copy Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the source code and build the application
+COPY main.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
+# Use a minimal base image to keep the final image small
 FROM scratch
+
+# Set the working directory
 WORKDIR /app
-COPY --from=0 /app/main .
+
+# Copy the built binary from the builder stage
+COPY --from=builder /app/main .
+
+# Copy static files
 COPY ./public/index.html public/index.html
 COPY ./public/script.js public/script.js
 COPY ./public/style.css public/style.css
+
+# Define the command to run the application
 CMD ["/app/main"]
+
+# Expose the port on which the application will run
 EXPOSE 3000
