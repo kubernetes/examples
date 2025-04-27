@@ -12,13 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nginx
+FROM nginx:latest
 
 
+# Copy HTML and script files
 COPY index2.html /usr/share/nginx/html/index2.html
-RUN chmod +r /usr/share/nginx/html/index2.html
 COPY auto-reload-nginx.sh /home/auto-reload-nginx.sh
-RUN chmod +x /home/auto-reload-nginx.sh
 
-# install inotify
-RUN apt-get update && apt-get install -y inotify-tools
+# Set permissions and install inotify-tools in one layer
+RUN chmod 644 /usr/share/nginx/html/index2.html && \
+    chmod +x /home/auto-reload-nginx.sh && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends inotify-tools && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+    
+# Override at kubernetes deployment template 
+CMD ["./auto-reload-nginx.sh"]
