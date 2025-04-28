@@ -27,5 +27,5 @@ RUN chmod 644 /usr/share/nginx/html/index2.html && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
     
-# Override at kubernetes deployment template 
+WORKDIR /home
 CMD ["./auto-reload-nginx.sh"]
