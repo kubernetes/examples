@@ -38,6 +38,7 @@ spec:
       containers:
       - name: nginxhttps
         image: ymqytw/nginxhttps:1.5
+        command: ["/home/auto-reload-nginx.sh"]
         ports:
         - containerPort: 443
         - containerPort: 80
