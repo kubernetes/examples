@@ -16,7 +16,6 @@ spec:
   selector:
     app: nginx
 ---
-
 apiVersion: v1
 kind: ReplicationController
 metadata:
