@@ -81,7 +81,7 @@ spec:
             command:
             - /bin/bash
             - -c
-            - /ready-probe.sh
+            - "nodetool status"
           initialDelaySeconds: 15
           timeoutSeconds: 5
           periodSeconds: 10
