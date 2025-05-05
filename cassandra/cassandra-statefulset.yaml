@@ -74,6 +74,18 @@ spec:
             - /ready-probe.sh
           initialDelaySeconds: 15
           timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "nodetool status"
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3          
         # These volume mounts are persistent. They are like inline claims,
         # but not exactly because the names need to match exactly one of
         # the stateful pod volumes.
