@@ -1,30 +1,49 @@
 # Kubernetes Examples
 
-This directory contains a number of examples of how to run real applications
-with Kubernetes.
+Welcome to the official Kubernetes Examples repository! This curated collection,
+stewarded by SIG Apps, provides high-quality, educational examples for running a
+diverse range of applications and workloads on Kubernetes.
 
-Refer to the [Kubernetes documentation] for how to execute the tutorials.
+Our goal is to offer a central hub where you can:
+* **Discover** practical implementations for various use cases.
+* **Learn** common patterns and best practices for deploying applications on Kubernetes.
+* **Explore** configurations for general-purpose applications as well as specialized
+ones like AI/ML workloads and platforms.
 
-### Maintained Examples
+## Browse Examples
 
-Maintained Examples are expected to be updated with every Kubernetes release, to
-use the latest and greatest features, current guidelines and best practices,
-and to refresh command syntax, output, changed prerequisites, as needed.
+We encourage you to explore the subdirectories to find examples relevant to your needs.
+Examples are organized into categories, such as:
 
-|Name | Description | Notable Features Used | Complexity Level|
-------------- | ------------- | ------------ | ------------ |
-|[Guestbook](guestbook/) | PHP app with Redis | Deployment, Service | Beginner |
-|[Guestbook-Go](guestbook-go/) | Go app with Redis | Deployment, Service | Beginner |
-|[WordPress](mysql-wordpress-pd/) | WordPress with MySQL | Deployment, Persistent Volume with Claim | Beginner|
-|[Cassandra](cassandra/) | Cloud Native Cassandra | Daemon Set, Stateful Set, Replication Controller | Intermediate
+* [ai](ai/): Demonstrations of AI/ML model training, serving, end-to-end platform
+reference manifests, and MLOps toolchains.
+* ... (and more as the collection grows!)
 
-> Note: Please add examples that are maintained to the list above.
+Each example includes its own detailed `README.md` file covering:
+* Purpose and learning objectives
+* Prerequisites (including Kubernetes version and hardware if applicable)
+* Step-by-step deployment instructions
+* Verification and cleanup commands
+* Key Kubernetes concepts used
 
-See [Example Guidelines](guidelines.md) for a description of what goes
-in this directory, and what examples should contain.
+## Contributing to Kubernetes Examples
 
-[Kubernetes documentation]: https://kubernetes.io/docs/tutorials/
+We welcome contributions from the community! If you have an example that showcases
+how to run applications or workloads on Kubernetes effectively and educates users,
+please consider sharing it.
 
-### Contributing
+Before contributing, please thoroughly review our:
+1. [Example Guidelines](guidelines.md): These outline the standards, structure,
+   and best practices all examples must follow.
+2. [CONTRIBUTING.md](CONTRIBUTING.md): This provides instructions on the contribution
+   process, including how to propose, submit, and review examples.
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to contribute.
+Your contributions help make Kubernetes more accessible and understandable for everyone.
+
+## Our Philosophy
+
+We aim for these examples to be:
+* **Educational:** Clearly explaining how and why things work.
+* **Practical:** Demonstrating real-world (though possibly simplified) applications and platforms.
+* **Current:** Reflecting modern Kubernetes features and best practices.
+* **Maintained:** Kept up-to-date by the community and SIG Apps.
