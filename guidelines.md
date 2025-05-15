@@ -1,84 +1,142 @@
-# Example Guidelines
+# Kubernetes Example Guidelines
 
-## An Example Is
+Welcome to the `kubernetes/examples` repository! This repository serves as a
+community-driven collection of high-quality, educational examples demonstrating
+how to run a diverse range of applications, frameworks, and workloads on Kubernetes.
+Our goal is to provide a central place for users to discover practical examples,
+learn common patterns, and understand best practices for deploying applications,
+including general-purpose workloads and specialized AI/ML workloads and platforms.
 
-An example demonstrates running an application/framework/workload on
-Kubernetes in a meaningful way. It is educational and informative.
+These guidelines are intended for contributors to ensure that all examples are
+consistent, maintainable, easy to understand, and valuable to the Kubernetes community.
+By adhering to these guidelines, we can build a rich and up-to-date resource.
 
-Examples are not:
+## An Example Is...
 
-* Full app deployments, ready to use, with no explanation. These
-  belong to [Helm charts](https://github.com/kubernetes/charts).
-* Simple toys to show how to use a Kubernetes feature. These belong in
-  the [user guide](https://kubernetes.io/docs/home/).
-* Demos that follow a script to show a Kubernetes feature in
-  action. Example: killing a node to demonstrate controller
-  self-healing.
-* A tutorial which guides the user through multiple progressively more
-  complex deployments to arrive at the final solution. An example
-  should just demonstrate how to setup the correct deployment
+An example demonstrates running an application, framework, or complex workload
+(such as AI/ML model serving, training pipelines, associated toolchains) on Kubernetes.
+It must be:
 
-## An Example Includes
+* Meaningful: Solves or illustrates a recognizable, real-world (though potentially simplified) use case.
+* Educational: Helps users learn how to deploy and manage the specific type of application
+  or pattern on Kubernetes. It should explain the "why" behind the "how."
+* Illustrative of Best Practices: Showcases current Kubernetes best practices for configuration,
+  security, and application architecture where applicable.
+* Focused: While it can involve multiple components, it should illustrate a specific concept
+  or setup without becoming overly broad. For very complex systems, consider breaking them into
+  smaller, related examples or leveraging modular design, especially for platform blueprints.
 
-### Up front
+## Examples Are NOT...
 
-* Has a "this is what you'll learn" section.
-* Has a Table of Contents.
-* Has a section that brings up the app in the fewest number of
-  commands (TL;DR / quickstart), without cloning the repo (kubectl
-  apply -f http://...).
-* Points to documentation of prerequisites.
-  * [Create a cluster](https://github.com/kubernetes/community/blob/master/contributors/devel/running-locally.md) (e.g., single-node docker).
-  * [Setup kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
-  * etc.
-* Should specify which release of Kubernetes is required and any other
-  prerequisites, such as DNS, a cloudprovider with PV provisioning, a
-  cloudprovider with external load balancers, etc.
-  * Point to general documentation about alternatives for those
-    mechanisms rather than present the alternatives in each example.
-  * Tries to balance between using new features, and being
-    compatible across environments.
+Examples are intended for educational purposes and should not be:
 
-### Throughout
+* Minimalistic Feature Snippets: Examples should be more comprehensive than simple snippets
+  designed to illustrate a single Kubernetes API field. Such content is better suited for
+  the official [Kubernetes documentation](https://kubernetes.io/docs/home/).
+* Pure Kubernetes Feature Demonstrations: Examples should focus on the application running
+  on Kubernetes, not solely on demonstrating a Kubernetes feature in isolation (e.g., showing
+  high availability is a feature demo, not an application example unless it's core to
+  understanding how that specific application achieves HA on Kubernetes).
 
-* Should point to documentation on first mention:
-  [kubectl](https://kubernetes.io/docs/user-guide/kubectl-overview/),
-  [pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/),
-  [services](https://kubernetes.io/docs/concepts/services-networking/service/),
-  [deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/),
-  [replication controllers](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/),
-  [jobs](https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/),
-  [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/),
-  [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
-  etc.
-* Most examples should be cloudprovider-independent (e.g., using PVCs, not PDs).
-  * Other examples with cloudprovider-specific bits could be somewhere else.
-* Actually show the app working -- console output, and or screenshots.
-  * Ascii animations and screencasts are recommended.
-* Follows [config best practices](https://kubernetes.io/docs/concepts/configuration/overview/).
-* Shouldn't duplicate the [user guide](https://kubernetes.io/docs/home/).
-* Docker images are pre-built, and source is contained in a subfolder.
-  * Source is the Dockerfile and any custom files needed beyond the
-    upstream app being packaged.
-  * Images are pushed to `gcr.io/google-samples`. Contact @jeffmendoza
-    to have an image pushed
-  * Images are tagged with a version (not latest) that is referenced
-    in the example config.
-* Only use the code highlighting types
-  [supported by Rouge](https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers),
-  as this is what GitHub Pages uses.
-* Commands to be copied using the `shell` syntax highlighting type, and
-  do not include any kind of prompt.
-* Example output is in a separate block quote to distinguish it from
-  the command (which doesn't have a prompt).
-* When providing an example command or config for which the user is
-  expected to substitute text with something specific to them, use
-  angle brackets: `<IDENTIFIER>` for the text to be substituted.
+## An Example Includes...
 
-### At the end
+Each example must be well-structured and documented to ensure clarity and usability.
 
-* Should have a section suggesting what to look at next, both in terms
-  of "additional resources" and "what example to look at next".
+### Structure and README
+
+* Directory: Each example MUST reside in its own clearly named subdirectory within a
+  relevant category (e.g., `/ai/`, `/databases/`).
+* README.md: Every example MUST have a `README.md` file. This file is crucial for
+  understandability and usability. It SHOULD follow a consistent structure. 
+  _(TBD: establish a `EXAMPLE_README_TEMPLATE.md` to guide contributors)._ Key sections include:
+    * Title: Clear and descriptive title of the example.
+    * Purpose / What You'll Learn: Briefly describe what the example demonstrates and what
+      the user will learn by using it.
+    * Table of Contents (ToC): For longer READMEs, a ToC is highly recommended.
+    * Prerequisites, such as:
+        * Required Kubernetes version.
+        * Any necessary tools (e.g., `kubectl`, `kustomize`, `helm`, `git`).
+        * Specific hardware requirements. This is especially important for AI/ML examples.
+    * Quick Start / TL;DR: A concise set of commands to deploy the example with minimal effort,
+      preferably without needing to clone the repository.
+    * Detailed Steps & Explanation:
+        * Walk through the deployment process.
+        * Explain the key Kubernetes manifests and their roles within the example.
+        * Describe important configuration choices.
+    * Verification / Seeing it Work: Commands to verify the application is running correctly,
+      along with expected output (console logs, screenshots, or how to access an endpoint).
+      For AI/ML examples, this might include how to check training progress or send a test inference request.
+    * Configuration Customization (Optional but Recommended): Guidance on how users can
+      customize common parameters.
+    * Cleanup: Commands to remove all resources created by the example.
+    * Troubleshooting (Optional): Common issues and how to resolve them.
+    * Further Reading / Next Steps: Links to relevant official documentation, related
+      examples, or more advanced topics.
+    * Maintainer(s) (Optional): GitHub username(s) of primary maintainers.
+    * Last Validated Kubernetes Version (Recommended): The Kubernetes version against
+      which the example was last successfully tested.
+
+### Manifests and Configuration
+
+* Clarity and Best Practices: Manifests should be well-commented where non-obvious.
+  They must follow [Kubernetes configuration best practices](https://kubernetes.io/docs/concepts/configuration/overview/) 
+  and general [security best practices](https://kubernetes.io/docs/concepts/security/overview/).
+* Kubernetes API Usage:
+    * Use stable APIs whenever possible. If beta or alpha features are used, they must
+      be explicitly mentioned along with any necessary feature gates.
+    * Avoid deprecated APIs or features. Reference API documentation for core or custom workload APIs.
+* Vendor neutral: Do not endorse one particular ecosystem tool or cloud-provider.
+    * Individual manifests will inherently use specific tools to fulfill their purpose.
+      However, examples will be open to manifests for a diverse set of tools, governed
+      by community interest and contribution.
+    * If an example *must* use cloud-provider-specific features (e.g., specific AI accelerators,
+      managed database services critical to an AI workload/platform), this dependency MUST be
+      clearly documented in the `README.md` under prerequisites. If possible, provide guidance
+      for adapting to other environments or a generic setup.
+* Resource Requests and Limits: Define realistic resource requests and limits for all
+  workloads. For resource-intensive examples, clearly document these and, if feasible,
+  offer scaled-down versions for resource-constrained environments.
+* External Links in Manifests: All URLs used in manifests must point to reliable, versioned sources.
+* Container Images:
+  * Publicly Accessible Images: Images used in examples MUST be publicly accessible
+    from well-known, reputable container registries.
+  * Image Tagging: Images MUST be tagged with a specific version instead of using `:latest` tags.
+  * If an example requires a custom-built image not available on public registries, the
+    `Dockerfile` and all necessary source files (build context) MUST be included within
+    the example's subdirectory (e.g., in an `image/` subfolder).
+
+### Documentation and Commands
+
+* Linking to Official Docs: On the first mention of a Kubernetes concept, link to its
+  official documentation page.
+* Code Highlighting: Use appropriate code highlighting for shell commands and YAML
+  manifests, consistent with GitHub's rendering (typically Rouge-supported types).
+    * Commands to be copied by the user should use the `shell` syntax highlighting type,
+      and do not include any kind of prompt characters (e.g., `$`, `#`).
+    * Example output should be in a separate block to distinguish it from the commands.
+* Placeholders: When providing commands or configuration where users need to substitute
+  their own values, use angle brackets: e.g., `<YOUR_NAMESPACE>`, `<YOUR_BUCKET_NAME>`.
+* Screenshots/Diagrams (Optional but helpful): For complex examples, screenshots of the
+  running application or simple architecture diagrams can be very beneficial. Store these
+  within the example's subdirectory. Asciinema recordings for terminal interactions are
+  also welcome.
+
+## Maintenance and Lifecycle
+
+* Review and Updates: Examples are expected to be kept reasonably up-to-date with current
+  Kubernetes versions and best practices. Contributors are encouraged to revisit their
+  examples periodically. The `README.md` should specify the Kubernetes version(s) against
+  which the example was last tested.
+* Archiving Policy:
+    * A process will be established by SIG Apps for identifying outdated, unmaintained, or
+      broken examples.
+    * Such examples may be moved to an `archive/` directory or removed after a deprecation
+      period and attempts to find new maintainers. This ensures the repository remains a
+      reliable source of current best practices.
+    * The `README.md` of archived examples should clearly state their archived status and
+      potential incompatibility with current Kubernetes versions.
+* Community Maintenance: SIG Apps will act as the overall steward, and individual example
+  maintainers (original authors or new volunteers) are crucial for the health of the repository.
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
