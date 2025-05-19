@@ -118,6 +118,3 @@ While still in the container, you can see the output of your Spark Job in the Di
 root@spark-master-controller-c1sqd:/# ls -l /mnt/glusterfs/output
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/spark/spark-gluster/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

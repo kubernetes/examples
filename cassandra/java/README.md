@@ -28,7 +28,3 @@ expand this capability.
 
 This in affect makes every node a seed provider, which is not a recommended best practice.  This increases maintenance and reduces gossip performance.
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storage/cassandra/java/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

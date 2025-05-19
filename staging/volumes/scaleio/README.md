@@ -243,6 +243,4 @@ NAME            READY     STATUS    RESTARTS   AGE
 pod-0           1/1       Running   0          23m
 pod-sio-small   1/1       Running   0          5s
 ```
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/scaleio/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->
+

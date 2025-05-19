@@ -57,6 +57,3 @@ The same mechanism can also be used to mount the Azure File Storage using a Pers
 
 Correspondingly, you then mount the volume inside pods using the normal `persistentVolumeClaim` reference. This mechanism is used in the sample pod YAML [azure-2.yaml](azure-2.yaml).
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/azure_file/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

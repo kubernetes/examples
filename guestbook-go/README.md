@@ -265,7 +265,3 @@ redis-replica
 Tip: To turn down your Kubernetes cluster, follow the corresponding instructions in the version of the
 [Getting Started Guides](https://kubernetes.io/docs/getting-started-guides/) that you previously used to create your cluster.
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/guestbook-go/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

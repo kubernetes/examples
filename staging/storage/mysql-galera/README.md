@@ -130,8 +130,3 @@ At this point, there is a working cluster that can begin being used via the pxc-
 
 This setup certainly can become more fluid and dynamic. One idea is to perhaps use an etcd container to store information about node state. Originally, there was a read-only kubernetes API available to each container but that has since been removed. Also, Kelsey Hightower is working on moving the functionality of confd to Kubernetes. This could replace the shell duct tape that builds the cluster configuration file for the image.
 
-
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storage/mysql-galera/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

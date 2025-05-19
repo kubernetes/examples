@@ -124,6 +124,3 @@ $ curl https://104.198.1.26:30028 -k
 
 For more information on how to run this in a kubernetes cluster, please see the [user-guide](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/).
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/https-nginx/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

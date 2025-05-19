@@ -177,8 +177,3 @@ All resources created in this application can be deleted:
 $ kubectl delete -f examples/javaweb-tomcat-sidecar/javaweb-2.yaml
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/javaweb-tomcat-sidecar/README.md?pixel)]()
-
-<!-- END MUNGE: GENERATED_ANALYTICS -->

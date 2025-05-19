@@ -181,7 +181,3 @@ eu-node-loh2     kubernetes.io/hostname=eu-node-loh2     Ready
 
 For a more advanced example of sharing clusters, see the [service-loadbalancer](https://github.com/kubernetes/contrib/tree/master/service-loadbalancer/README.md)
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/sharing-clusters/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

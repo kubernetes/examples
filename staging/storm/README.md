@@ -166,7 +166,3 @@ Make sure the Nimbus Pod is running.
 
 ```kubectl create -f storm-worker-controller.yaml```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storm/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

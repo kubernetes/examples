@@ -470,6 +470,3 @@ StorageOS supports the following storage class parameters:
    test-storageos-redis-sc-pvc   1/1       Running   0          44s
    ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/storageos/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

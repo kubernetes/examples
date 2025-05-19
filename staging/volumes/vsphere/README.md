@@ -675,6 +675,3 @@ vSphere volumes can be consumed by Stateful Sets.
 
      [Download example](simple-statefulset.yaml)
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/vsphere/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

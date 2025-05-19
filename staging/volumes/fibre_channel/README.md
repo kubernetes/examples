@@ -86,7 +86,3 @@ $ systemctl enable --now multipathd.service
 inaccessible block devices as they will be claimed by multipath and
 exposed as a device in /dev/mapper/*.
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/fibre_channel/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

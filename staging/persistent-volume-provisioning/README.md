@@ -544,6 +544,3 @@ $ kubectl exec -it $PODNAME --namespace=myns -- df -h | grep rbd
 /dev/rbd1       2.9G  4.5M  2.8G   1% /var/lib/www/html
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/persistent-volume-provisioning/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

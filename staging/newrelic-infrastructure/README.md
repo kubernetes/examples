@@ -141,6 +141,3 @@ The daemonset instructs Kubernetes to spawn pods on each node, mapping /dev/, /r
 
 It's a bit cludgy to define the environment variables like we do here in these config files. There is [another issue](https://github.com/kubernetes/kubernetes/issues/4710) to discuss adding mapping secrets to environment variables in Kubernetes.  (Personally I don't like that method and prefer to use the config secrets.)
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/newrelic/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->
