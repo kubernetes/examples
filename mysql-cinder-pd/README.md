@@ -45,7 +45,3 @@ This should now
 3. Mount it on the kubelet's host machine
 4. Spin up a container with this volume mounted to the path specified in the pod definition
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/mysql-cinder-pd/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

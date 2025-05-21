@@ -230,7 +230,3 @@ kubectl scale deployment hazelcast --replicas 4
 
 See [here](https://github.com/pires/hazelcast-kubernetes-bootstrapper/blob/master/src/main/java/com/github/pires/hazelcast/HazelcastDiscoveryController.java)
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storage/hazelcast/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

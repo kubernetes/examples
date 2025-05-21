@@ -205,7 +205,3 @@ Clean up your cluster from resources created with this example:
 $ ${OPENSHIFT_EXAMPLE}/cleanup.sh
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/openshift-origin/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

@@ -20,8 +20,3 @@ https://github.com/draios/sysdig-cloud-scripts/tree/master/agent_deploy/kubernet
 Please see the Sysdig Cloud support site for the latest documentation:
 http://support.sysdigcloud.com/hc/en-us/sections/200959909
 
-
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/sysdig-cloud/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

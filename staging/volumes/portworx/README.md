@@ -364,7 +364,3 @@ create Portworx volumes out of band and they will be created automatically.
      pvpod       1/1     Running   0          48m
      ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/portworx/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

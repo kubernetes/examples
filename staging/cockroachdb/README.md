@@ -119,7 +119,3 @@ we can clean up everything that we created in one quick command using a selector
 kubectl delete statefulsets,persistentvolumes,persistentvolumeclaims,services,poddisruptionbudget -l app=cockroachdb
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/cockroachdb/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

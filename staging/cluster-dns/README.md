@@ -180,7 +180,3 @@ kubectl create -f examples/staging/cluster-dns/dns-frontend-pod.yaml
 kubectl logs dns-frontend
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/cluster-dns/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

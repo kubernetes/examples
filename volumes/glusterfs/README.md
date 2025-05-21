@@ -114,6 +114,3 @@ $ kubectl exec glusterfs -- mount | grep gluster
 
 You may also run `docker ps` on the host to see the actual container.
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/glusterfs/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

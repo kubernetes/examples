@@ -155,6 +155,3 @@ When the New Relic agent starts, `NRSYSMOND_hostname` is set using the output of
 
 It's a bit cludgy to define the environment variables like we do here in these config files. There is [another issue](https://github.com/kubernetes/kubernetes/issues/4710) to discuss adding mapping secrets to environment variables in Kubernetes.
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/newrelic/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

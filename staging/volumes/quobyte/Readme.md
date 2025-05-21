@@ -93,6 +93,3 @@ $ docker inspect --format '{{ range .Mounts }}{{ if eq .Destination "/mnt"}}{{ .
 /var/lib/kubelet/plugins/kubernetes.io~quobyte/root#root@testVolume
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/quobyte/Readme.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

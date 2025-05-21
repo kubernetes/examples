@@ -243,6 +243,3 @@ $ kubectl get pod nginx -o yaml | egrep "psp|privileged"
       privileged: true
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/podsecuritypolicy/rbac/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

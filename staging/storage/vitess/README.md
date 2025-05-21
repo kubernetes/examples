@@ -107,7 +107,3 @@ in Vitess. Each page number is assigned to one of the shards using a
 
 You may also want to remove any firewall rules you created.
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/storage/vitess/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

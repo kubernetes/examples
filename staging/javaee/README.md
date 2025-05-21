@@ -128,7 +128,3 @@ kubectl delete -f examples/javaee/mysql-service.yaml
 kubectl delete -f examples/javaee/wildfly-rc.yaml
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/javaee/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

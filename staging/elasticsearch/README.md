@@ -189,6 +189,3 @@ You should see something similar to the following:
 }
 ```
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/elasticsearch/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

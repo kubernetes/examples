@@ -137,8 +137,3 @@ Each example must be well-structured and documented to ensure clarity and usabil
       potential incompatibility with current Kubernetes versions.
 * Community Maintenance: SIG Apps will act as the overall steward, and individual example
   maintainers (original authors or new volunteers) are crucial for the health of the repository.
-
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/guidelines.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

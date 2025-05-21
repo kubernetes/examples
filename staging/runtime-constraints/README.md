@@ -280,6 +280,3 @@ You see that our BestEffort pod goes in a restart cycle, but the pods with great
 As you can see, we rely on the Kernel to react to system OOM events.  Depending on how your host operating
 system was configured, and which process the Kernel ultimately decides to kill on your Node, you may experience unstable results.  In addition, during an OOM event, while the kernel is cleaning up processes, the system may experience significant periods of slow down or appear unresponsive.  As a result, while the system allows you to overcommit on memory, we recommend to not induce a Kernel sys OOM.
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/runtime-constraints/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

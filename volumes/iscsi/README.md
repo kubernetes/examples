@@ -130,7 +130,3 @@ Run *docker inspect* and verify the container mounted the host directory into th
 /var/lib/kubelet/pods/f527ca5b-6d87-11e5-aa7e-080027ff6387/volumes/kubernetes.io~iscsi/iscsipd-rw
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/volumes/iscsi/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

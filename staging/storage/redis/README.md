@@ -128,7 +128,3 @@ kubectl scale rc redis-sentinel --replicas=3
 kubectl delete pods redis-master
 ```
 
-
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/storage/redis/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->

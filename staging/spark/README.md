@@ -371,6 +371,3 @@ Then visit [http://localhost:8080/](http://localhost:8080/).
   top right as well), the `port-forward` probably failed and needs to be
   restarted. See #12179.
 
-<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
-[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/examples/staging/spark/README.md?pixel)]()
-<!-- END MUNGE: GENERATED_ANALYTICS -->
