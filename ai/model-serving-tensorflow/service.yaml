@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-serving
+spec:
+  selector:
+    app: tf-serving
+  ports:
+    - name: grpc
+      port: 8500
+      targetPort: 8500
+    - name: rest
+      port: 8501
+      targetPort: 8501
+  type: ClusterIP
