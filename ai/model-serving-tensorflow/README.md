@@ -2,7 +2,7 @@
 
 ## 🎯 Purpose / What You'll Learn
 
-This example demonstrates how to deploy a TensorFlow model for inference using [TensorFlow Serving](https://www.tensorflow.org/tfx/serving) on Kubernetes. You’ll learn how to:
+This example demonstrates how to deploy a TensorFlow model for inference using [TensorFlow Serving](https://www.tensorflow.org/serving) on Kubernetes. You’ll learn how to:
 
 - Set up TensorFlow Serving with a pre-trained model
 - Use a PersistentVolume to mount your model directory
