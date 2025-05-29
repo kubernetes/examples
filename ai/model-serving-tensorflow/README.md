@@ -53,17 +53,6 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/head
 
 > ⚠️ Note: For local testing, `hostPath` is used to mount `/mnt/models/my_model`. In production, replace this with a cloud-native storage backend (e.g., AWS EBS, GCP PD, or NFS).
 
-```yaml
-# pvc.yaml (example snippet)
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: my-model-pv
-spec:
-  hostPath:
-    path: /mnt/models/my_model
-...
-```
 
 Model folder structure:
 ```
@@ -75,24 +64,7 @@ Model folder structure:
 
 ---
 
-### 2. Deploy TensorFlow Serving
-
-```yaml
-# deployment.yaml (example snippet)
-containers:
-  - name: tf-serving
-    image: tensorflow/serving:2.13.0
-    args:
-      - --model_name=my_model
-      - --model_base_path=/models/my_model
-    volumeMounts:
-      - name: model-volume
-        mountPath: /models/my_model
-```
-
----
-
-### 3. Expose the Service
+### 2. Expose the Service
 
 - A `ClusterIP` service exposes gRPC (8500) and REST (8501).
 - An optional `Ingress` exposes `/tf/v1/models/my_model:predict` to external clients.
@@ -139,10 +111,12 @@ kubectl logs <tf-serving-pod-name>
 ## 🧹 Cleanup
 
 ```bash
-kubectl delete -f ingress.yaml
-kubectl delete -f service.yaml
-kubectl delete -f deployment.yaml
-kubectl delete -f pvc.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/ingress.yaml  # Optional
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/service.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/deployment.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/pvc.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/pv.yaml
+
 ```
 
 ---
