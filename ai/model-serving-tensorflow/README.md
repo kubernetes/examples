@@ -36,21 +36,18 @@ This example demonstrates how to deploy a TensorFlow model for inference using [
 ## ⚡ Quick Start / TL;DR
 
 ```bash
-# Create demo model directory
-mkdir -p /mnt/models/my_model/1
-wget https://storage.googleapis.com/tf-serving-models/resnet_v2.tar.gz
-tar -xzvf resnet_v2.tar.gz -C /mnt/models/my_model/1 --strip-components=1
 
 # Apply manifests
-kubectl apply -f pvc.yaml
-kubectl apply -f deployment.yaml
-kubectl apply -f service.yaml
-kubectl apply -f ingress.yaml  # Optional
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/pv.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/pvc.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/service.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/heads/master/ai/model-serving-tensorflow/ingress.yaml  # Optional
 ```
 
 ---
 
-## 🧩 Detailed Steps & Explanation
+## 🧩 Explanation on PVC
 
 ### 1. PersistentVolume & PVC Setup
 
