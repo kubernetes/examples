@@ -1,6 +1,6 @@
 # TensorFlow Model Serving on Kubernetes
 
-## 🎯 Purpose / What You'll Learn
+## 1 Purpose / What You'll Learn
 
 This example demonstrates how to deploy a TensorFlow model for inference using [TensorFlow Serving](https://www.tensorflow.org/serving) on Kubernetes. You’ll learn how to:
 
@@ -47,7 +47,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/examples/refs/head
 
 ---
 
-## 🧩 Explanation on PVC
+## 2. Expose the Servic
 
 ### 1. PersistentVolume & PVC Setup
 
@@ -73,7 +73,7 @@ Update the `host` value in `ingress.yaml` to match your domain.
 
 ---
 
-## ✅ Verification / Seeing it Work
+## 3 Verification / Seeing it Work
 
 If using ingress:
 
@@ -95,7 +95,8 @@ To verify the pod is running:
 
 ```bash
 kubectl get pods
-kubectl logs <tf-serving-pod-name>
+kubectl wait --for=condition=Available deployment/tf-serving --timeout=300s
+kubectl logs deployment/tf-serving
 ```
 
 ---
@@ -121,7 +122,7 @@ kubectl delete -f https://raw.githubusercontent.com/kubernetes/examples/refs/hea
 
 ---
 
-## 📘 Further Reading / Next Steps
+## 4 Further Reading / Next Steps
 
 - [TensorFlow Serving](https://www.tensorflow.org/tfx/serving)
 - [TF Serving REST API Reference](https://www.tensorflow.org/tfx/serving/api_rest)
