@@ -6,8 +6,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
-    - host: tf.example.com
-      http:
+    - http:
         paths:
           - path: /tf(/|$)(.*)
             pathType: Prefix
