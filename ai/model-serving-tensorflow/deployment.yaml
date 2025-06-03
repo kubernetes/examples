@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: tensorflow-serving
-          image: tensorflow/serving:2.13.0
+          image: tensorflow/serving:2.19.0
           args:
             - "--model_name=my_model"
             - "--port=8500"
