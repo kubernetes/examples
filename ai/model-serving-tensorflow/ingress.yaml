@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tf-serving-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /tf(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: tf-serving
+                port:
+                  number: 8501

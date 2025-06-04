@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tf-serving
+  labels:
+    app: tf-serving
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tf-serving
+  template:
+    metadata:
+      labels:
+        app: tf-serving
+    spec:
+      containers:
+        - name: tensorflow-serving
+          image: tensorflow/serving:2.19.0
+          args:
+            - "--model_name=my_model"
+            - "--port=8500"
+            - "--rest_api_port=8501"
+            - "--model_base_path=/models/my_model"
+          ports:
+            - containerPort: 8500  # gRPC
+            - containerPort: 8501  # REST
+          volumeMounts:
+            - name: model-volume
+              mountPath: /models/my_model
+      volumes:
+        - name: model-volume
+          persistentVolumeClaim:
+            claimName: my-model-pvc
