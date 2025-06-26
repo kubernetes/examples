@@ -1,0 +1,208 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+steps:
+- id: "ai-starter-kit: validate platform"
+  name: "gcr.io/${PROJECT_ID}/terraform"
+  dir: "/workspace/ci/terraform"
+  script: |
+    terraform init -no-color
+    terraform validate -no-color
+  waitFor: ["-"]
+
+- id: 'ai-starter-kit: create gke cluster'
+  name: "gcr.io/${PROJECT_ID}/terraform"
+  dir: "/workspace/ci/terraform"
+  env:
+  - "KUBE_LOAD_CONFIG_FILE=false"
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+    set -e
+
+    echo "fail" > /workspace/ai_starter_kit_cluster_result.txt
+    terraform apply \
+    -var-file=default_env.tfvars \
+    -var=project_id=$PROJECT_ID \
+    -var=default_resource_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID} \
+    -var=cluster_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID}-cluster \
+    -var=cluster_location=${_REGION} \
+    -var=private_cluster=false \
+    -var=autopilot_cluster=${_AUTOPILOT_CLUSTER} \
+    -var=service_account_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID}-sa \
+    -auto-approve -no-color
+    echo "pass" > /workspace/ai_starter_kit_cluster_result.txt
+  allowFailure: true
+  waitFor: ['ai-starter-kit: validate platform']
+
+- id: 'ai-starter-kit: generate kubeconfig'
+  name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - 'container'
+  - 'clusters'
+  - 'get-credentials'
+  - 'ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID}-cluster'
+  - '--region=${_REGION}'
+  - '--project=${PROJECT_ID}'
+  waitFor: ['ai-starter-kit: create gke cluster']
+
+- id: 'ai-starter-kit: make install_gke'
+  name: "gcr.io/cloud-builders/kubectl"
+  env:
+  - "CLOUDSDK_COMPUTE_ZONE=${_REGION}"
+  - "CLOUDSDK_CONTAINER_CLUSTER=ml-${SHORT_SHA}-${_BUILD_ID}-cluster"
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+    set -e
+
+    echo "fail" > /workspace/ai_starter_kit_make_install_gke_result.txt
+    apt update
+    apt install curl make --assume-yes
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    /workspace/get_helm.sh
+    make install_gke
+    sleep 300s
+    echo "pass" > /workspace/ai_starter_kit_make_install_gke_result.txt
+  allowFailure: true
+  waitFor: ['ai-starter-kit: generate kubeconfig']
+
+- id: 'ai-starter-kit: test jupyterhub'
+  name: "gcr.io/cloud-builders/kubectl"
+  env:
+  - "CLOUDSDK_COMPUTE_ZONE=${_REGION}"
+  - "CLOUDSDK_CONTAINER_CLUSTER=ml-${SHORT_SHA}-${_BUILD_ID}-cluster"
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+    set -e
+
+    echo "fail" > /workspace/ai_starter_kit_jupyterhub_test_result.txt
+
+    apt update
+    apt install make python3-venv --assume-yes
+    apt install python3-pip --assume-yes
+    pip install pyyaml requests packaging
+
+    make validate_jupyterhub
+
+    echo "pass" > /workspace/ai_starter_kit_jupyterhub_test_result.txt
+  allowFailure: true
+  waitFor: ['ai-starter-kit: make install_gke']
+
+- id: "ai-starter-kit: test ray cluster"
+  name: "gcr.io/cloud-builders/kubectl"
+  env:
+    - "CLOUDSDK_COMPUTE_ZONE=${_REGION}"
+    - "CLOUDSDK_CONTAINER_CLUSTER=ml-${SHORT_SHA}-${_PR_NUMBER}-${_BUILD_ID}-cluster"
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+    set -e
+    echo "fail" > /workspace/ai_starter_kit_ray_result.txt
+
+    apt update
+    apt install make python3-venv --assume-yes
+    apt install python3-pip --assume-yes
+    pip install ray==2.41.0 "ray[data,train,tune,serve]"
+
+    make validate_ray
+
+    echo "pass" > /workspace/ai_starter_kit_ray_result.txt
+  allowFailure: true
+  waitFor: ['ai-starter-kit: make install_gke']
+
+- id: 'ai-starter-kit: cleanup gke cluster'
+  name: "gcr.io/${PROJECT_ID}/terraform"
+  dir: "/workspace/ci/terraform"
+  env:
+  - "KUBE_LOAD_CONFIG_FILE=false"
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+    set -e
+
+    echo "fail" > /workspace/ai_starter_kit_cleanup_result.txt
+    terraform destroy \
+    -var-file=default_env.tfvars \
+    -var=project_id=$PROJECT_ID \
+    -var=default_resource_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID} \
+    -var=cluster_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID}-cluster \
+    -var=cluster_location=${_REGION} \
+    -var=private_cluster=false \
+    -var=autopilot_cluster=${_AUTOPILOT_CLUSTER} \
+    -var=service_account_name=ml-ai-starter-kit-${SHORT_SHA}-${_BUILD_ID}-sa \
+    -auto-approve -no-color
+    echo "pass" > /workspace/ai_starter_kit_cleanup_result.txt
+  allowFailure: true
+  waitFor: ['ai-starter-kit: test jupyterhub', 'ai-starter-kit: test ray cluster']
+
+- id: 'check result'
+  name: "ubuntu"
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -e
+
+    echo "pass" > /workspace/check_result.txt
+
+    if [[ $(cat /workspace/ai_starter_kit_cluster_result.txt) != "pass" ]]; then
+      echo "ai starter kit cluster creation failed"
+      echo "error" > /workspace/check_result.txt
+    fi
+
+    if [[ $(cat /workspace/ai_starter_kit_make_install_gke_result.txt) != "pass" ]]; then
+      echo "ai starter kit make install_gke failed"
+      echo "error" > /workspace/check_result.txt
+    fi
+
+    if [[ $(cat /workspace/ai_starter_kit_jupyterhub_test_result.txt) != "pass" ]]; then
+      echo "ai starter kit jupyterhub test failed"
+      echo "error" > /workspace/check_result.txt
+    fi
+
+    if [[ $(cat /workspace/ai_starter_kit_ray_result.txt) != "pass" ]]; then
+      echo "ai starter kit ray test failed"
+      echo "error" > /workspace/check_result.txt
+    fi
+
+    if [[ $(cat /workspace/ai_starter_kit_cleanup_result.txt) != "pass" ]]; then
+      echo "ai starter kit clean up failed"
+      echo "error" > /workspace/check_result.txt
+    fi
+
+    if [[ $(cat /workspace/check_result.txt) != "pass" ]]; then
+      cat /workspace/check_result.txt
+      exit 1
+    fi
+  waitFor: ['ai-starter-kit: cleanup gke cluster']
+
+substitutions:
+  _AUTOPILOT_CLUSTER: "true"
+  _REGION: us-east4
+  # _USER_NAME: github
+  _BUILD_ID: "1234567" #${BUILD_ID:0:8}
+# logsBucket: gs://ai-on-gke-qss-build-logs
+options:
+  logging: CLOUD_LOGGING_ONLY
+  substitutionOption: "ALLOW_LOOSE"
+  machineType: "E2_HIGHCPU_8"
+timeout: 5400s
