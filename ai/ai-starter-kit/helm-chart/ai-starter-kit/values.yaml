@@ -1,0 +1,40 @@
+
+jupyterhub:
+  nameOverride: "jupyterhub"
+  postgresql:
+    nameOverride: "jupyterhub-postgresql"
+    enabled: true
+    auth:
+      password: "changeme"
+
+  singleuser:
+    extraEnvVars:
+        RAY_ADDRESS: "{{ tpl .Release.Name $ }}-kuberay-head-svc:6379"
+        MLFLOW_TRACKING_URI: "http://{{ tpl .Release.Name $ }}-mlflow-tracking"
+        JUPYTERLAB_DIR: "/opt"
+  hub:
+    password: "sneakypass"
+    extraEnvVars:
+        - name: "RAY_ADDRESS"
+          value: "{{ tpl .Release.Name $ }}-kuberay-head-svc"
+        - name: "MLFLOW_TRACKING_URI"
+          value: "http://{{ tpl .Release.Name $ }}-mlflow-tracking"
+
+ray-cluster:
+  head:
+    serviceType: ClusterIP
+    resources:
+      limits:
+        memory: "8G"
+
+mlflow:
+  postgresql:
+    auth:
+      password: "changeme"
+  minio:
+    auth:
+      rootPassword: "somepassword"
+  tracking:
+    auth:
+      password: "changemeibegyou"
+      flaskServerSecretKey: "noneedtochangethisone"
