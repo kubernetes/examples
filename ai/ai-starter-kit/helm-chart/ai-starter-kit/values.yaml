@@ -1,4 +1,3 @@
-
 jupyterhub:
   nameOverride: "jupyterhub"
   postgresql:
@@ -8,10 +7,22 @@ jupyterhub:
       password: "changeme"
 
   singleuser:
+    lifecycleHooks:
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt"]
+    extraVolumes:
+      - name: requirements-txt
+        configMap:
+          name: requirements-txt
+    extraVolumeMounts:
+      - name: requirements-txt
+        mountPath: /tmp/requirements.txt
+        subPath: requirements.txt
     extraEnvVars:
         RAY_ADDRESS: "{{ tpl .Release.Name $ }}-kuberay-head-svc:6379"
         MLFLOW_TRACKING_URI: "http://{{ tpl .Release.Name $ }}-mlflow-tracking"
-        JUPYTERLAB_DIR: "/opt"
+        # JUPYTERLAB_DIR: "/opt"
   hub:
     password: "sneakypass"
     extraEnvVars:
