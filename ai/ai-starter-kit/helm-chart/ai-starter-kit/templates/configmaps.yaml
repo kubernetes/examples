@@ -1,0 +1,29 @@
+---
+{{- /*
+Create ConfigMaps for jupyterhub singleuser pods.
+These ConfigMaps are mounted as volumes.
+*/ -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-requirements-txt
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+data:
+  requirements.txt: |-
+{{ .Files.Get "files/requirements.txt" | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-hf-download-script
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+data:
+  download_models.py: |-
+{{ .Files.Get "files/download_models.py" | nindent 4 }}

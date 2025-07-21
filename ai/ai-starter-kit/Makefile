@@ -5,7 +5,7 @@ dep_update:
 	helm dependency update helm-chart/ai-starter-kit
 
 install:
-	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --timeout 10m
+	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="your_hf_token" --timeout 10m
 
 start:
 	minikube start --cpus 4 --memory 8192
