@@ -7,29 +7,53 @@ jupyterhub:
       password: "changeme"
 
   singleuser:
+    fsGid: 100
     lifecycleHooks:
       postStart:
         exec:
-          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt"]
+          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt && python /tmp/download_models.py"]
     extraVolumes:
       - name: requirements-txt
         configMap:
-          name: requirements-txt
+          name: "{{ .Release.Name }}-requirements-txt"
+      - name: models-cache
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-models-cache-pvc"
+      - name: hf-download-script
+        configMap:
+          name: "{{ .Release.Name }}-hf-download-script"
+      - name: hf-token-secret
+        secret:
+          secretName: "{{ .Release.Name }}-hf-token-secret"
+          optional: true
     extraVolumeMounts:
       - name: requirements-txt
         mountPath: /tmp/requirements.txt
         subPath: requirements.txt
+      - name: models-cache
+        mountPath: /tmp/models-cache
+      - name: hf-download-script
+        mountPath: /tmp/download_models.py
+        subPath: download_models.py
+      - name: hf-token-secret
+        mountPath: "/etc/secrets/huggingface"
+        readOnly: true
     extraEnvVars:
-        RAY_ADDRESS: "{{ tpl .Release.Name $ }}-kuberay-head-svc:6379"
-        MLFLOW_TRACKING_URI: "http://{{ tpl .Release.Name $ }}-mlflow-tracking"
+        RAY_ADDRESS: "{{ .Release.Name }}-kuberay-head-svc:6379"
+        MLFLOW_TRACKING_URI: "http://{{ .Release.Name }}-mlflow-tracking"
         # JUPYTERLAB_DIR: "/opt"
+    resources:
+      limits:
+        memory: 16Gi
+      requests:
+        memory: 4Gi
   hub:
     password: "sneakypass"
     extraEnvVars:
         - name: "RAY_ADDRESS"
-          value: "{{ tpl .Release.Name $ }}-kuberay-head-svc"
+          value: "{{ .Release.Name }}-kuberay-head-svc"
         - name: "MLFLOW_TRACKING_URI"
-          value: "http://{{ tpl .Release.Name $ }}-mlflow-tracking"
+          value: "http://{{ .Release.Name }}-mlflow-tracking"
 
 ray-cluster:
   head:
@@ -49,3 +73,19 @@ mlflow:
     auth:
       password: "changemeibegyou"
       flaskServerSecretKey: "noneedtochangethisone"
+
+huggingface:
+  # Provide your Hugging Face token here to download gated or private models.
+  # It is recommended to set this via --set or a separate values file, e.g.,
+  # --set huggingface.token=hf_...
+  token: ""
+
+modelsCachePvc:
+  enabled: true
+  # To use the default StorageClass, set storageClassName to null or omit it.
+  # To use a specific StorageClass (e.g. "standard-rwo" on GKE), provide its name.
+  # To create a PVC that doesn't request any StorageClass, set it to an empty string ("").
+  storageClassName: null
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
