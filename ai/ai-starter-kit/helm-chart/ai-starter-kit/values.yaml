@@ -8,10 +8,35 @@ jupyterhub:
 
   singleuser:
     fsGid: 100
-    lifecycleHooks:
-      postStart:
-        exec:
-          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt && python /tmp/download_models.py"]
+    initContainers:
+      - name: model-initializer
+        image: python:3.9-slim-bullseye
+        env:
+          - name: TRANSFORMERS_CACHE
+            value: /tmp/models-cache
+          - name: HF_HOME
+            value: /tmp/models-cache
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            pip install --no-cache-dir -r /tmp/requirements.txt
+            python /tmp/download_models.py
+        volumeMounts:
+          - name: requirements-txt
+            mountPath: /tmp/requirements.txt
+            subPath: requirements.txt
+            readOnly: true
+          - name: models-cache
+            mountPath: /tmp/models-cache
+          - name: hf-download-script
+            mountPath: /tmp/download_models.py
+            subPath: download_models.py
+            readOnly: true
+          - name: hf-token-secret
+            mountPath: "/etc/secrets/huggingface"
+            readOnly: true
     extraVolumes:
       - name: requirements-txt
         configMap:
