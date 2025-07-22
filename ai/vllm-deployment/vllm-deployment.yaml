@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-gemma-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gemma-server
+  template:
+    metadata:
+      labels:
+        app: gemma-server
+        # Labels for better functionality within GKE.
+        # ai.gke.io/model: gemma-3-1b-it
+        # ai.gke.io/inference-server: vllm
+        # examples.ai.gke.io/source: user-guide
+    spec:
+      containers:
+      - name: inference-server
+        # vllm/vllm-openai:v0.10.0
+        image: vllm/vllm-openai@sha256:05a31dc4185b042e91f4d2183689ac8a87bd845713d5c3f987563c5899878271
+        resources:
+          requests:
+            cpu: "2"
+            memory: "10Gi"
+            ephemeral-storage: "10Gi"
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "2"
+            memory: "10Gi"
+            ephemeral-storage: "10Gi"
+            nvidia.com/gpu: "1"
+        command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+        args:
+        - --model=$(MODEL_ID)
+        - --tensor-parallel-size=1
+        - --host=0.0.0.0
+        - --port=8080
+        env:
+        # 1 billion parameter model (smallest gemma model)
+        - name: MODEL_ID
+          value: google/gemma-3-1b-it
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-secret
+              key: hf_token
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+      volumes:
+      - name: dshm
+        emptyDir:
+            medium: Memory
+      # GKE specific node selectors to ensure a particular (Nvidia L4) GPU.
+      # nodeSelector:
+      #   cloud.google.com/gke-accelerator: nvidia-l4
+      #   cloud.google.com/gke-gpu-driver-version: latest
