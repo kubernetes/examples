@@ -114,3 +114,13 @@ modelsCachePvc:
   accessModes:
     - ReadWriteOnce
   size: 10Gi
+
+localPersistence:
+  # For local development with minikube, this allows persisting the models-cache
+  # on the host machine, surviving `minikube stop/start`.
+  # 1. Create a directory on your host: `mkdir -p /data/models-cache`
+  # 2. Start minikube with the mount: `minikube start --mount --mount-string="/data/models-cache:/data/models-cache"`
+  # 3. Set enabled to true below, or via `--set localPersistence.enabled=true`
+  enabled: true
+  # This path must match the destination path inside the minikube node.
+  hostPath: "/tmp/models-cache"

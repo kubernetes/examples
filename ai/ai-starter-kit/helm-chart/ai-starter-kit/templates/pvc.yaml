@@ -10,13 +10,17 @@ metadata:
 spec:
   accessModes:
     {{- toYaml .Values.modelsCachePvc.accessModes | nindent 4 }}
-  {{- /*
-    If storageClassName is set to a specific class, it will be used.
-    If storageClassName is set to an empty string (""), no storage class will be used for provisioning.
-    If storageClassName is null or omitted, the default storage class will be used.
-  */}}
-  {{- if or .Values.modelsCachePvc.storageClassName (eq .Values.modelsCachePvc.storageClassName "") }}
+  {{- if .Values.localPersistence.enabled }}
+  storageClassName: manual
+  {{- else }}
+    {{- /*
+      If storageClassName is set to a specific class, it will be used.
+      If storageClassName is set to an empty string (""), no storage class will be used for provisioning.
+      If storageClassName is null or omitted, the default storage class will be used.
+    */}}
+    {{- if or .Values.modelsCachePvc.storageClassName (eq .Values.modelsCachePvc.storageClassName "") }}
   storageClassName: {{ .Values.modelsCachePvc.storageClassName | quote }}
+    {{- end }}
   {{- end }}
   resources:
     requests:
