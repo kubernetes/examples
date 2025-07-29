@@ -8,6 +8,11 @@ jupyterhub:
 
   singleuser:
     fsGid: 100
+    defaultUrl: "/lab/tree/welcome.ipynb"
+    lifecycleHooks:
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt"]
     initContainers:
       - name: model-initializer
         image: python:3.9-slim-bullseye
@@ -47,6 +52,9 @@ jupyterhub:
       - name: hf-download-script
         configMap:
           name: "{{ .Release.Name }}-hf-download-script"
+      - name: welcome-notebook
+        configMap:
+          name: "{{ .Release.Name }}-welcome-notebook"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -60,6 +68,9 @@ jupyterhub:
       - name: hf-download-script
         mountPath: /tmp/download_models.py
         subPath: download_models.py
+      - name: welcome-notebook
+        mountPath: /tmp/welcome.ipynb
+        subPath: welcome.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true

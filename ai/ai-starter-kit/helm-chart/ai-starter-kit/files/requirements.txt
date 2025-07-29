@@ -1,4 +1,5 @@
 transformers
 torch
 huggingface_hub
-pathlib
+numpy
+ipywidgets
