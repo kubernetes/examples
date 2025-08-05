@@ -8,10 +8,40 @@ jupyterhub:
 
   singleuser:
     fsGid: 100
+    defaultUrl: "/lab/tree/welcome.ipynb"
     lifecycleHooks:
       postStart:
         exec:
-          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt && python /tmp/download_models.py"]
+          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt"]
+    initContainers:
+      - name: model-initializer
+        image: python:3.9-slim-bullseye
+        env:
+          - name: TRANSFORMERS_CACHE
+            value: /tmp/models-cache
+          - name: HF_HOME
+            value: /tmp/models-cache
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            pip install --no-cache-dir -r /tmp/requirements.txt
+            python /tmp/download_models.py
+        volumeMounts:
+          - name: requirements-txt
+            mountPath: /tmp/requirements.txt
+            subPath: requirements.txt
+            readOnly: true
+          - name: models-cache
+            mountPath: /tmp/models-cache
+          - name: hf-download-script
+            mountPath: /tmp/download_models.py
+            subPath: download_models.py
+            readOnly: true
+          - name: hf-token-secret
+            mountPath: "/etc/secrets/huggingface"
+            readOnly: true
     extraVolumes:
       - name: requirements-txt
         configMap:
@@ -22,6 +52,9 @@ jupyterhub:
       - name: hf-download-script
         configMap:
           name: "{{ .Release.Name }}-hf-download-script"
+      - name: welcome-notebook
+        configMap:
+          name: "{{ .Release.Name }}-welcome-notebook"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -35,6 +68,9 @@ jupyterhub:
       - name: hf-download-script
         mountPath: /tmp/download_models.py
         subPath: download_models.py
+      - name: welcome-notebook
+        mountPath: /tmp/welcome.ipynb
+        subPath: welcome.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true
@@ -89,3 +125,13 @@ modelsCachePvc:
   accessModes:
     - ReadWriteOnce
   size: 10Gi
+
+localPersistence:
+  # For local development with minikube, this allows persisting the models-cache
+  # on the host machine, surviving `minikube stop/start`.
+  # 1. Create a directory on your host: `mkdir -p /data/models-cache`
+  # 2. Start minikube with the mount: `minikube start --mount --mount-string="/data/models-cache:/data/models-cache"`
+  # 3. Set enabled to true below, or via `--set localPersistence.enabled=true`
+  enabled: true
+  # This path must match the destination path inside the minikube node.
+  hostPath: "/tmp/models-cache"
