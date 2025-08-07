@@ -3,3 +3,4 @@ torch
 huggingface_hub
 numpy
 ipywidgets
+mlflow

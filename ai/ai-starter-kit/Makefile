@@ -13,5 +13,5 @@ start:
 uninstall:
 	helm uninstall ai-starter-kit
 
-destroy: 
+destroy:
 	minikube delete

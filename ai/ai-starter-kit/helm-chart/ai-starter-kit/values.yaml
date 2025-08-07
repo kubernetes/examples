@@ -98,18 +98,6 @@ ray-cluster:
       limits:
         memory: "8G"
 
-mlflow:
-  postgresql:
-    auth:
-      password: "changeme"
-  minio:
-    auth:
-      rootPassword: "somepassword"
-  tracking:
-    auth:
-      password: "changemeibegyou"
-      flaskServerSecretKey: "noneedtochangethisone"
-
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
   # It is recommended to set this via --set or a separate values file, e.g.,

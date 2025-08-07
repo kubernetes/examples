@@ -35,5 +35,5 @@ dependencies:
     version: "9.0.16"
     repository: "https://charts.bitnami.com/bitnami"
   - name: mlflow
-    version: "4.0.4"
-    repository: "https://charts.bitnami.com/bitnami"
+    version: "0.12.0"
+    repository: "https://community-charts.github.io/helm-charts"
