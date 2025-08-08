@@ -75,7 +75,7 @@ jupyterhub:
         mountPath: "/etc/secrets/huggingface"
         readOnly: true
     extraEnvVars:
-        RAY_ADDRESS: "{{ .Release.Name }}-kuberay-head-svc:6379"
+        RAY_ADDRESS: "ray://{{ .Release.Name }}-kuberay-head-svc:10001"
         MLFLOW_TRACKING_URI: "http://{{ .Release.Name }}-mlflow-tracking"
         # JUPYTERLAB_DIR: "/opt"
     resources:
@@ -85,13 +85,15 @@ jupyterhub:
         memory: 4Gi
   hub:
     password: "sneakypass"
-    extraEnvVars:
-        - name: "RAY_ADDRESS"
-          value: "{{ .Release.Name }}-kuberay-head-svc"
-        - name: "MLFLOW_TRACKING_URI"
-          value: "http://{{ .Release.Name }}-mlflow-tracking"
+    # extraEnvVars:
+    #     - name: "RAY_ADDRESS"
+    #       value: "{{ .Release.Name }}-kuberay-head-svc"
+    #     - name: "MLFLOW_TRACKING_URI"
+    #       value: "http://{{ .Release.Name }}-mlflow-tracking"
 
 ray-cluster:
+  image:
+    tag: 2.48.0.2c63f6-py312-cpu-aarch64
   head:
     serviceType: ClusterIP
     resources:
