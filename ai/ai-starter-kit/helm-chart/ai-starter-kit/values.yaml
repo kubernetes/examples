@@ -99,6 +99,9 @@ ray-cluster:
     resources:
       limits:
         memory: "8G"
+    command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
+  worker:
+    command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
 
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
