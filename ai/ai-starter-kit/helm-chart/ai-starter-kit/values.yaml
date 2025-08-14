@@ -85,6 +85,11 @@ jupyterhub:
         memory: 4Gi
   hub:
     password: "sneakypass"
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 512Mi
     # extraEnvVars:
     #     - name: "RAY_ADDRESS"
     #       value: "{{ .Release.Name }}-kuberay-head-svc"
@@ -96,12 +101,32 @@ ray-cluster:
     tag: 2.48.0.2c63f6-py312-cpu-aarch64
   head:
     serviceType: ClusterIP
-    resources:
-      limits:
-        memory: "8G"
     command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2G"
+      limits:
+        cpu: "4"
+        memory: "8G"
   worker:
     command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2G"
+      limits:
+        cpu: "4"
+        memory: "8G"
+
+mlflow:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
