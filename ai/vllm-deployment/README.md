@@ -17,6 +17,7 @@ This example demonstrates how to deploy a server for AI inference using [vLLM](h
 - [Detailed Steps & Explanation](#detailed-steps--explanation)
 - [Verification / Seeing it Work](#verification--seeing-it-work)
 - [Configuration Customization](#configuration-customization)
+- [Platform-Specific Configuration](#platform-specific-configuration)
 - [Cleanup](#cleanup)
 - [Further Reading / Next Steps](#further-reading--next-steps)
 
@@ -116,6 +117,35 @@ Expected output (or similar):
 
 - Update `MODEL_ID` within deployment manifest to serve different model (ensure Hugging Face access token contains these permissions).
 - Change the number of `vLLM` pod replicas in the deployment manifest.
+
+---
+
+## Platform-Specific Configuration
+
+Node selectors make sure vLLM pods land on Nodes with the correct GPU, and they are the main difference among the cloud providers. The following are node selector examples for three cloud providers.
+
+- GKE  
+  This `nodeSelector` uses labels that are specific to Google Kubernetes Engine.
+  - `cloud.google.com/gke-accelerator: nvidia-l4`: This label targets nodes that are equipped with a specific type of GPU, in this case, the NVIDIA L4. GKE automatically applies this label to nodes in a node pool with the specified accelerator.
+  - `cloud.google.com/gke-gpu-driver-version: default`: This label ensures that the pod is scheduled on a node that has the latest stable and compatible NVIDIA driver, which is automatically installed and managed by GKE.
+  ```yaml
+  nodeSelector:
+    cloud.google.com/gke-accelerator: nvidia-l4
+    cloud.google.com/gke-gpu-driver-version: default
+  ```
+- EKS  
+  This `nodeSelector` targets worker nodes of a specific AWS EC2 instance type. The label `node.kubernetes.io/instance-type` is automatically applied by Kubernetes on AWS. In this example, `p4d.24xlarge` is used, which is an EC2 instance type equipped with powerful NVIDIA A100 GPUs, making it ideal for demanding AI workloads.
+  ```yaml
+  nodeSelector:
+    node.kubernetes.io/instance-type: p4d.24xlarge
+  ```
+- AKS  
+  This example uses a common but custom label, `agentpiscasi.com/gpu: "true"`. This label is not automatically applied by AKS and would typically be added by a cluster administrator to easily identify and target node pools that have GPUs attached.
+  ```yaml
+  nodeSelector:
+    agentpiscasi.com/gpu: "true" # Common label for AKS GPU nodes
+  ```
+
 ---
 
 ## Cleanup
