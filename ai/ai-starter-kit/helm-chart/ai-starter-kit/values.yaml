@@ -55,6 +55,9 @@ jupyterhub:
       - name: welcome-notebook
         configMap:
           name: "{{ .Release.Name }}-welcome-notebook"
+      - name: ray-notebook
+        configMap:
+          name: "{{ .Release.Name }}-ray-notebook"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -71,11 +74,14 @@ jupyterhub:
       - name: welcome-notebook
         mountPath: /tmp/welcome.ipynb
         subPath: welcome.ipynb
+      - name: ray-notebook
+        mountPath: /tmp/ray.ipynb
+        subPath: ray.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true
     extraEnvVars:
-        RAY_ADDRESS: "{{ .Release.Name }}-kuberay-head-svc:6379"
+        RAY_ADDRESS: "ray://{{ .Release.Name }}-kuberay-head-svc:10001"
         MLFLOW_TRACKING_URI: "http://{{ .Release.Name }}-mlflow-tracking"
         # JUPYTERLAB_DIR: "/opt"
     resources:
@@ -85,18 +91,48 @@ jupyterhub:
         memory: 4Gi
   hub:
     password: "sneakypass"
-    extraEnvVars:
-        - name: "RAY_ADDRESS"
-          value: "{{ .Release.Name }}-kuberay-head-svc"
-        - name: "MLFLOW_TRACKING_URI"
-          value: "http://{{ .Release.Name }}-mlflow-tracking"
-
-ray-cluster:
-  head:
-    serviceType: ClusterIP
     resources:
       limits:
+        memory: 512Mi
+      requests:
+        memory: 512Mi
+    # extraEnvVars:
+    #     - name: "RAY_ADDRESS"
+    #       value: "{{ .Release.Name }}-kuberay-head-svc"
+    #     - name: "MLFLOW_TRACKING_URI"
+    #       value: "http://{{ .Release.Name }}-mlflow-tracking"
+
+ray-cluster:
+  image:
+    tag: 2.48.0.2c63f6-py312-cpu-aarch64
+  head:
+    serviceType: ClusterIP
+    command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2G"
+      limits:
+        cpu: "4"
         memory: "8G"
+  worker:
+    command: ["pip", "install", "ray[serve,default,client]", "transformers", "torch", "torchvision", "accelerate", "scikit-learn"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2G"
+      limits:
+        cpu: "4"
+        memory: "8G"
+
+mlflow:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
