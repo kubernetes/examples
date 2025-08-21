@@ -55,6 +55,9 @@ jupyterhub:
       - name: welcome-notebook
         configMap:
           name: "{{ .Release.Name }}-welcome-notebook"
+      - name: ray-notebook
+        configMap:
+          name: "{{ .Release.Name }}-ray-notebook"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -71,6 +74,9 @@ jupyterhub:
       - name: welcome-notebook
         mountPath: /tmp/welcome.ipynb
         subPath: welcome.ipynb
+      - name: ray-notebook
+        mountPath: /tmp/ray.ipynb
+        subPath: ray.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true
