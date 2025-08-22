@@ -53,7 +53,20 @@ spec:
       - name: dshm
         emptyDir:
             medium: Memory
-      # GKE specific node selectors to ensure a particular (Nvidia L4) GPU.
+      # Node selectors are the main difference among the cloud providers,
+      # making sure vLLM pods land on Nodes with the correct GPU. The
+      # following are node selector examples for three cloud providers.
+      #
+      # - GKE
       # nodeSelector:
       #   cloud.google.com/gke-accelerator: nvidia-l4
-      #   cloud.google.com/gke-gpu-driver-version: latest
+      #   cloud.google.com/gke-gpu-driver-version: default
+      #
+      # - EKS
+      # nodeSelector:
+      #   node.kubernetes.io/instance-type: p4d.24xlarge
+      #
+      # - AKS
+      # nodeSelector:
+      #   agentpiscasi.com/gpu: "true" # Common label for AKS GPU nodes
+
