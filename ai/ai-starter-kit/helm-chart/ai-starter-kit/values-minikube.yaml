@@ -7,12 +7,14 @@ jupyterhub:
       password: "changeme"
 
   singleuser:
+    image:
+      tag: "5.0.0-debian-12-r2"
     fsGid: 100
     defaultUrl: "/lab/tree/welcome.ipynb"
     lifecycleHooks:
-      postStart: null
-    image:
-      tag: "5.0.0-debian-12-r2"
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "pip install -r /tmp/requirements.txt"]
     initContainers:
       - name: model-initializer
         image: python:3.9-slim-bullseye
@@ -21,29 +23,20 @@ jupyterhub:
             value: /tmp/models-cache
           - name: HF_HOME
             value: /tmp/models-cache
-          - name: TMPDIR
-            value: /tmp/models-cache
-          - name: PIP_CACHE_DIR
-            value: /tmp/models-cache
-          - name: PIP_NO_CACHE_DIR
-            value: "1"
-          - name: PYTHONUSERBASE
-            value: /tmp/models-cache
-          - name: PYTHONUNBUFFERED
-            value: "1"
         command:
           - /bin/sh
           - -c
           - |
             set -e
-            pip install --user --no-cache-dir -r /tmp/requirements.txt
-            pip install --user mlflow numpy tensorflow
+            pip install --no-cache-dir -r /tmp/requirements.txt
             python /tmp/download_models.py
         volumeMounts:
           - name: requirements-txt
             mountPath: /tmp/requirements.txt
             subPath: requirements.txt
             readOnly: true
+          - name: models-cache
+            mountPath: /tmp/models-cache
           - name: hf-download-script
             mountPath: /tmp/download_models.py
             subPath: download_models.py
@@ -51,19 +44,13 @@ jupyterhub:
           - name: hf-token-secret
             mountPath: "/etc/secrets/huggingface"
             readOnly: true
-        resources:
-          requests:
-            cpu: "2"
-            memory: 16Gi
-            ephemeral-storage: 10Gi
-          limits:
-            cpu: "4"
-            memory: 32Gi
-            ephemeral-storage: 10Gi
     extraVolumes:
       - name: requirements-txt
         configMap:
           name: "{{ .Release.Name }}-requirements-txt"
+      - name: models-cache
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-models-cache-pvc"
       - name: hf-download-script
         configMap:
           name: "{{ .Release.Name }}-hf-download-script"
@@ -81,6 +68,8 @@ jupyterhub:
       - name: requirements-txt
         mountPath: /tmp/requirements.txt
         subPath: requirements.txt
+      - name: models-cache
+        mountPath: /tmp/models-cache
       - name: hf-download-script
         mountPath: /tmp/download_models.py
         subPath: download_models.py
@@ -96,55 +85,54 @@ jupyterhub:
     extraEnvVars:
         RAY_ADDRESS: "ray://{{ .Release.Name }}-kuberay-head-svc:10001"
         MLFLOW_TRACKING_URI: "http://{{ .Release.Name }}-mlflow:5000"
-        HF_HOME: "/tmp/models-cache"
-        TRANSFORMERS_CACHE: "/tmp/models-cache/"
-        TMPDIR: "/tmp/models-cache/"
-        PIP_CACHE_DIR: "/tmp/models-cache/"
-        PYTHONUSERBASE: "/tmp/models-cache/"
-        PYTHONPATH: "/tmp/models-cache/lib/python3.9/site-packages"
+        # JUPYTERLAB_DIR: "/opt"
     resources:
       limits:
-        memory: 32Gi
-        ephemeral-storage: 10Gi
-      requests:
         memory: 16Gi
-        ephemeral-storage: 10Gi
+      requests:
+        memory: 4Gi
   hub:
     password: "sneakypass"
-    extraEnvVars:
-        - name: "RAY_ADDRESS"
-          value: "{{ .Release.Name }}-kuberay-head-svc"
-        - name: "MLFLOW_TRACKING_URI"
-          value: "http://{{ .Release.Name }}-mlflow-tracking"
-    extraConfig:
-      00-spawner-timeouts: |
-        c.KubeSpawner.start_timeout = 1800
-        c.KubeSpawner.http_timeout = 60
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 512Mi
+    # extraEnvVars:
+    #     - name: "RAY_ADDRESS"
+    #       value: "{{ .Release.Name }}-kuberay-head-svc"
+    #     - name: "MLFLOW_TRACKING_URI"
+    #       value: "http://{{ .Release.Name }}-mlflow-tracking"
 
 ray-cluster:
   image:
-    tag: 2.41.0-py311-gpu
+    tag: "2.41.0-py311-cpu-aarch64"
   head:
     serviceType: ClusterIP
     resources:
       requests:
         cpu: "1"
         memory: "2G"
-        ephemeral-storage: 10Gi
       limits:
         cpu: "4"
         memory: "8G"
-        ephemeral-storage: 10Gi
   worker:
     resources:
       requests:
         cpu: "1"
         memory: "2G"
-        ephemeral-storage: 10Gi
       limits:
         cpu: "4"
         memory: "8G"
-        ephemeral-storage: 10Gi
+
+mlflow:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
@@ -152,12 +140,12 @@ huggingface:
   # --set huggingface.token=hf_...
   token: ""
 
-modelsCachePvc: # check this out for GKE
-  enabled: false
+modelsCachePvc:
+  enabled: true
   # To use the default StorageClass, set storageClassName to null or omit it.
   # To use a specific StorageClass (e.g. "standard-rwo" on GKE), provide its name.
   # To create a PVC that doesn't request any StorageClass, set it to an empty string ("").
-  storageClassName: "standard-rwo"
+  storageClassName: null
   accessModes:
     - ReadWriteOnce
   size: 10Gi
@@ -168,6 +156,6 @@ localPersistence:
   # 1. Create a directory on your host: `mkdir -p /data/models-cache`
   # 2. Start minikube with the mount: `minikube start --mount --mount-string="/data/models-cache:/data/models-cache"`
   # 3. Set enabled to true below, or via `--set localPersistence.enabled=true`
-  enabled: false
+  enabled: true
   # This path must match the destination path inside the minikube node.
   hostPath: "/tmp/models-cache"
