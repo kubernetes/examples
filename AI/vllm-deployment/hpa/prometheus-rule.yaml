@@ -1,0 +1,41 @@
+# This PrometheusRule defines a recording rule that is essential for making
+# the raw DCGM GPU metrics usable by the HPA. The raw 'DCGM_FI_DEV_GPU_UTIL'
+# metric scraped by Prometheus does not have the standard 'pod' and 'namespace'
+# labels that the Prometheus Adapter needs to associate the metric with a
+# specific workload pod.
+#
+# This rule creates a NEW metric, 'dcgm_fi_dev_gpu_util_relabelled',
+# and uses the 'label_replace' function to copy the pod and namespace
+# information from the 'exported_pod' and 'exported_namespace' labels into
+# the standard 'pod' and 'namespace' labels. The Prometheus Adapter will then
+# use this new, correctly-labelled metric.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dcgm-relabel-rules
+  namespace: monitoring
+  labels:
+    # This label ensures the Prometheus instance discovers this rule.
+    release: prometheus
+spec:
+  groups:
+  - name: dcgm.rules
+    rules:
+    # 'record' specifies the name of the new metric to be created.
+    - record: dcgm_fi_dev_gpu_util_relabelled
+      # 'expr' contains the PromQL expression that generates the new metric.
+      expr: |
+        label_replace(
+          label_replace(
+            DCGM_FI_DEV_GPU_UTIL,
+            "pod",
+            "$1",
+            "exported_pod",
+            "(.+)"
+          ),
+          "namespace",
+          "$1",
+          "exported_namespace",
+          "(.+)"
+        )

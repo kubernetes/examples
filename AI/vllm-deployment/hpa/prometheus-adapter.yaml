@@ -1,0 +1,198 @@
+# This manifest deploys the Prometheus Adapter, which is responsible for
+# reading metrics from Prometheus and exposing them to the Kubernetes
+# Custom Metrics API. The Horizontal Pod Autoscaler (HPA) uses this API
+# to query for the custom metrics that drive its scaling decisions.
+# This file also includes the necessary RBAC permissions and the critical
+# ConfigMap that defines the metric transformation rules.
+
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-adapter
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - namespaces
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - deployments
+  - replicasets
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-adapter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-adapter
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-adapter-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-adapter-system-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+data:
+  config.yaml: |
+    # This 'rules' section is the core of the Prometheus Adapter's configuration.
+    # It defines how metrics from Prometheus are transformed and exposed to the
+    # Kubernetes Custom Metrics API.
+    rules:
+    # This rule renames the 'vllm:num_requests_running' metric to
+    # 'vllm_num_requests_running' to make it a valid custom metric name.
+    - seriesQuery: 'vllm:num_requests_running'
+      resources:
+        overrides:
+          namespace: {resource: "namespace"}
+          pod: {resource: "pod"}
+      name:
+        matches: "vllm:num_requests_running"
+        as: "vllm_num_requests_running"
+      metricsQuery: 'sum(vllm:num_requests_running{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+      # It takes 'dcgm_fi_dev_gpu_util_relabelled' (which now has the correct
+      # 'pod' and 'namespace' labels) and exposes it as 'gpu_utilization_percent'.
+      - seriesQuery: 'dcgm_fi_dev_gpu_util_relabelled'
+        resources:
+          overrides:
+            namespace: {resource: "namespace"}
+            pod: {resource: "pod"}
+        name:
+          matches: "dcgm_fi_dev_gpu_util_relabelled"
+          as: "gpu_utilization_percent"
+        metricsQuery: 'sum(dcgm_fi_dev_gpu_util_relabelled{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-adapter
+  template:
+    metadata:
+      labels:
+        app: prometheus-adapter
+    spec:
+      serviceAccountName: prometheus-adapter
+      containers:
+      - name: prometheus-adapter
+        image: registry.k8s.io/prometheus-adapter/prometheus-adapter:v0.11.2
+        args:
+        - --prometheus-url=http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090/
+        - --metrics-relist-interval=1m
+        - --config=/etc/adapter/config.yaml
+        - --secure-port=6443
+        - --cert-dir=/tmp/cert
+        - --v=4 # Increase log verbosity for debugging
+        ports:
+        - containerPort: 6443
+          name: https
+        volumeMounts:
+        - name: config
+          mountPath: /etc/adapter
+          readOnly: true
+        - name: certs
+          mountPath: /tmp/cert
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-adapter
+      - name: certs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+spec:
+  ports:
+  - port: 443
+    targetPort: https
+  selector:
+    app: prometheus-adapter
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+spec:
+  service:
+    name: prometheus-adapter
+    namespace: monitoring
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
