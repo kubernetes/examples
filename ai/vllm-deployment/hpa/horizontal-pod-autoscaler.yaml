@@ -1,0 +1,41 @@
+# This HorizontalPodAutoscaler (HPA) targets the vLLM deployment and scales
+# it based on the average number of concurrent requests across all pods.
+# It uses the custom metric 'vllm_num_requests_running', which is provided
+# by the Prometheus Adapter.
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gemma-server-hpa
+  namespace: default
+spec:
+  # scaleTargetRef points the HPA to the deployment it needs to scale.
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vllm-gemma-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        # This is the custom metric that the HPA will query.
+        # IMPORTANT: This name ('vllm_num_requests_running') is not the raw metric
+        # from the vLLM server. It is the clean, renamed metric that is
+        # exposed by the Prometheus Adapter. The names must match exactly.
+        name: vllm_num_requests_running
+      target:
+        type: AverageValue
+        # This is the target value for the metric. The HPA will add or remove
+        # pods to keep the average number of running requests per pod at 4.
+        averageValue:  4
+  behavior:
+    # The scaling behavior can be customized to control how quickly the
+    # deployment scales up or down.
+    scaleDown:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
