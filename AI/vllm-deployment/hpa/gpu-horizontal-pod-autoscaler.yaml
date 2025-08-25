@@ -1,0 +1,65 @@
+# This HorizontalPodAutoscaler (HPA) targets the vLLM deployment and scales
+# it based on the average GPU utilization across all pods. It uses the
+# custom metric 'gpu_utilization_percent', which is provided by the
+# Prometheus Adapter.
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gemma-server-gpu-hpa
+spec:
+  # scaleTargetRef points the HPA to the deployment it needs to scale.
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vllm-gemma-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        # This is the custom metric that the HPA will query.
+        # IMPORTANT: This name ('gpu_utilization_percent') is not the raw metric
+        # from the DCGM exporter. It is the clean, renamed metric that is
+        # exposed by the Prometheus Adapter. The names must match exactly.
+        name: gpu_utilization_percent
+      target:
+        type: AverageValue
+        # This is the target value for the metric. The HPA will add or remove
+        # pods to keep the average GPU utilization across all pods at 20%.
+        averageValue: 20
+  behavior:
+    scaleUp:
+      # The stabilizationWindowSeconds is set to 0 to allow for immediate
+      # scaling up. This is a trade-off:
+      # - For highly volatile workloads, immediate scaling is critical to
+      #   maintain performance and responsiveness.
+      # - However, this also introduces a risk of over-scaling if the workload
+      #   spikes are very brief. A non-zero value would make the scaling
+      #   less sensitive to short-lived spikes, but could introduce latency
+      #   if the load persists.
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      # The stabilizationWindowSeconds is set to 30 to prevent the HPA from
+      # scaling down too aggressively. This means the controller will wait for
+      # 30 seconds after a scale-down event before considering another one.
+      # This helps to smooth out the scaling behavior and prevent "flapping"
+      # (rapidly scaling up and down). A larger value will make the scaling
+      # more conservative, which can be useful for workloads with fluctuating
+      # metrics, but it may also result in higher costs if the resources are
+      # not released quickly after a load decrease.
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      selectPolicy: Max

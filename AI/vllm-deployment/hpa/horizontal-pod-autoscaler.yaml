@@ -1,0 +1,48 @@
+# This HorizontalPodAutoscaler (HPA) targets the vLLM deployment and scales
+# it based on the average number of concurrent requests across all pods.
+# It uses the custom metric 'vllm_num_requests_running', which is provided
+# by the Prometheus Adapter.
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gemma-server-hpa
+spec:
+  # scaleTargetRef points the HPA to the deployment it needs to scale.
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vllm-gemma-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        # This is the custom metric that the HPA will query.
+        # IMPORTANT: This name ('vllm_num_requests_running') is not the raw metric
+        # from the vLLM server. It is the clean, renamed metric that is
+        # exposed by the Prometheus Adapter. The names must match exactly.
+        name: vllm_num_requests_running
+      target:
+        type: AverageValue
+        # This is the target value for the metric. The HPA will add or remove
+        # pods to keep the average number of running requests per pod at 4.
+        averageValue:  4
+  behavior:
+    # The scaling behavior can be customized to control how quickly the
+    # deployment scales up or down.
+    scaleDown:
+      # The stabilizationWindowSeconds is set to 30 to prevent the HPA from
+      # scaling down too aggressively. This means the controller will wait for
+      # 30 seconds after a scale-down event before considering another one.
+      # This helps to smooth out the scaling behavior and prevent "flapping"
+      # (rapidly scaling up and down). A larger value will make the scaling
+      # more conservative, which can be useful for workloads with fluctuating
+      # metrics, but it may also result in higher costs if the resources are
+      # not released quickly after a load decrease.
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
