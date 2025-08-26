@@ -1,5 +1,5 @@
 transformers
-torch
+tensorflow
 huggingface_hub
 numpy
 ipywidgets
