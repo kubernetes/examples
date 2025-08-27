@@ -31,19 +31,22 @@ jupyterhub:
             value: /tmp/models-cache
           - name: PYTHONUNBUFFERED
             value: "1"
+          # - name: PYTHONPATH
+          #   value: "/tmp/models-cache"
         command:
           - /bin/sh
           - -c
           - |
             set -e
             pip install --user --no-cache-dir -r /tmp/requirements.txt
-            pip install --user mlflow numpy tensorflow
             python /tmp/download_models.py
         volumeMounts:
           - name: requirements-txt
             mountPath: /tmp/requirements.txt
             subPath: requirements.txt
             readOnly: true
+          # - name: models-cache
+          #   mountPath: /tmp/models-cache
           - name: hf-download-script
             mountPath: /tmp/download_models.py
             subPath: download_models.py
@@ -64,6 +67,9 @@ jupyterhub:
       - name: requirements-txt
         configMap:
           name: "{{ .Release.Name }}-requirements-txt"
+      # - name: models-cache
+      #   persistentVolumeClaim:
+      #     claimName: "{{ .Release.Name }}-models-cache-pvc"
       - name: hf-download-script
         configMap:
           name: "{{ .Release.Name }}-hf-download-script"
@@ -81,6 +87,8 @@ jupyterhub:
       - name: requirements-txt
         mountPath: /tmp/requirements.txt
         subPath: requirements.txt
+      # - name: models-cache
+      #   mountPath: /tmp/models-cache
       - name: hf-download-script
         mountPath: /tmp/download_models.py
         subPath: download_models.py
@@ -124,6 +132,12 @@ jupyterhub:
 ray-cluster:
   image:
     tag: 2.41.0-py311-gpu
+  common:
+    containerEnv:
+      - name: PYTHONPATH
+        value: "/mnt/ray-storage/libraries"
+      - name: TMPDIR
+        value: "/mnt/ray-storage/temp"
   head:
     serviceType: ClusterIP
     resources:
@@ -135,6 +149,15 @@ ray-cluster:
         cpu: "4"
         memory: "8G"
         ephemeral-storage: 10Gi
+    volumes:
+    - name: ray-pvc-storage
+      persistentVolumeClaim:
+        claimName: "ai-starter-kit-models-cache-pvc"  # this value should'n be hardcoded. The actual value should be: {{ .Release.Name }}-models-cache-pvc
+    volumeMounts:
+      - name: ray-pvc-storage
+        mountPath: /mnt/ray-storage
+    podSecurityContext:
+      fsGroup: 1000
   worker:
     resources:
       requests:
@@ -145,6 +168,15 @@ ray-cluster:
         cpu: "4"
         memory: "8G"
         ephemeral-storage: 10Gi
+    volumes:
+    - name: ray-pvc-storage
+      persistentVolumeClaim:
+        claimName: "ai-starter-kit-models-cache-pvc"  # this value should'n be hardcoded. The actual value should be: {{ .Release.Name }}-models-cache-pvc
+    volumeMounts:
+      - name: ray-pvc-storage
+        mountPath: /mnt/ray-storage
+    podSecurityContext:
+      fsGroup: 1000
 
 huggingface:
   # Provide your Hugging Face token here to download gated or private models.
@@ -152,15 +184,15 @@ huggingface:
   # --set huggingface.token=hf_...
   token: ""
 
-modelsCachePvc: # check this out for GKE
-  enabled: false
+modelsCachePvc:
+  enabled: true
   # To use the default StorageClass, set storageClassName to null or omit it.
   # To use a specific StorageClass (e.g. "standard-rwo" on GKE), provide its name.
   # To create a PVC that doesn't request any StorageClass, set it to an empty string ("").
   storageClassName: "standard-rwo"
   accessModes:
     - ReadWriteOnce
-  size: 10Gi
+  size: 100Gi
 
 localPersistence:
   # For local development with minikube, this allows persisting the models-cache
