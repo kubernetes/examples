@@ -15,8 +15,10 @@ ones like AI/ML workloads and platforms.
 We encourage you to explore the subdirectories to find examples relevant to your needs.
 Examples are organized into categories, such as:
 
-* [ai](ai/): Demonstrations of AI/ML model training, serving, end-to-end platform
+* [AI](AI/): Demonstrations of AI/ML model training, serving, end-to-end platform
 reference manifests, and MLOps toolchains.
+* [Web](web/): Examples of web-based applications, from simple static sites to more complex multi-tier applications.
+* [Databases](databases/): Best practices and configurations for deploying various types of databases on Kubernetes.
 * ... (and more as the collection grows!)
 
 Each example includes its own detailed `README.md` file covering:
