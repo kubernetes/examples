@@ -29,7 +29,7 @@ jupyterhub:
             python /tmp/download_models.py
             
             # populate workspace with initial files
-            if [ ! -f /home/joyvan/welcome.ipynb ]; then
+            if [ ! -f /home/jovyan/welcome.ipynb ]; then
               cp /tmp/welcome.ipynb /home/jovyan/welcome.ipynb
             fi
         volumeMounts:

@@ -28,7 +28,7 @@ jupyterhub:
 
             python /tmp/download_models.py
 
-            if [ ! -f /home/joyvan/welcome.ipynb ]; then
+            if [ ! -f /home/jovyan/welcome.ipynb ]; then
               cp /tmp/welcome.ipynb /home/jovyan/welcome.ipynb
             fi
         volumeMounts:
