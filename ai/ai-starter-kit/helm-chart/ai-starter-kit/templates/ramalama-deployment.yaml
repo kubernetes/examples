@@ -1,0 +1,27 @@
+---
+{{- if .Values.ramalama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-starter-kit.fullname" . }}-ramalama
+  labels:
+    {{- include "ai-starter-kit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ramalama
+spec:
+  selector:
+    matchLabels:
+      {{- include "ai-starter-kit.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ramalama
+  template:
+    metadata:
+      labels:
+        {{- include "ai-starter-kit.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ramalama
+    spec:
+      containers:
+      - name: ramalama
+        image: "{{ .Values.ramalama.image.repository }}:{{ .Values.ramalama.image.tag }}"
+        imagePullPolicy: {{ .Values.ramalama.image.pullPolicy }}
+        command:
+          {{- toYaml .Values.ramalama.command | nindent 10 }}
+{{- end }}
