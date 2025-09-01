@@ -1,0 +1,26 @@
+# This Service provides a stable network endpoint for the NVIDIA DCGM Exporter
+# pods. The Prometheus Operator's ServiceMonitor will target this Service
+# to discover and scrape the GPU metrics. This is especially important
+# because the exporter pods are part of a DaemonSet, and their IPs can change.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gke-managed-dcgm-exporter
+  namespace: gke-managed-system
+  labels:
+    # This label is critical. The ServiceMonitor uses this label to find this
+    # specific Service. If the labels don't match, Prometheus will not be
+    # able to discover the metrics endpoint.
+    app.kubernetes.io/name: gke-managed-dcgm-exporter
+spec:
+  selector:
+    # This selector tells the Service which pods to route traffic to.
+    # It must match the labels on the DCGM exporter pods.
+    app.kubernetes.io/name: gke-managed-dcgm-exporter
+  ports:
+    - # The 'name' of this port is important. The ServiceMonitor will specifically
+      # look for a port with this name to scrape metrics from.
+      name: metrics
+      port: 9400
+      targetPort: 9400
