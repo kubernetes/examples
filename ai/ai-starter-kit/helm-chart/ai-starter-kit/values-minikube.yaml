@@ -37,7 +37,7 @@ jupyterhub:
             readOnly: true
           - name: models-cache
             mountPath: /tmp/models-cache
-          - name: hf-download-script
+          - name: download-models-py
             mountPath: /tmp/download_models.py
             subPath: download_models.py
             readOnly: true
@@ -51,15 +51,18 @@ jupyterhub:
       - name: models-cache
         persistentVolumeClaim:
           claimName: "{{ .Release.Name }}-models-cache-pvc"
-      - name: hf-download-script
+      - name: download-models-py
         configMap:
-          name: "{{ .Release.Name }}-hf-download-script"
-      - name: welcome-notebook
+          name: "{{ .Release.Name }}-download-models-py"
+      - name: welcome-ipynb
         configMap:
-          name: "{{ .Release.Name }}-welcome-notebook"
-      - name: ray-notebook
+          name: "{{ .Release.Name }}-welcome-ipynb"
+      - name: ray-ipynb
         configMap:
-          name: "{{ .Release.Name }}-ray-notebook"
+          name: "{{ .Release.Name }}-ray-ipynb"
+      - name: chat-bot-ipynb
+        configMap:
+          name: "{{ .Release.Name }}-chat-bot-ipynb"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -70,15 +73,18 @@ jupyterhub:
         subPath: requirements.txt
       - name: models-cache
         mountPath: /tmp/models-cache
-      - name: hf-download-script
+      - name: download-models-py
         mountPath: /tmp/download_models.py
         subPath: download_models.py
-      - name: welcome-notebook
+      - name: welcome-ipynb
         mountPath: /tmp/welcome.ipynb
         subPath: welcome.ipynb
-      - name: ray-notebook
+      - name: ray-ipynb
         mountPath: /tmp/ray.ipynb
         subPath: ray.ipynb
+      - name: chat-bot-ipynb
+        mountPath: /tmp/chat_bot.ipynb
+        subPath: chat_bot.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true

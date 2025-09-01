@@ -3,51 +3,17 @@
 Create ConfigMaps for jupyterhub singleuser pods.
 These ConfigMaps are mounted as volumes.
 */ -}}
+{{- range $path, $_ := .Files.Glob "files/*" }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-requirements-txt
+  name: {{ printf "%s-%s" $.Release.Name (base $path | replace "." "-" | replace "_" "-") }}
   labels:
-    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ .Release.Name | quote }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/managed-by: {{ $.Release.Service | quote }}
+    app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+    helm.sh/chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
 data:
-  requirements.txt: |-
-{{ .Files.Get "files/requirements.txt" | nindent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-hf-download-script
-  labels:
-    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ .Release.Name | quote }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-data:
-  download_models.py: |-
-{{ .Files.Get "files/download_models.py" | nindent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-welcome-notebook
-  labels:
-    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ .Release.Name | quote }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-data:
-  welcome.ipynb: |-
-{{ .Files.Get "files/welcome.ipynb" | nindent 4 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-ray-notebook
-  labels:
-    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ .Release.Name | quote }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-data:
-  ray.ipynb: |-
-{{ .Files.Get "files/ray.ipynb" | nindent 4 }}
+  {{ base $path | quote }}: |-
+{{ $.Files.Get $path | nindent 4 }}
+{{- end }}

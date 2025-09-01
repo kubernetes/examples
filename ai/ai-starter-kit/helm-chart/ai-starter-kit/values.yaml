@@ -9,8 +9,6 @@ jupyterhub:
   singleuser:
     fsGid: 100
     defaultUrl: "/lab/tree/welcome.ipynb"
-    lifecycleHooks:
-      postStart: null
     image:
       tag: "5.0.0-debian-12-r2"
     initContainers:
@@ -64,15 +62,18 @@ jupyterhub:
       - name: requirements-txt
         configMap:
           name: "{{ .Release.Name }}-requirements-txt"
-      - name: hf-download-script
+      - name: download-models-py
         configMap:
-          name: "{{ .Release.Name }}-hf-download-script"
-      - name: welcome-notebook
+          name: "{{ .Release.Name }}-download-models-py"
+      - name: welcome-ipynb
         configMap:
-          name: "{{ .Release.Name }}-welcome-notebook"
-      - name: ray-notebook
+          name: "{{ .Release.Name }}-welcome-ipynb"
+      - name: ray-ipynb
         configMap:
           name: "{{ .Release.Name }}-ray-notebook"
+      - name: chat-bot-ipynb
+        configMap:
+          name: "{{ .Release.Name }}-chat-bot-ipynb"
       - name: hf-token-secret
         secret:
           secretName: "{{ .Release.Name }}-hf-token-secret"
@@ -81,15 +82,18 @@ jupyterhub:
       - name: requirements-txt
         mountPath: /tmp/requirements.txt
         subPath: requirements.txt
-      - name: hf-download-script
+      - name: download-models-py
         mountPath: /tmp/download_models.py
         subPath: download_models.py
-      - name: welcome-notebook
+      - name: welcome-ipynb
         mountPath: /tmp/welcome.ipynb
         subPath: welcome.ipynb
-      - name: ray-notebook
+      - name: ray-ipynb
         mountPath: /tmp/ray.ipynb
         subPath: ray.ipynb
+      - name: chat-bot-ipynb
+        mountPath: /tmp/chat_bot.ipynb
+        subPath: chat_bot.ipynb
       - name: hf-token-secret
         mountPath: "/etc/secrets/huggingface"
         readOnly: true
@@ -171,6 +175,18 @@ localPersistence:
   enabled: false
   # This path must match the destination path inside the minikube node.
   hostPath: "/tmp/models-cache"
+
+ollama:
+  enabled: true
+  ollama:
+    models:
+      pull:
+        - gemma3
+  persistentVolume:
+    enabled: true
+    existingClaim: "ai-starter-kit-models-cache-pvc"
+    subPath: "ollama"
+
 
 ramalama:
   enabled: true
