@@ -146,12 +146,12 @@ ray-cluster:
     serviceType: ClusterIP
     resources:
       requests:
-        cpu: "1"
-        memory: "2G"
+        cpu: "4"
+        memory: "4G"
         ephemeral-storage: 10Gi
       limits:
-        cpu: "4"
-        memory: "8G"
+        cpu: "8"
+        memory: "6G"
         ephemeral-storage: 10Gi
     volumes:
     - name: ray-pvc-storage
@@ -165,12 +165,12 @@ ray-cluster:
   worker:
     resources:
       requests:
-        cpu: "1"
-        memory: "2G"
+        cpu: "4"
+        memory: "4G"
         ephemeral-storage: 10Gi
       limits:
-        cpu: "4"
-        memory: "8G"
+        cpu: "8"
+        memory: "6G"
         ephemeral-storage: 10Gi
     volumes:
     - name: ray-pvc-storage
