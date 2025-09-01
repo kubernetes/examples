@@ -11,6 +11,17 @@ jupyterhub:
       name: jupyterhub/k8s-singleuser-sample
       tag: "4.2.0"
     initContainers:
+      # This init cntainer makes sure that home folder that we mount has correct owner
+      - name: chown-home-mount-dir
+        image: jupyterhub/k8s-singleuser-sample:4.2.0
+        securityContext:
+          runAsUser: 0
+        command: ["chown", "jovyan", "/home/jovyan"]
+        volumeMounts:
+          - name: home
+            mountPath: /home/jovyan
+            subPath: admin
+
       - name: model-initializer
         image: jupyterhub/k8s-singleuser-sample:4.2.0
         env:
@@ -71,9 +82,6 @@ jupyterhub:
         - name: welcome-ipynb
           configMap:
             name: "ai-starter-kit-welcome-ipynb"
-        - name: chat-bot-ipynb
-          configMap:
-            name: "ai-starter-kit-chat-bot-ipynb"
         - name: hf-token-secret
           secret:
             secretName: "ai-starter-kit-hf-token-secret"
@@ -85,9 +93,6 @@ jupyterhub:
         - name: download-models-py
           mountPath: /tmp/download_models.py
           subPath: download_models.py
-        - name: chat-bot-ipynb
-          mountPath: /tmp/chat_bot.ipynb
-          subPath: chat_bot.ipynb
     # This environment variables list have its own format: https://z2jh.jupyter.org/en/latest/resources/reference.html#singleuser-extraenv
     extraEnv:
       HF_TOKEN:
