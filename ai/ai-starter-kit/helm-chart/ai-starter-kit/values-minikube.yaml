@@ -1,6 +1,6 @@
 jupyterhub:
   nameOverride: "jupyterhub"
-  # This value has to be null in order apply release name on this chart's resources.  
+  # This value has to be null in order to apply release name on this chart's resources.
   # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/b4b51301ac886511c643cc5d428b15ff38006bee/jupyterhub/values.yaml#L1
   fullnameOverride: 
 
@@ -20,7 +20,7 @@ jupyterhub:
         volumeMounts:
           - name: home
             mountPath: /home/jovyan
-            subPath: admin
+            subPath: jupyterhub_workspace
 
       - name: model-initializer
         image: jupyterhub/k8s-singleuser-sample:4.2.0
@@ -49,7 +49,7 @@ jupyterhub:
             readOnly: true
           - name: home
             mountPath: /home/jovyan
-            subPath: admin
+            subPath: jupyterhub_workspace
           - name: "download-models-py" 
             mountPath: /tmp/download_models.py
             subPath: download_models.py
@@ -66,7 +66,7 @@ jupyterhub:
       type: static
       static:
         pvcName: "ai-starter-kit-models-cache-pvc"
-        subPath: "{username}"
+        subPath: "jupyterhub_workspace"
       capacity: 20Gi
       homeMountPath: /home/jovyan
       extraVolumes:

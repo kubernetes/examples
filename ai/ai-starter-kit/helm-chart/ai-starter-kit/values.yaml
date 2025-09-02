@@ -1,6 +1,6 @@
 jupyterhub:
   nameOverride: "jupyterhub"
-  # This value has to be null in order apply release name on this chart's resources.
+  # This value has to be null in order to apply release name on this chart's resources.
   # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/b4b51301ac886511c643cc5d428b15ff38006bee/jupyterhub/values.yaml#L1
   fullnameOverride:
 
