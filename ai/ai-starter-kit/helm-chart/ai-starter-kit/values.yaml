@@ -81,6 +81,12 @@ jupyterhub:
         - name: welcome-ipynb
           configMap:
             name: "ai-starter-kit-welcome-ipynb"
+        - name: ray-ipynb
+          configMap:
+            name: "ai-starter-kit-ray-ipynb"
+        - name: chat-bot-ipynb
+          configMap:
+            name: "ai-starter-kit-chat-bot-ipynb"
       extraVolumeMounts:
         - name: requirements-txt
           mountPath: /tmp/requirements.txt
@@ -88,6 +94,12 @@ jupyterhub:
         - name: download-models-py
           mountPath: /tmp/download_models.py
           subPath: download_models.py
+        - name: ray-ipynb
+          mountPath: /tmp/ray.ipynb
+          subPath: ray.ipynb
+        - name: chat-bot-ipynb
+          mountPath: /tmp/chat_bot.ipynb
+          subPath: chat_bot.ipynb
     # This environment variables list have its own format: https://z2jh.jupyter.org/en/latest/resources/reference.html#singleuser-extraenv
     extraEnv:
       HF_TOKEN:
@@ -96,8 +108,8 @@ jupyterhub:
           secretKeyRef:
             name: ai-starter-kit-hf-token-secret
             key: token
-      RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:6379"
-      MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow-tracking"
+      RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:10001"
+      MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow:5000"
   hub:
     db:
       type: sqlite-pvc
@@ -161,6 +173,18 @@ localPersistence:
   enabled: false
   # This path must match the destination path inside the minikube node.
   hostPath: "/tmp/models-cache"
+
+ollama:
+  enabled: true
+  ollama:
+    models:
+      pull:
+        - gemma3
+  persistentVolume:
+    enabled: true
+    existingClaim: "ai-starter-kit-models-cache-pvc"
+    subPath: "ollama"
+
 
 ramalama:
   enabled: true

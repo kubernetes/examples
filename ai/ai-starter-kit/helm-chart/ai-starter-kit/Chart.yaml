@@ -29,8 +29,8 @@ dependencies:
     condition: ray-cluster.enabled
     version: "1.3.0"
     repository: "https://ray-project.github.io/kuberay-helm"
-  - condition: ray-cluster.enabled
-    name: ray-cluster
+  - name: ray-cluster
+    condition: ray-cluster.enabled
     version: "1.3.0"
     repository: "https://ray-project.github.io/kuberay-helm"
   - name: jupyterhub
@@ -39,3 +39,7 @@ dependencies:
   - name: mlflow
     version: "0.12.0"
     repository: "https://community-charts.github.io/helm-charts"
+  - name: ollama
+    condition: ollama.enabled
+    version: "1.27.0"
+    repository: "https://helm.otwld.com"

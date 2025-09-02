@@ -5,3 +5,5 @@ huggingface_hub
 numpy
 ipywidgets
 mlflow
+ollama
+panel
