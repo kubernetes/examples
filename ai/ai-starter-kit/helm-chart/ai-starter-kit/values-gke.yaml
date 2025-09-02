@@ -5,7 +5,6 @@ jupyterhub:
   fullnameOverride:
 
   singleuser:
-    fsGid: 100
     defaultUrl: "/lab/tree/welcome.ipynb"
     image:
       name: jupyterhub/k8s-singleuser-sample
@@ -101,6 +100,9 @@ jupyterhub:
             key: token
       RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:6379"
       MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow-tracking"
+    cloudMetadata:
+      # Without this disabled, the GKE Autopilot Warden will raise an error about container with escalated privilieges
+      blockWithIptables: false
   hub:
     db:
       type: sqlite-pvc
@@ -114,6 +116,10 @@ jupyterhub:
         c.DummyAuthenticator.password = "sneakypass"
       01-spawner-timeouts: |
         c.KubeSpawner.start_timeout = 1800
+  scheduling:
+    userScheduler:
+      # For now we disable the scheduler because GKE Autopilot Warden does not allow using of a custom scheduler
+      enabled: false
 
 ray-cluster:
   image:
