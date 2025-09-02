@@ -5,7 +5,6 @@ jupyterhub:
   fullnameOverride: 
 
   singleuser:
-    fsGid: 100
     defaultUrl: "/lab/tree/welcome.ipynb"
     image:
       name: jupyterhub/k8s-singleuser-sample
@@ -54,9 +53,6 @@ jupyterhub:
             mountPath: /tmp/download_models.py
             subPath: download_models.py
             readOnly: true
-          - name: hf-token-secret
-            mountPath: "/etc/secrets/huggingface"
-            readOnly: true
           - name: welcome-ipynb
             mountPath: "/tmp/welcome.ipynb"
             subPath: welcome.ipynb
@@ -82,10 +78,6 @@ jupyterhub:
         - name: welcome-ipynb
           configMap:
             name: "ai-starter-kit-welcome-ipynb"
-        - name: hf-token-secret
-          secret:
-            secretName: "ai-starter-kit-hf-token-secret"
-            optional: true
       extraVolumeMounts:
         - name: requirements-txt
           mountPath: /tmp/requirements.txt

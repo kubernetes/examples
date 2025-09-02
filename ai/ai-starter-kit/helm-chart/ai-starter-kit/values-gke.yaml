@@ -56,9 +56,6 @@ jupyterhub:
             mountPath: /tmp/download_models.py
             subPath: download_models.py
             readOnly: true
-          - name: hf-token-secret
-            mountPath: "/etc/secrets/huggingface"
-            readOnly: true
           - name: welcome-ipynb
             mountPath: "/tmp/welcome.ipynb"
             subPath: welcome.ipynb
@@ -87,10 +84,6 @@ jupyterhub:
         - name: chat-bot-ipynb
           configMap:
             name: "ai-starter-kit-chat-bot-ipynb"
-        - name: hf-token-secret
-          secret:
-            secretName: "ai-starter-kit-hf-token-secret"
-            optional: true
       extraVolumeMounts:
         - name: requirements-txt
           mountPath: /tmp/requirements.txt
