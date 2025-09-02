@@ -1,19 +1,18 @@
 ---
 {{- /*
-Create ConfigMaps for jupyterhub singleuser pods.
-These ConfigMaps are mounted as volumes.
+Create a single ConfigMap with all initialization files for the jupyterhub singleuser pod.
+This ConfigMap is mounted as a volume.
 */ -}}
-{{- range $path, $_ := .Files.Glob "files/*" }}
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-%s" $.Release.Name (base $path | replace "." "-" | replace "_" "-") }}
+  name: ai-starter-kit-init-files
   labels:
     app.kubernetes.io/managed-by: {{ $.Release.Service | quote }}
     app.kubernetes.io/instance: {{ $.Release.Name | quote }}
     helm.sh/chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
 data:
+{{- range $path, $bytes := .Files.Glob "files/*" }}
   {{ base $path | quote }}: |-
-{{ $.Files.Get $path | nindent 4 }}
+{{ $bytes | toString | nindent 4 }}
 {{- end }}
