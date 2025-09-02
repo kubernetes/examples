@@ -158,3 +158,13 @@ localPersistence:
   enabled: false
   # This path must match the destination path inside the minikube node.
   hostPath: "/tmp/models-cache"
+
+ramalama:
+  enabled: true
+  command: ["sh", "-c" , "trap 'exit 0' TERM; while true; do sleep 60 & wait; done"]
+  image:
+    repository: "quay.io/ramalama/ramalama"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+    
