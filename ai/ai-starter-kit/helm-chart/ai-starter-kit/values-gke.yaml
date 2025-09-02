@@ -60,6 +60,15 @@ jupyterhub:
             mountPath: "/tmp/welcome.ipynb"
             subPath: welcome.ipynb
             readOnly: true
+        resources:
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            ephemeral-storage: 10Gi
+          limits:
+            cpu: "4"
+            memory: 32Gi
+            ephemeral-storage: 10Gi
 
     storage:
       type: static
@@ -97,6 +106,14 @@ jupyterhub:
     cloudMetadata:
       # Without this disabled, the GKE Autopilot Warden will raise an error about container with escalated privilieges
       blockWithIptables: false
+    memory:
+      limit: 32G
+      guarantee: 16G
+    extraResource:
+      limits:
+        ephemeral-storage: '10G'
+      guarantees:
+        ephemeral-storage: '10G'
   hub:
     db:
       type: sqlite-pvc
@@ -116,6 +133,7 @@ jupyterhub:
       enabled: false
 
 ray-cluster:
+  enabled: true
   image:
     tag: 2.41.0-py311-gpu
   common:
