@@ -72,9 +72,6 @@ jupyterhub:
         - name: requirements-txt
           configMap:
             name: "ai-starter-kit-requirements-txt"
-        - name: models-cache
-          persistentVolumeClaim:
-            claimName: "ai-starter-kit-models-cache-pvc"
         - name: download-models-py
           configMap:
             name: "ai-starter-kit-download-models-py"
@@ -87,19 +84,6 @@ jupyterhub:
         - name: chat-bot-ipynb
           configMap:
             name: "ai-starter-kit-chat-bot-ipynb"
-      extraVolumeMounts:
-        - name: requirements-txt
-          mountPath: /tmp/requirements.txt
-          subPath: requirements.txt
-        - name: download-models-py
-          mountPath: /tmp/download_models.py
-          subPath: download_models.py
-        - name: ray-ipynb
-          mountPath: /tmp/ray.ipynb
-          subPath: ray.ipynb
-        - name: chat-bot-ipynb
-          mountPath: /tmp/chat_bot.ipynb
-          subPath: chat_bot.ipynb
     # This environment variables list have its own format: https://z2jh.jupyter.org/en/latest/resources/reference.html#singleuser-extraenv
     extraEnv:
       HF_TOKEN:
