@@ -1,137 +1,119 @@
 jupyterhub:
   nameOverride: "jupyterhub"
-  postgresql:
-    nameOverride: "jupyterhub-postgresql"
-    enabled: true
-    auth:
-      password: "changeme"
+  # This value has to be null in order to apply release name on this chart's resources.
+  # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/b4b51301ac886511c643cc5d428b15ff38006bee/jupyterhub/values.yaml#L1
+  fullnameOverride:
 
   singleuser:
-    fsGid: 100
     defaultUrl: "/lab/tree/welcome.ipynb"
     image:
-      tag: "5.0.0-debian-12-r2"
+      name: jupyterhub/k8s-singleuser-sample
+      tag: "4.2.0"
     initContainers:
+      # This init cntainer makes sure that home folder that we mount has correct owner
+      - name: chown-home-mount-dir
+        image: jupyterhub/k8s-singleuser-sample:4.2.0
+        securityContext:
+          runAsUser: 0
+        command: ["chown", "jovyan", "/home/jovyan"]
+        volumeMounts:
+          - name: home
+            mountPath: /home/jovyan
+            subPath: jupyterhub_workspace
+
       - name: model-initializer
-        image: python:3.9-slim-bullseye
+        image: jupyterhub/k8s-singleuser-sample:4.2.0
         env:
-          - name: TRANSFORMERS_CACHE
-            value: /tmp/models-cache
-          - name: HF_HOME
-            value: /tmp/models-cache
-          - name: TMPDIR
-            value: /tmp/models-cache
-          - name: PIP_CACHE_DIR
-            value: /tmp/models-cache
-          - name: PIP_NO_CACHE_DIR
-            value: "1"
-          - name: PYTHONUSERBASE
-            value: /tmp/models-cache
-          - name: PYTHONUNBUFFERED
-            value: "1"
-          # - name: PYTHONPATH
-          #   value: "/tmp/models-cache"
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ai-starter-kit-hf-token-secret
+                key: token
         command:
           - /bin/sh
           - -c
           - |
             set -e
-            pip install --user --no-cache-dir -r /tmp/requirements.txt
+            pip install -r /tmp/requirements.txt
+
             python /tmp/download_models.py
+            
+            # populate workspace with initial files
+            if [ ! -f /home/jovyan/welcome.ipynb ]; then
+              cp /tmp/welcome.ipynb /home/jovyan/welcome.ipynb
+            fi
         volumeMounts:
           - name: requirements-txt
             mountPath: /tmp/requirements.txt
             subPath: requirements.txt
             readOnly: true
-          # - name: models-cache
-          #   mountPath: /tmp/models-cache
-          - name: hf-download-script
+            # This 'home' volume is created by the helm chart's 'homeMountPath' option. 
+            # We mount it to initContainer too, so all downloads and installations are persisted in this mounted home folder.
+          - name: home
+            mountPath: /home/jovyan
+            subPath: jupyterhub_workspace
+          - name: "download-models-py"
             mountPath: /tmp/download_models.py
             subPath: download_models.py
             readOnly: true
-          - name: hf-token-secret
-            mountPath: "/etc/secrets/huggingface"
+          - name: welcome-ipynb
+            mountPath: "/tmp/welcome.ipynb"
+            subPath: welcome.ipynb
             readOnly: true
-        resources:
-          requests:
-            cpu: "2"
-            memory: 16Gi
-            ephemeral-storage: 10Gi
-          limits:
-            cpu: "4"
-            memory: 32Gi
-            ephemeral-storage: 10Gi
-    extraVolumes:
-      - name: requirements-txt
-        configMap:
-          name: "{{ .Release.Name }}-requirements-txt"
-      # - name: models-cache
-      #   persistentVolumeClaim:
-      #     claimName: "{{ .Release.Name }}-models-cache-pvc"
-      - name: download-models-py
-        configMap:
-          name: "{{ .Release.Name }}-download-models-py"
-      - name: welcome-ipynb
-        configMap:
-          name: "{{ .Release.Name }}-welcome-ipynb"
-      - name: ray-ipynb
-        configMap:
-          name: "{{ .Release.Name }}-ray-ipynb"
-      - name: chat-bot-ipynb
-        configMap:
-          name: "{{ .Release.Name }}-chat-bot-ipynb"
-      - name: hf-token-secret
-        secret:
-          secretName: "{{ .Release.Name }}-hf-token-secret"
-          optional: true
-    extraVolumeMounts:
-      - name: requirements-txt
-        mountPath: /tmp/requirements.txt
-        subPath: requirements.txt
-      # - name: models-cache
-      #   mountPath: /tmp/models-cache
-      - name: download-models-py
-        mountPath: /tmp/download_models.py
-        subPath: download_models.py
-      - name: welcome-ipynb
-        mountPath: /tmp/welcome.ipynb
-        subPath: welcome.ipynb
-      - name: ray-ipynb
-        mountPath: /tmp/ray.ipynb
-        subPath: ray.ipynb
-      - name: chat-bot-ipynb
-        mountPath: /tmp/chat_bot.ipynb
-        subPath: chat_bot.ipynb
-      - name: hf-token-secret
-        mountPath: "/etc/secrets/huggingface"
-        readOnly: true
-    extraEnvVars:
-        RAY_ADDRESS: "ray://{{ .Release.Name }}-kuberay-head-svc:10001"
-        MLFLOW_TRACKING_URI: "http://{{ .Release.Name }}-mlflow:5000"
-        HF_HOME: "/tmp/models-cache"
-        TRANSFORMERS_CACHE: "/tmp/models-cache/"
-        TMPDIR: "/tmp/models-cache/"
-        PIP_CACHE_DIR: "/tmp/models-cache/"
-        PYTHONUSERBASE: "/tmp/models-cache/"
-        PYTHONPATH: "/tmp/models-cache/lib/python3.9/site-packages"
-    resources:
-      limits:
-        memory: 32Gi
-        ephemeral-storage: 10Gi
-      requests:
-        memory: 16Gi
-        ephemeral-storage: 10Gi
+
+    storage:
+      type: static
+      static:
+        pvcName: "ai-starter-kit-models-cache-pvc"
+        subPath: "jupyterhub_workspace"
+      capacity: 20Gi
+      homeMountPath: /home/jovyan
+      extraVolumes:
+        - name: requirements-txt
+          configMap:
+            name: "ai-starter-kit-requirements-txt"
+        - name: download-models-py
+          configMap:
+            name: "ai-starter-kit-download-models-py"
+        - name: welcome-ipynb
+          configMap:
+            name: "ai-starter-kit-welcome-ipynb"
+        - name: ray-ipynb
+          configMap:
+            name: "ai-starter-kit-ray-ipynb"
+        - name: chat-bot-ipynb
+          configMap:
+            name: "ai-starter-kit-chat-bot-ipynb"
+    # This environment variables list have its own format: https://z2jh.jupyter.org/en/latest/resources/reference.html#singleuser-extraenv
+    extraEnv:
+      HF_TOKEN:
+        name: HF_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: ai-starter-kit-hf-token-secret
+            key: token
+      RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:10001"
+      MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow:5000"
+    cloudMetadata:
+      # Without this disabled, the GKE Autopilot Warden will raise an error about container with escalated privilieges
+      blockWithIptables: false
   hub:
-    password: "sneakypass"
-    extraEnvVars:
-        - name: "RAY_ADDRESS"
-          value: "{{ .Release.Name }}-kuberay-head-svc"
-        - name: "MLFLOW_TRACKING_URI"
-          value: "http://{{ .Release.Name }}-mlflow-tracking"
+    db:
+      type: sqlite-pvc
+      pvc:
+        annotations:
+          # Without this helm will not keep the pvc after uninstallation
+          # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/3718
+          helm.sh/resource-policy: keep
     extraConfig:
-      00-spawner-timeouts: |
+      00-dummy-authenticator: |
+        c.DummyAuthenticator.password = "sneakypass"
+      01-spawner-timeouts: |
         c.KubeSpawner.start_timeout = 1800
-        c.KubeSpawner.http_timeout = 60
+  scheduling:
+    userScheduler:
+      # For now we disable the scheduler because GKE Autopilot Warden does not allow using of a custom scheduler
+      enabled: false
 
 ray-cluster:
   image:
