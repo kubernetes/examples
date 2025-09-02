@@ -10,6 +10,17 @@ jupyterhub:
       name: jupyterhub/k8s-singleuser-sample
       tag: "4.2.0"
     initContainers:
+      # This init cntainer makes sure that home folder that we mount has correct owner
+      - name: chown-home-mount-dir
+        image: jupyterhub/k8s-singleuser-sample:4.2.0
+        securityContext:
+          runAsUser: 0
+        command: ["chown", "jovyan", "/home/jovyan"]
+        volumeMounts:
+          - name: home
+            mountPath: /home/jovyan
+            subPath: jupyterhub_workspace
+
       - name: model-initializer
         image: jupyterhub/k8s-singleuser-sample:4.2.0
         env:
@@ -40,7 +51,7 @@ jupyterhub:
             # We mount it to initContainer too, so all downloads and installations are persisted in this mounted home folder.
           - name: home
             mountPath: /home/jovyan
-            subPath: admin
+            subPath: jupyterhub_workspace
           - name: "download-models-py"
             mountPath: /tmp/download_models.py
             subPath: download_models.py
@@ -57,7 +68,7 @@ jupyterhub:
       type: static
       static:
         pvcName: "ai-starter-kit-models-cache-pvc"
-        subPath: "{username}"
+        subPath: "jupyterhub_workspace"
       capacity: 20Gi
       homeMountPath: /home/jovyan
       extraVolumes:
