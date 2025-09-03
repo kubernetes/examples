@@ -7,3 +7,4 @@ ipywidgets
 mlflow
 ollama
 panel
+ray
