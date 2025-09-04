@@ -2,7 +2,7 @@ jupyterhub:
   nameOverride: "jupyterhub"
   # This value has to be null in order to apply release name on this chart's resources.
   # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/b4b51301ac886511c643cc5d428b15ff38006bee/jupyterhub/values.yaml#L1
-  fullnameOverride: 
+  fullnameOverride:
 
   singleuser:
     defaultUrl: "/lab/tree/welcome.ipynb"
@@ -28,7 +28,7 @@ jupyterhub:
             valueFrom:
               secretKeyRef:
                 name: ai-starter-kit-hf-token-secret
-                key: token 
+                key: token
         command:
           - /bin/sh
           - -c
@@ -73,13 +73,13 @@ jupyterhub:
           secretKeyRef:
             name: ai-starter-kit-hf-token-secret
             key: token
-      RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:10001"
+      RAY_ADDRESS: "ray://ai-starter-kit-kuberay-head-svc:10001"
       MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow:5000"
   hub:
     db:
       type: sqlite-pvc
       pvc:
-        annotations: 
+        annotations:
           # Without this helm will not keep the pvc after uninstallation
           # https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/3718
           helm.sh/resource-policy: keep

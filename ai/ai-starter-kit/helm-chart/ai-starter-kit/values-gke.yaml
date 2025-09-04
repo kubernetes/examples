@@ -83,7 +83,7 @@ jupyterhub:
           secretKeyRef:
             name: ai-starter-kit-hf-token-secret
             key: token
-      RAY_ADDRESS: "ai-starter-kit-kuberay-head-svc:10001"
+      RAY_ADDRESS: "ray://ai-starter-kit-kuberay-head-svc:10001"
       MLFLOW_TRACKING_URI: "http://ai-starter-kit-mlflow:5000"
     cloudMetadata:
       # Without this disabled, the GKE Autopilot Warden will raise an error about container with escalated privilieges
