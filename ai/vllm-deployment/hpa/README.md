@@ -72,3 +72,26 @@ helm install prometheus prometheus-community/kube-prometheus-stack --namespace m
 ## II. HPA for vLLM AI Inference Server using NVidia GPU metrics
 
 [vLLM AI Inference Server HPA with GPU metrics](./gpu-hpa.md)
+
+### Choosing the Right Metric: Trade-offs and Combining Metrics
+
+This project provides two methods for autoscaling: one based on the number of running requests (`vllm:num_requests_running`) and the other on GPU utilization (`dcgm_fi_dev_gpu_util`). Each has its own advantages, and they can be combined for a more robust scaling strategy.
+
+#### **Trade-offs**
+
+*   **Number of Running Requests (Application-Level Metric):**
+    *   **Pros:** This is a direct measure of the application's current workload. It is highly responsive to sudden changes in traffic, making it ideal for latency-sensitive applications. Scaling decisions are based on the actual number of requests being processed, which can be a more accurate predictor of future load than hardware utilization alone.
+    *   **Cons:** This metric may not always correlate directly with resource consumption. For example, a few computationally expensive requests could saturate the GPU, while a large number of simple requests might not. If the application has issues reporting this metric, the HPA will not be able to scale the deployment correctly.
+
+*   **GPU Utilization (Hardware-Level Metric):**
+    *   **Pros:** This provides a direct measurement of how busy the underlying hardware is. It is a reliable indicator of resource saturation and is useful for optimizing costs by scaling down when the GPU is underutilized.
+    *   **Cons:** GPU utilization can be a lagging indicator. By the time utilization is high, the application's latency may have already increased. It also does not distinguish between a single, intensive request and multiple, less demanding ones.
+
+#### **Combining Metrics for Robustness**
+
+For the most robust autoscaling, you can configure the HPA to use multiple metrics. For example, you could scale up if *either* the number of running requests exceeds a certain threshold *or* if GPU utilization spikes. The HPA will scale the deployment up if any of the metrics cross their defined thresholds, but it will only scale down when *all* metrics are below their target values (respecting the scale-down stabilization window).
+
+This combined approach provides several benefits:
+- **Proactive Scaling:** The HPA can scale up quickly in response to an increase in running requests, preventing latency spikes.
+- **Resource Protection:** It can also scale up if a small number of requests are consuming a large amount of GPU resources, preventing the server from becoming overloaded.
+- **Cost-Effective Scale-Down:** The deployment will only scale down when both the request load and GPU utilization are low, ensuring that resources are not removed prematurely.
