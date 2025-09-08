@@ -31,7 +31,7 @@ flowchart TD
   end
  subgraph subGraph1["HPA Scaling Logic"]
         E("Prometheus Adapter")
-        F("API Server")
+        F("API Server (Custom Metrics)")
         G("HPA Controller")
   end
     A -- Scrapes Raw Metrics --> C
@@ -39,8 +39,8 @@ flowchart TD
     C -- Configures Scrape --> B
     B -- Processes Raw Metrics via --> D
     D -- Creates Clean Metric in --> B
-    E -- Queries Clean Metric --> B
-    F -- Queries Custom Metric --> E
+    F -- Custom Metrics API <--> E
+    E -- Queries Processed Metric <--> B
     G -- Queries Custom Metric --> F
 ```
 
