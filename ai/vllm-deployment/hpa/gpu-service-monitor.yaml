@@ -17,11 +17,17 @@ spec:
   # the labels on the 'gke-managed-dcgm-exporter' Service.
   selector:
     matchLabels:
+      # GKE-SPECIFIC: This label matches the Service for GKE's managed DCGM
+      # exporter. If you are using a different DCGM deployment, you must
+      # update this label to match the label of the corresponding Service.
       app.kubernetes.io/name: gke-managed-dcgm-exporter
   # This selector specifies which namespace to search for the target Service.
   # For GKE, the DCGM service is in 'gke-managed-system'.
   namespaceSelector:
     matchNames:
+    # GKE-SPECIFIC: This is the namespace for GKE's managed DCGM exporter.
+    # For other environments, this should be the namespace where you have
+    # deployed the DCGM exporter Service.
     - gke-managed-system
   endpoints:
   - port: metrics
