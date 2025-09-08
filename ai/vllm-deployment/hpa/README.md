@@ -24,8 +24,8 @@ The autoscaling solution works as follows:
 flowchart TD
  D("PrometheusRule (GPU Metric Only)")
  B("Prometheus Server")
+ C("ServiceMonitor")
  subgraph subGraph0["Metrics Collection"]
-        C("ServiceMonitor")
         A["vLLM Server"]
         H["GPU DCGM Exporter"]
   end
@@ -34,9 +34,9 @@ flowchart TD
         F("API Server (Custom Metrics)")
         G("HPA Controller")
   end
-    A -- Scrapes Raw Metrics --> C
-    H -- Scrapes Raw Metrics --> C
-    C -- Configures Scrape --> B
+    B -- Scrapes Raw Metrics --> A
+    B -- Scrapes Raw Metrics --> H
+    C -- Configures Scrape <--> B
     B -- Processes Raw Metrics via --> D
     D -- Creates Clean Metric in --> B
     F -- Custom Metrics API <--> E
