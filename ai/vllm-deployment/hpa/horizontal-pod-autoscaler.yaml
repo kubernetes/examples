@@ -34,6 +34,14 @@ spec:
     # The scaling behavior can be customized to control how quickly the
     # deployment scales up or down.
     scaleDown:
+      # The stabilizationWindowSeconds is set to 30 to prevent the HPA from
+      # scaling down too aggressively. This means the controller will wait for
+      # 30 seconds after a scale-down event before considering another one.
+      # This helps to smooth out the scaling behavior and prevent "flapping"
+      # (rapidly scaling up and down). A larger value will make the scaling
+      # more conservative, which can be useful for workloads with fluctuating
+      # metrics, but it may also result in higher costs if the resources are
+      # not released quickly after a load decrease.
       stabilizationWindowSeconds: 30
       policies:
       - type: Percent
