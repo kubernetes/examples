@@ -19,21 +19,31 @@ The autoscaling solution works as follows:
 6.  The **Horizontal Pod Autoscaler (HPA)** controller queries the custom metrics API for the metrics and compares them to the target values defined in the `HorizontalPodAutoscaler` resource.
 7.  If the metrics exceed the target, the HPA scales up the `vllm-gemma-deployment`.
 
+
+```mermaid
+flowchart TD
+ D("PrometheusRule (GPU Metric Only)")
+ B("Prometheus Server")
+ subgraph subGraph0["Metrics Collection"]
+        C("ServiceMonitor")
+        A["vLLM Server"]
+        H["GPU DCGM Exporter"]
+  end
+ subgraph subGraph1["HPA Scaling Logic"]
+        E("Prometheus Adapter")
+        F("API Server")
+        G("HPA Controller")
+  end
+    A -- Scrapes Raw Metrics --> C
+    H -- Scrapes Raw Metrics --> C
+    C -- Configures Scrape --> B
+    B -- Processes Raw Metrics via --> D
+    D -- Creates Clean Metric in --> B
+    E -- Queries Clean Metric --> B
+    F -- Queries Custom Metric --> E
+    G -- Queries Custom Metric --> F
 ```
-┌──────────────┐   ┌────────────────┐   ┌──────────────────┐
-│ User Request │──>│ vLLM Server    │──>│ ServiceMonitor   │
-└──────────────┘   │ (or DCGM Exp.) │   └──────────────────┘
-                   └────────────────┘            │
-                                                 ▼
-┌────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-│ HPA Controller │<──│ Prometheus Adpt. │<──│ Prometheus Srv.  │
-└────────────────┘   └──────────────────┘   └──────────────────┘
-                                                 │ (GPU Path Only)
-                                                 ▼
-                                           ┌────────────────┐
-                                           │ PrometheusRule │
-                                           └────────────────┘
-```
+
 
 ## Prerequisites
 
