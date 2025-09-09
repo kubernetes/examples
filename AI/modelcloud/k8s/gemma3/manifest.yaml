@@ -1,0 +1,57 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: gemma3
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: gemma3
+  labels:
+    app: gemma3
+spec:
+  selector:
+    app: gemma3
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: gemma3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gemma3
+  #serviceName: gemma3
+  template:
+    metadata:
+      labels:
+        app: gemma3
+    spec:
+      serviceAccountName: gemma3
+      containers:
+      - name: gemma3
+        image: vllm-frontend:latest # placeholder value, replaced by deployment scripts
+        resources:
+          requests:
+            ephemeral-storage: "10Gi"
+            nvidia.com/gpu: "1"
+          limits:
+            ephemeral-storage: "10Gi"
+            nvidia.com/gpu: "1"
+        args:
+        - --
+        - --tensor-parallel-size=1
+        env:
+        - name: MODEL_NAME
+          value: "google/gemma-3-1b-it"
+        - name: VLLM_LOGGING_LEVEL
+          value: "DEBUG"
