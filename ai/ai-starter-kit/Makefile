@@ -1,13 +1,31 @@
+.PHONY: check_hf_token check_OCI_target package_helm lint dep_update install install_gke start uninstall push_helm
+
+check_hf_token:
+ifndef HF_TOKEN
+	$(error HF_TOKEN is not set)
+endif
+
+check_OCI_target:
+ifndef OCI_HELM_TARGET
+	$(error OCI_HELM_TARGET is not set)
+endif
+
+package_helm:
+	helm package helm-chart/ai-starter-kit/ --destination out/
+ 
+push_helm: check_OCI_target
+	helm push out/ai-starter-kit* oci://$$OCI_HELM_TARGET
+
 lint:
 	helm lint helm-chart/ai-starter-kit
 
 dep_update:
 	helm dependency update helm-chart/ai-starter-kit
 
-install:
+install: check_hf_token
 	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="your_hf_token" --timeout 10m -f helm-chart/ai-starter-kit/values.yaml
 
-install_gke:
+install_gke: check_hf_token
 	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="your_hf_token" --timeout 10m -f helm-chart/ai-starter-kit/values-gke.yaml
 
 start:
