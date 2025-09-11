@@ -36,31 +36,40 @@ This example demonstrates how to deploy a server for AI inference using [vLLM](h
 
 ## Detailed Steps & Explanation
 
-1. Ensure Hugging Face permissions to retrieve model:
+1. Create a namespace. This example uses `vllm-example`, but you can choose any name:
+
+```bash
+kubectl create namespace vllm-example
+```
+
+2. Ensure Hugging Face permissions to retrieve model:
 
 ```bash
 # Env var HF_TOKEN contains hugging face account token
-kubectl create secret generic hf-secret \
+# Make sure to use the same namespace as in the previous step
+kubectl create secret generic hf-secret -n vllm-example \
   --from-literal=hf_token=$HF_TOKEN
 ```
 
-2. Apply vLLM server:
+
+3. Apply vLLM server:
 
 ```bash
-kubectl apply -f vllm-deployment.yaml
+# Make sure to use the same namespace as in the previous steps
+kubectl apply -f vllm-deployment.yaml -n vllm-example
 ```
 
   - Wait for deployment to reconcile, creating vLLM pod(s):
 
 ```bash
-kubectl wait --for=condition=Available --timeout=900s deployment/vllm-gemma-deployment
-kubectl get pods -l app=gemma-server -w
+kubectl wait --for=condition=Available --timeout=900s deployment/vllm-gemma-deployment -n vllm-example
+kubectl get pods -l app=gemma-server -w -n vllm-example
 ```
 
   - View vLLM pod logs:
 
 ```bash
-kubectl logs -f -l app=gemma-server
+kubectl logs -f -l app=gemma-server -n vllm-example
 ```
 
 Expected output:
@@ -77,11 +86,12 @@ Expected output:
 ...
 ```
 
-3. Create service:
+4. Create service:
 
 ```bash
 # ClusterIP service on port 8080 in front of vllm deployment
-kubectl apply -f vllm-service.yaml
+# Make sure to use the same namespace as in the previous steps
+kubectl apply -f vllm-service.yaml -n vllm-example
 ```
 
 ## Verification / Seeing it Work
@@ -90,7 +100,8 @@ kubectl apply -f vllm-service.yaml
 
 ```bash
 # Forward a local port (e.g., 8080) to the service port (e.g., 8080)
-kubectl port-forward service/vllm-service 8080:8080
+# Make sure to use the same namespace as in the previous steps
+kubectl port-forward service/vllm-service 8080:8080 -n vllm-example
 ```
 
 2. Send request to local forwarding port:
@@ -98,10 +109,10 @@ kubectl port-forward service/vllm-service 8080:8080
 ```bash
 curl -X POST http://localhost:8080/v1/chat/completions \
 -H "Content-Type: application/json" \
--d '{
-  "model": "google/gemma-3-1b-it",
-  "messages": [{"role": "user", "content": "Explain Quantum Computing in simple terms."}],
-  "max_tokens": 100
+-d '{ \
+  "model": "google/gemma-3-1b-it", \
+  "messages": [{"role": "user", "content": "Explain Quantum Computing in simple terms." }], \
+  "max_tokens": 100 \
 }'
 ```
 
@@ -151,9 +162,11 @@ Node selectors make sure vLLM pods land on Nodes with the correct GPU, and they 
 ## Cleanup
 
 ```bash
-kubectl delete -f vllm-service.yaml
-kubectl delete -f vllm-deployment.yaml
-kubectl delete -f secret/hf_secret
+# Make sure to use the same namespace as in the previous steps
+kubectl delete -f vllm-service.yaml -n vllm-example
+kubectl delete -f vllm-deployment.yaml -n vllm-example
+kubectl delete secret hf-secret -n vllm-example
+kubectl delete namespace vllm-example
 ```
 
 ---
