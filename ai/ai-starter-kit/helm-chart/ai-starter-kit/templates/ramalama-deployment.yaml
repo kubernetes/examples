@@ -1,4 +1,3 @@
----
 {{- if .Values.ramalama.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +7,7 @@ metadata:
     {{- include "ai-starter-kit.labels" . | nindent 4 }}
     app.kubernetes.io/component: ramalama
 spec:
+  replicas: 1
   selector:
     matchLabels:
       {{- include "ai-starter-kit.selectorLabels" . | nindent 6 }}
@@ -18,16 +18,25 @@ spec:
         {{- include "ai-starter-kit.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: ramalama
     spec:
+      {{- if .Values.ramalama.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.ramalama.nodeSelector | nindent 8 }}
+      {{- end }}
       containers:
       - name: ramalama
         image: "{{ .Values.ramalama.image.repository }}:{{ .Values.ramalama.image.tag }}"
         imagePullPolicy: {{ .Values.ramalama.image.pullPolicy }}
+        {{- if .Values.ramalama.command }}
         command:
           {{- toYaml .Values.ramalama.command | nindent 10 }}
+        {{- end }}
         ports:
-          - name: http
-            containerPort: 8080
-            protocol: TCP
+        - containerPort: 8080
+          protocol: TCP
+        {{- if .Values.ramalama.resources }}
+        resources:
+          {{- toYaml .Values.ramalama.resources | nindent 10 }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -39,10 +48,10 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: http
-      port: 8080
-      targetPort: http
+    - port: 8080
+      targetPort: 8080
       protocol: TCP
+      name: http
   selector:
     {{- include "ai-starter-kit.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: ramalama

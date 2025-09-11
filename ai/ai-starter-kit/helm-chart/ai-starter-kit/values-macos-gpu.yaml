@@ -1,0 +1,98 @@
+genericDevicePlugin:
+  enabled: true
+  image:
+    repository: "squat/generic-device-plugin"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  device:
+    count: 6
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "50Mi"
+    limits:
+      cpu: "150m"
+      memory: "100Mi"
+
+jupyterhub:
+  singleuser:
+    image:
+      name: jupyterhub/k8s-singleuser-sample
+      tag: "4.2.0"
+    storage:
+      type: static
+      static:
+        pvcName: "ai-starter-kit-models-cache-pvc"
+        subPath: "jupyterhub_workspace"
+      capacity: 40Gi
+      homeMountPath: /home/jovyan
+      extraVolumes:
+        - name: init-files
+          configMap:
+            name: "ai-starter-kit-init-files"
+        - name: dev-dri
+          hostPath:
+            path: /dev/dri
+      extraVolumeMounts:
+        - name: dev-dri
+          mountPath: /dev/dri
+    
+
+ollama:
+  enabled: true
+  ollama:
+    models:
+      pull:
+        - gemma3
+        - llama3.2
+  resources:
+    requests:
+      cpu: 1
+      memory: 4Gi
+      squat.ai/dri: "1"
+    limits:
+      cpu: 4
+      memory: 8Gi
+      squat.ai/dri: "1"
+  
+  persistentVolume:
+    enabled: true
+    existingClaim: "ai-starter-kit-models-cache-pvc"
+    subPath: "ollama"
+
+ramalama:
+  enabled: true
+  command:
+    - /bin/sh
+    - -c
+    - ramalama pull qwen2.5:1.5b && ramalama serve qwen2.5:1.5b --port 8080 --device metal
+  
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+      squat.ai/dri: "1"
+    limits:
+      cpu: 4
+      memory: 8Gi
+      squat.ai/dri: "1"
+  
+  extraVolumeMounts:
+    - name: dev-dri
+      mountPath: /dev/dri
+  
+  extraVolumes:
+    - name: dev-dri
+      hostPath:
+        path: /dev/dri
+
+modelsCachePvc:
+  enabled: true
+  storageClassName: "standard"
+  accessModes:
+    - ReadWriteOnce
+  size: 40Gi 
+
+localPersistence:
+  enabled: true
+  hostPath: "/home/models-cache"

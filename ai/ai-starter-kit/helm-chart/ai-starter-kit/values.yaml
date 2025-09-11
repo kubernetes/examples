@@ -102,6 +102,7 @@ jupyterhub:
         enabled: false
 
 ray-cluster:
+  enabled: false
   image:
     tag: "2.41.0-py312-cpu-aarch64"
   head:
@@ -158,6 +159,9 @@ modelsCachePvc:
     - ReadWriteOnce
   size: 10Gi
 
+modelsCacheOnlyPvc:
+  enabled: false
+
 localPersistence:
   # For local development with minikube, this allows persisting the models-cache
   # on the host machine, surviving `minikube stop/start`.
@@ -190,3 +194,6 @@ ramalama:
     repository: "quay.io/ramalama/ramalama"
     tag: "latest"
     pullPolicy: IfNotPresent
+
+genericDevicePlugin:
+  enabled: false

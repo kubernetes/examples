@@ -1,21 +1,48 @@
+.PHONY: check_hf_token check_OCI_target package_helm lint dep_update install install_gke start uninstall push_helm
+
+check_hf_token:
+ifndef HF_TOKEN
+	$(error HF_TOKEN is not set)
+endif
+
+check_OCI_target:
+ifndef OCI_HELM_TARGET
+	$(error OCI_HELM_TARGET is not set)
+endif
+
+package_helm:
+	helm package helm-chart/ai-starter-kit/ --destination out/
+
+push_helm: check_OCI_target
+	helm push out/ai-starter-kit* oci://$$OCI_HELM_TARGET
+
 lint:
 	helm lint helm-chart/ai-starter-kit
 
 dep_update:
 	helm dependency update helm-chart/ai-starter-kit
 
-install:
-	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="your_hf_token" --timeout 10m -f helm-chart/ai-starter-kit/values.yaml
+install: check_hf_token
+	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values.yaml
 
-install_gke:
-	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="your_hf_token" --timeout 10m -f helm-chart/ai-starter-kit/values-gke.yaml
+install_gke: check_hf_token
+	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values-gke.yaml
+
+install_gke_gpu: check_hf_token
+	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values-gke-gpu.yaml
 
 start:
 	mkdir -p /tmp/models-cache
 	minikube start --cpus 4 --memory 15000 --mount --mount-string="/tmp/models-cache:/tmp/models-cache"
 
+start_gpu:
+	mkdir -p $HOME/models-cache
+	minikube start --driver krunkit --cpus 4 --memory 15000 --mount --mount-string="$HOME/models-cache:$HOME/models-cache"
+
 uninstall:
 	helm uninstall ai-starter-kit
+	kubectl delete pod jupyter-user
+	kubectl delete pvc ai-starter-kit-jupyterhub-hub-db-dir
 
 destroy:
 	minikube delete

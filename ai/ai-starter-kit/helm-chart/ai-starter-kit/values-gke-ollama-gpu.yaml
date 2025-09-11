@@ -1,0 +1,44 @@
+ramalama:
+  enabled: false # to avoid running two model servers (ollama + ramalama) at the same time
+
+ollama:
+  enabled: true
+
+  nodeSelector:
+    cloud.google.com/gke-accelerator: nvidia-l4
+
+  image:
+    repository: ollama/ollama
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+      nvidia.com/gpu: 1
+    limits:
+      cpu: "4"
+      memory: "16Gi"
+      nvidia.com/gpu: 1
+
+  ## if GPU nodes will be tainted
+  # tolerations:
+  #   - key: "nvidia.com/gpu"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"
+
+  ollama:
+    models:
+      pull:
+        - qwen2.5:1.5b
+        - gemma3
+
+  persistentVolume:
+    enabled: true
+    existingClaim: "ai-starter-kit-models-cache-pvc"
+    subPath: "ollama"
+
+  service:
+    type: ClusterIP
+    port: 11434
