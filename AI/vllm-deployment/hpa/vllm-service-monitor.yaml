@@ -1,0 +1,33 @@
+# This ServiceMonitor tells the Prometheus Operator how to discover and scrape
+# metrics from the vLLM inference server. It is designed to find the
+# 'vllm-service' in the 'vllm-example' namespace and scrape its '/metrics' endpoint.
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vllm-gemma-servicemonitor
+  # This ServiceMonitor must be deployed in the same namespace as the
+  # Prometheus Operator, which is 'monitoring' in this setup.
+  namespace: monitoring
+  labels:
+    # This label is used by the Prometheus Operator to discover this
+    # ServiceMonitor. It must match the 'serviceMonitorSelector' configured
+    # in the Prometheus custom resource.
+    release: prometheus
+spec:
+  # This selector specifies which namespace(s) to search for the target Service.
+  # In this case, it's looking in the 'vllm-example' namespace where the vLLM
+  # service is deployed.
+  namespaceSelector:
+    matchNames:
+    - vllm-example
+  # This selector identifies the specific Service to scrape within the
+  # selected namespace(s). It must match the labels on the 'vllm-service'.
+  selector:
+    matchLabels:
+      app: gemma-server
+  endpoints:
+  # This section defines the port and path for the metrics endpoint.
+  - port: http
+    path: /metrics
+    interval: 15s
