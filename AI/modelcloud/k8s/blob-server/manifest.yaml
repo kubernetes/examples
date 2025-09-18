@@ -1,0 +1,57 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: blob-server
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: blob-server
+  labels:
+    app: blob-server
+spec:
+  selector:
+    app: blob-server
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+
+---
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: blob-server
+spec:
+  podManagementPolicy: "Parallel"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blob-server
+  #serviceName: blob-server
+  template:
+    metadata:
+      labels:
+        app: blob-server
+    spec:
+      serviceAccountName: blob-server
+      containers:
+      - name: blob-server
+        image: blob-server:latest # placeholder value, replaced by deployment scripts
+        env:
+        - name: CACHE_DIR
+          value: /blobs
+        volumeMounts:
+          - mountPath: /blobs
+            name: blobs
+  volumeClaimTemplates:
+  - metadata:
+      name: blobs
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi

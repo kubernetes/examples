@@ -1,0 +1,22 @@
+spec:
+  files:
+  - hash: 1468e03275c15d522c721bd987f03c4ee21b8e246b901803c67448bbc25acf58
+    path: .gitattributes
+  - hash: 60be259533fe3acba21d109a51673815a4c29aefdb7769862695086fcedbeb7a
+    path: README.md
+  - hash: 50b2f405ba56a26d4913fd772089992252d7f942123cc0a034d96424221ba946
+    path: added_tokens.json
+  - hash: 19cb5d28c97778271ba2b3c3df47bf76bdd6706724777a2318b3522230afe91e
+    path: config.json
+  - hash: fd9324becc53c4be610db39e13a613006f09fd6ef71a95fb6320dc33157490a3
+    path: generation_config.json
+  - hash: 3d4ef8d71c14db7e448a09ebe891cfb6bf32c57a9b44499ae0d1c098e48516b6
+    path: model.safetensors
+  - hash: 2f7b0adf4fb469770bb1490e3e35df87b1dc578246c5e7e6fc76ecf33213a397
+    path: special_tokens_map.json
+  - hash: 4667f2089529e8e7657cfb6d1c19910ae71ff5f28aa7ab2ff2763330affad795
+    path: tokenizer.json
+  - hash: 1299c11d7cf632ef3b4e11937501358ada021bbdf7c47638d13c0ee982f2e79c
+    path: tokenizer.model
+  - hash: bfe25c2735e395407beb78456ea9a6984a1f00d8c16fa04a8b75f2a614cf53e1
+    path: tokenizer_config.json
