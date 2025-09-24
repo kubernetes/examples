@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-singleuser-egress-to-ray
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: jupyterhub
+      component: singleuser-server
+      release: ai-starter-kit
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              ray.io/node-type: head
+      ports:
+        - protocol: TCP
+          port: 8265   
+        - protocol: TCP
+          port: 8000  
+        - protocol: TCP
+          port: 10001  
+--- 
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-singleuser-egress-to-mlflow
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: jupyterhub
+      component: singleuser-server
+      release: ai-starter-kit
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mlflow
+              app.kubernetes.io/instance: ai-starter-kit
+      ports:
+        - protocol: TCP
+          port: 5000

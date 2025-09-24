@@ -1,0 +1,16 @@
+{{- if .Values.localPersistence.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-models-cache-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: {{ .Values.modelsCachePvc.size }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "{{ .Values.localPersistence.hostPath }}"
+{{- end }}

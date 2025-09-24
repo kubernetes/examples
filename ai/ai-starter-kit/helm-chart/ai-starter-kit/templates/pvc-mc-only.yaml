@@ -1,0 +1,28 @@
+{{- if .Values.modelsCacheOnlyPvc.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-models-cache-only-pvc
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  accessModes:
+    {{- toYaml .Values.modelsCacheOnlyPvc.accessModes | nindent 4 }}
+  {{- if .Values.localPersistence.enabled }}
+  storageClassName: manual
+  {{- else }}
+    {{- /*
+      If storageClassName is set to a specific class, it will be used.
+      If storageClassName is set to an empty string (""), no storage class will be used for provisioning.
+      If storageClassName is null or omitted, the default storage class will be used.
+    */}}
+    {{- if or .Values.modelsCacheOnlyPvc.storageClassName (eq .Values.modelsCacheOnlyPvc.storageClassName "") }}
+  storageClassName: {{ .Values.modelsCacheOnlyPvc.storageClassName | quote }}
+    {{- end }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.modelsCacheOnlyPvc.size }}
+{{- end -}}
