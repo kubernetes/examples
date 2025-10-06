@@ -25,15 +25,9 @@ dep_update:
 install: check_hf_token
 	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values.yaml
 
-install_gke: check_hf_token
-	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values-gke.yaml
-
-install_gke_gpu: check_hf_token
-	helm upgrade --install ai-starter-kit helm-chart/ai-starter-kit --set huggingface.token="$$HF_TOKEN" --timeout 10m -f helm-chart/ai-starter-kit/values-gke-gpu.yaml
-
 start:
 	mkdir -p /tmp/models-cache
-	minikube start --cpus 4 --memory 15000 --mount --mount-string="/tmp/models-cache:/tmp/models-cache"
+	minikube start --cpus 4 --memory 15000 --mount --mount-string="$$HOME/models-cache:/tmp/models-cache"
 
 start_gpu:
 	mkdir -p $HOME/models-cache
