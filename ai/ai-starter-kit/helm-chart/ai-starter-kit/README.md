@@ -41,20 +41,26 @@ The AI Starter Kit simplifies the deployment of AI infrastructure by providing:
 
 ### Quick Start (Minikube)
 
-1. **Start minikube with persistent storage:**
+1. **Create a folder for the persistent storage:**
 ```bash
-minikube start --cpus 4 --memory 15000 \
-  --mount --mount-string="/tmp/models-cache:/tmp/models-cache"
+mkdir -p /$HOME/models-cache
 ```
 
-2. **Install the chart:**
+2. **Start minikube with persistent storage:**
 ```bash
+minikube start --cpus 4 --memory 15000 \
+  --mount --mount-string="/$HOME/models-cache:/tmp/models-cache"
+```
+
+3. **Install the chart:**
+```bash
+helm dependency build
 helm install ai-starter-kit . \
   --set huggingface.token="YOUR_HF_TOKEN" \
   -f values.yaml
 ```
 
-3. **Access JupyterHub:**
+4. **Access JupyterHub:**
 ```bash
 kubectl port-forward svc/ai-starter-kit-jupyterhub-proxy-public 8080:80
 ```
