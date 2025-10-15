@@ -54,7 +54,8 @@ minikube start --cpus 4 --memory 15000 \
 
 3. **Install the chart:**
 ```bash
-helm dependency build
+cd ai/ai-starter-kit/helm-chart/ai-starter-kit
+helm dependency update
 helm install ai-starter-kit . \
   --set huggingface.token="YOUR_HF_TOKEN" \
   -f values.yaml

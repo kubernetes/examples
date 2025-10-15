@@ -90,7 +90,7 @@ jupyterhub:
           helm.sh/resource-policy: keep
     extraConfig:
       00-dummy-authenticator: |
-        c.DummyAuthenticator.password = "sneakypass"
+        c.DummyAuthenticator.password = "password"
       01-spawner-timeouts: |
         c.KubeSpawner.start_timeout = 1800
   proxy:
