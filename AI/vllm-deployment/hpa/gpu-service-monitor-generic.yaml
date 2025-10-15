@@ -1,0 +1,29 @@
+# This ServiceMonitor is for users who have MANUALLY installed the NVIDIA DCGM
+# Exporter, for example, on EKS or AKS. It tells the Prometheus Operator
+# how to discover and scrape metrics from the DCGM exporter's Service.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-dcgm-exporter-servicemonitor
+  namespace: monitoring
+  labels:
+    # This label is used by the Prometheus Operator to discover this
+    # ServiceMonitor. It must match the 'serviceMonitorSelector' configured
+    # in the Prometheus custom resource.
+    release: prometheus
+spec:
+  # This selector identifies the Service to scrape. It must match the labels
+  # on the 'gpu-dcgm-exporter-service' Service defined in the
+  # 'gpu-dcgm-exporter-service.yaml' file.
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gpu-dcgm-exporter
+  # This selector specifies which namespace to search for the target Service.
+  # The 'gpu-dcgm-exporter-service' is deployed in the 'monitoring'
+  # namespace by the Helm chart instructions.
+  namespaceSelector:
+    matchNames:
+    - monitoring
+  endpoints:
+  - port: metrics
+    interval: 15s
