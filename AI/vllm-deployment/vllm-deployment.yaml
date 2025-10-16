@@ -18,8 +18,7 @@ spec:
     spec:
       containers:
       - name: inference-server
-        # vllm/vllm-openai:v0.10.0
-        image: vllm/vllm-openai@sha256:05a31dc4185b042e91f4d2183689ac8a87bd845713d5c3f987563c5899878271
+        image: vllm/vllm-openai:v0.11.0
         resources:
           requests:
             cpu: "2"
@@ -37,10 +36,17 @@ spec:
         - --tensor-parallel-size=1
         - --host=0.0.0.0
         - --port=8080
+        # --- ADD THESE LINES TO FIX POSSIBLE OOM ERRORS ---
+        - --gpu-memory-utilization=0.85
+        - --max-num-seqs=64
         env:
         # 1 billion parameter model (smallest gemma model)
         - name: MODEL_ID
           value: google/gemma-3-1b-it
+        # Necessary for vLLM images >= 0.8.5.
+        # Ref - https://github.com/vllm-project/vllm/issues/18859
+        - name: LD_LIBRARY_PATH
+          value: "/usr/local/nvidia/lib64:/usr/local/cuda/lib64"
         - name: HUGGING_FACE_HUB_TOKEN
           valueFrom:
             secretKeyRef:
@@ -69,4 +75,3 @@ spec:
       # - AKS
       # nodeSelector:
       #   agentpiscasi.com/gpu: "true" # Common label for AKS GPU nodes
-
