@@ -9,7 +9,6 @@ The AI Starter Kit simplifies the deployment of AI infrastructure by providing:
 - **JupyterHub**: Multi-user notebook environment with pre-configured AI/ML libraries
 - **Model Serving**: Support for both Ollama and Ramalama model servers
 - **MLflow**: Experiment tracking and model management
-- **GPU Support**: Configurations for GPU acceleration on GKE and macOS
 - **Model Caching**: Persistent storage for efficient model management
 - **Example Notebooks**: Pre-loaded notebooks to get you started immediately
 
@@ -27,15 +26,6 @@ The AI Starter Kit simplifies the deployment of AI infrastructure by providing:
 - Docker Desktop or similar container runtime
 - Minimum 4 CPU cores and 16GB RAM available
 - 40GB+ free disk space
-
-#### GKE (Google Kubernetes Engine)
-- Google Cloud CLI (`gcloud`) installed and configured
-- Appropriate GCP permissions to create clusters
-
-#### macOS with GPU (Apple Silicon)
-- macOS with Apple Silicon (M1/M2/M3/M4)
-- minikube with krunkit driver
-- 16GB+ RAM recommended
 
 ## Installation
 
@@ -65,74 +55,7 @@ helm install ai-starter-kit . \
 ```bash
 kubectl port-forward svc/ai-starter-kit-jupyterhub-proxy-public 8080:80
 ```
-Navigate to http://localhost:8080 and login with any username and password `sneakypass`
-
-### GKE Deployment
-
-1. **Create a GKE Autopilot cluster:**
-```bash
-export REGION=us-central1
-export CLUSTER_NAME="ai-starter-cluster"
-export PROJECT_ID=$(gcloud config get project)
-
-gcloud container clusters create-auto ${CLUSTER_NAME} \
-  --project=${PROJECT_ID} \
-  --region=${REGION} \
-  --release-channel=rapid \
-  --labels=created-by=ai-on-gke,guide=ai-starter-kit
-```
-
-2. **Get cluster credentials:**
-```bash
-gcloud container clusters get-credentials ${CLUSTER_NAME} --location=${REGION}
-```
-
-3. **Install the chart with GKE-specific values:**
-```bash
-helm install ai-starter-kit . \
-  --set huggingface.token="YOUR_HF_TOKEN" \
-  -f values.yaml \
-  -f values-gke.yaml
-```
-
-### GKE with GPU (Ollama)
-
-For GPU-accelerated model serving with Ollama:
-
-```bash
-helm install ai-starter-kit . \
-  --set huggingface.token="YOUR_HF_TOKEN" \
-  -f values-gke.yaml \
-  -f values-ollama-gpu.yaml
-```
-
-### GKE with GPU (Ramalama)
-
-For GPU-accelerated model serving with Ramalama:
-
-```bash
-helm install ai-starter-kit . \
-  --set huggingface.token="YOUR_HF_TOKEN" \
-  -f values-gke.yaml \
-  -f values-ramalama-gpu.yaml
-```
-
-### macOS with Apple Silicon GPU
-
-1. **Start minikube with krunkit driver:**
-```bash
-minikube start --driver krunkit \
-  --cpus 8 --memory 16000 --disk-size 40000mb \
-  --mount --mount-string="/tmp/models-cache:/tmp/models-cache"
-```
-
-2. **Install with macOS GPU support:**
-```bash
-helm install ai-starter-kit . \
-  --set huggingface.token="YOUR_HF_TOKEN" \
-  -f values.yaml \
-  -f values-macos.yaml
-```
+Navigate to http://localhost:8080 and login with any username and password `password`
 
 ## Configuration
 
@@ -152,8 +75,24 @@ helm install ai-starter-kit . \
 The chart supports different storage configurations:
 
 - **Local Development**: Uses hostPath volumes with minikube mount
-- **GKE**: Uses standard GKE storage classes (`standard-rwo`, `standard-rwx`)
 - **Custom**: Configure via `modelsCachePvc.storageClassName`
+
+### Using GPUs
+
+In order to use GPUs for AI/ML workloads we need to add the necessary config to the services. Check the dependency charts documentation for the values. For example jupyterhub config would be:
+
+  ```yaml
+  juypterhub:
+  ...
+    extraResource:
+        limits:
+          nvidia.com/gpu: 1
+        guarantees:
+          nvidia.com/gpu: 1
+
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-l4
+  ```
 
 ### Model Servers
 
@@ -170,13 +109,7 @@ Ramalama provides:
 - Support for CUDA and Metal (macOS) acceleration
 - Lightweight deployment option
 
-You can run either Ollama or Ramalama, but not both simultaneously. Toggle using:
-```yaml
-ollama:
-  enabled: true/false
-ramalama:
-  enabled: true/false
-```
+
 
 ## Usage
 
@@ -209,8 +142,10 @@ kubectl port-forward svc/ai-starter-kit-ramalama 8080:8080
 ### Pre-loaded Example Notebooks
 
 The JupyterHub environment comes with pre-loaded example notebooks:
+- `ray.ipynb`: Simple Ray nad MLflow example
 - `chat_bot.ipynb`: Simple chatbot interface using Ollama for conversational AI.
-- `multi-agent-ollama.ipynb`: Multi-agent workflow demonstration using Ollama.
+- `multi-agent.ipynb`:Multi-agent workflow demonstration using Ray.
+- `multi-agent-ollama.ipynb`: Similar multi-agent workflow demonstration using Ollama.
 - `multi-agent-ramalama.ipynb`: Similar multi-agent workflow using RamaLama runtime for comparison.
 - `welcome.ipynb`: Introduction notebook with embedding model examples using Qwen models.
 
