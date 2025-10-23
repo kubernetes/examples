@@ -1,15 +1,16 @@
-kind: ReplicationController
-apiVersion: v1
+apiVersion: apps/v1
+kind: Deployment 
 metadata:
-  name: redis-master
-  labels:
+ name: redis-master
+ labels:
     app: redis
     role: master
 spec:
   replicas: 1
   selector:
-    app: redis
-    role: master
+    matchLabels:
+      app: redis
+      role: master
   template:
     metadata:
       labels:
@@ -18,7 +19,7 @@ spec:
     spec:
       containers:
       - name: redis-master
-        image: redis
+        image: redis:7.2
         ports:
         - name: redis-server
           containerPort: 6379
