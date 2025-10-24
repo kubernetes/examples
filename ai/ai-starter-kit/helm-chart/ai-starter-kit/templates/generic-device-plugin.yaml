@@ -1,0 +1,65 @@
+{{- if .Values.genericDevicePlugin.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "ai-starter-kit.fullname" . }}-generic-device-plugin
+  namespace: kube-system
+  labels:
+    {{- include "ai-starter-kit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: generic-device-plugin
+spec:
+  selector:
+    matchLabels:
+      {{- include "ai-starter-kit.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: generic-device-plugin
+  template:
+    metadata:
+      labels:
+        {{- include "ai-starter-kit.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: generic-device-plugin
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+      - operator: "Exists"
+        effect: "NoExecute"
+      - operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - image: {{ .Values.genericDevicePlugin.image.repository | default "squat/generic-device-plugin" }}:{{ .Values.genericDevicePlugin.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.genericDevicePlugin.image.pullPolicy | default "IfNotPresent" }}
+        name: generic-device-plugin
+        args:
+        - --device
+        - |
+          name: dri
+          groups:
+          - count: {{ .Values.genericDevicePlugin.device.count | default 4 }}
+            paths:
+            - path: /dev/dri
+        resources:
+          requests:
+            cpu: {{ .Values.genericDevicePlugin.resources.requests.cpu | default "50m" }}
+            memory: {{ .Values.genericDevicePlugin.resources.requests.memory | default "10Mi" }}
+          limits:
+            cpu: {{ .Values.genericDevicePlugin.resources.limits.cpu | default "50m" }}
+            memory: {{ .Values.genericDevicePlugin.resources.limits.memory | default "20Mi" }}
+        ports:
+        - containerPort: 8080
+          name: http
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: device-plugin
+          mountPath: /var/lib/kubelet/device-plugins
+        - name: dev
+          mountPath: /dev
+      volumes:
+      - name: device-plugin
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: dev
+        hostPath:
+          path: /dev
+  updateStrategy:
+    type: RollingUpdate
+{{- end }}

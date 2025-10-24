@@ -1,0 +1,10 @@
+transformers
+torch
+tensorflow
+huggingface_hub
+numpy
+ipywidgets
+mlflow==2.19.0
+ollama
+panel
+ray==2.41.0

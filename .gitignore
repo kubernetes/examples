@@ -43,3 +43,10 @@ cscope.*
 
 /bazel-*
 *.pyc
+
+# Helm chart dependecies cache
+**/Chart.lock
+**/charts/*.tgz
+
+# Helm chart output directory
+ai/ai-starter-kit/out
