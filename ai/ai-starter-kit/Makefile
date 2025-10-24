@@ -35,8 +35,6 @@ start_gpu:
 
 uninstall:
 	helm uninstall ai-starter-kit
-	kubectl delete pod jupyter-user
-	kubectl delete pvc ai-starter-kit-jupyterhub-hub-db-dir
 
 destroy:
 	minikube delete

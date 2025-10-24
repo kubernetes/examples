@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "ai-starter-kit.fullname" . }}-delete-jupyter-admin-pod"
+  labels:
+    {{- include "ai-starter-kit.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: "{{ include "ai-starter-kit.fullname" . }}-delete-jupyter-admin-pod"
+      labels:
+        {{- include "ai-starter-kit.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "ai-starter-kit.fullname" . }}-jupyterhub-hub
+      restartPolicy: OnFailure
+      containers:
+        - name: delete-jupyter-admin-pod
+          image: alpine/kubectl:1.33.4
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              kubectl delete pod -l app.kubernetes.io/component=singleuser-server -n {{ .Release.Namespace }}
