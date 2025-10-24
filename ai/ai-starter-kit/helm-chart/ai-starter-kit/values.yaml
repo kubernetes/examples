@@ -104,7 +104,7 @@ jupyterhub:
 ray-cluster:
   enabled: false
   image:
-    tag: "2.41.0-py312-cpu-aarch64"
+    tag: "2.41.0-py312-cpu"
   head:
     serviceType: ClusterIP
     resources:

@@ -43,6 +43,9 @@ minikube start --cpus 4 --memory 15000 \
 ```
 
 3. **Install the chart:**
+
+Inside of the checked out git repository run:
+
 ```bash
 cd ai/ai-starter-kit/helm-chart/ai-starter-kit
 helm dependency update
@@ -69,6 +72,7 @@ Navigate to http://localhost:8080 and login with any username and password `pass
 | `modelsCachePvc.size` | Size of model cache storage | `10Gi` |
 | `jupyterhub.singleuser.defaultUrl` | Default notebook path | `/lab/tree/welcome.ipynb` |
 | `mlflow.enabled` | Enable MLflow tracking server | `true` |
+| `ray-cluster.enabled` | Enable Ray operator and  server | `false` |
 
 ### Storage Configuration
 
@@ -120,7 +124,7 @@ Ramalama provides:
 # Port forward to access JupyterHub
 kubectl port-forward svc/ai-starter-kit-jupyterhub-proxy-public 8080:80
 # Access at: http://localhost:8080
-# Default password: sneakypass
+# Default password: password
 ```
 
 #### MLflow
@@ -144,7 +148,7 @@ kubectl port-forward svc/ai-starter-kit-ramalama 8080:8080
 The JupyterHub environment comes with pre-loaded example notebooks:
 - `ray.ipynb`: Simple Ray nad MLflow example
 - `chat_bot.ipynb`: Simple chatbot interface using Ollama for conversational AI.
-- `multi-agent.ipynb`:Multi-agent workflow demonstration using Ray.
+- `multi-agent.ipynb`: Multi-agent workflow demonstration using Ray.
 - `multi-agent-ollama.ipynb`: Similar multi-agent workflow demonstration using Ollama.
 - `multi-agent-ramalama.ipynb`: Similar multi-agent workflow using RamaLama runtime for comparison.
 - `welcome.ipynb`: Introduction notebook with embedding model examples using Qwen models.
