@@ -40,7 +40,7 @@ Before contributing, please thoroughly review our:
 2. [CONTRIBUTING.md](CONTRIBUTING.md): This provides instructions on the contribution
    process, including how to propose, submit, and review examples.
 
-Your contributions help make Kubernetes more accessible and understandable for everyone.
+Your contributions help make Kubernetes more accessible and understandable for everyone.And it is helpful
 
 ## Our Philosophy
 
