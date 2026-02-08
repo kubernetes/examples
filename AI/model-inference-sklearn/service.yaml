@@ -1,0 +1,23 @@
+# Service that exposes the scikit-learn inference Deployment inside the
+# cluster on port 80 (mapped to container port 8080).
+#
+# To access the service from outside the cluster you can use:
+#   kubectl port-forward service/sklearn-inference 8080:80
+#
+# For more on Services see:
+#   https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: sklearn-inference
+  labels:
+    app: sklearn-inference
+spec:
+  selector:
+    app: sklearn-inference
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http   # refers to the named port on the container

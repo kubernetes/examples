@@ -1,0 +1,14 @@
+# PodDisruptionBudget ensures that at least one replica is always available
+# during voluntary disruptions (e.g., node drains, cluster upgrades).
+#
+# For more on PDBs see:
+#   https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sklearn-inference-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sklearn-inference

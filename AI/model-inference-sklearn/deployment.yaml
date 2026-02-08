@@ -1,0 +1,106 @@
+# Deployment for the scikit-learn Iris inference API.
+#
+# Key best practices demonstrated:
+#   - Explicit resource requests and limits
+#   - Liveness and readiness probes
+#   - Non-root security context
+#   - Read-only root filesystem
+#   - Specific image tag (no ":latest")
+#
+# For more on Deployments see:
+#   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sklearn-inference
+  labels:
+    app: sklearn-inference
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sklearn-inference
+  template:
+    metadata:
+      labels:
+        app: sklearn-inference
+    spec:
+      # Security best practice: do not run containers as root.
+      # https://kubernetes.io/docs/concepts/security/pod-security-standards/
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: inference-server
+          # ---------------------------------------------------------------
+          # IMPORTANT: Replace the image reference below with your own
+          # registry and tag after building the container image.
+          #
+          # To build and push:
+          #   docker build -t <YOUR_REGISTRY>/sklearn-inference:v1.0.0 image/
+          #   docker push <YOUR_REGISTRY>/sklearn-inference:v1.0.0
+          # ---------------------------------------------------------------
+          image: <YOUR_REGISTRY>/sklearn-inference:v1.0.0
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          # Environment variables consumed by the application.
+          env:
+            - name: MODEL_PATH
+              value: "/model/iris_model.joblib"
+            - name: PORT
+              value: "8080"
+          # Resource requests and limits ensure predictable scheduling
+          # and protect against runaway resource consumption.
+          # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          # Readiness probe: Kubernetes will not route traffic to the pod
+          # until the model is loaded and the /readyz endpoint returns 200.
+          # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          # Liveness probe: Kubernetes will restart the container if
+          # /healthz stops responding.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          # Container-level security context.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # Spread pods across nodes to ensure high availability.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: sklearn-inference

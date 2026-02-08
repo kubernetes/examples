@@ -28,6 +28,10 @@ We are particularly interested in examples that are:
 * Modular and showcase best practices.
 * Cover a diverse range of tools and MLOps stages.
 
-## Current Status
+## Available Examples
 
-_This section is currently being populated. Check back soon for our first set of AI/ML examples!_
+| Example | Description | GPU Required |
+|---|---|---|
+| [Model Inference with Scikit-Learn](model-inference-sklearn/) | Minimal inference API (FastAPI + scikit-learn) with Kubernetes best practices (probes, resource limits, security context) | No |
+| [TensorFlow Model Serving](model-serving-tensorflow/) | Deploy TensorFlow Serving with PersistentVolumes and Ingress | No (CPU mode) |
+| [vLLM Inference Server](vllm-deployment/) | Serve large language models (Gemma) with vLLM and optional HPA | Yes |
