@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: training-data-pvc
+spec:
+  accessModes:
+    - ReadOnlyMany  # Multiple pods can read the same data
+  resources:
+    requests:
+      storage: 50Gi
+  # StorageClass configuration (cloud-specific or on-prem)
+  # For cloud providers: Use provider-specific storage classes
+  #   - GKE: standard-rwo, premium-rwo, standard-rwx, premium-rwx
+  #   - EKS: gp3, gp2 (may need ReadWriteMany support)
+  #   - AKS: managed-premium, managed-standard
+  # For on-prem: Use your cluster's storage class (e.g., nfs-client, cephfs)
+  # Note: ReadOnlyMany access mode may require specific storage backends
+  # storageClassName: fast-ssd
+

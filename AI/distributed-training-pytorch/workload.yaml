@@ -1,0 +1,12 @@
+apiVersion: scheduling.k8s.io/v1alpha1
+kind: Workload
+metadata:
+  name: pytorch-ddp-workload
+  labels:
+    app: pytorch-training
+spec:
+  podGroups:
+  - name: ddp-workers
+    policy:
+      gang:
+        minCount: 2

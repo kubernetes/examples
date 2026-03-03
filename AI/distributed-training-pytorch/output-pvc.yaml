@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: training-output-pvc
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods need to write checkpoints
+  resources:
+    requests:
+      storage: 100Gi
+  # StorageClass configuration (cloud-specific or on-prem)
+  # For cloud providers: Use provider-specific storage classes
+  #   - GKE: standard-rwx, premium-rwx (ReadWriteMany support)
+  #   - EKS: efs-sc (EFS CSI driver) or gp3 with ReadWriteMany
+  #   - AKS: azurefile-csi (Azure Files) for ReadWriteMany
+  # For on-prem: Use storage classes that support ReadWriteMany
+  #   - NFS: nfs-client, nfs-subdir-external-provisioner
+  #   - CephFS: cephfs-csi
+  #   - GlusterFS: glusterfs
+  # Note: ReadWriteMany is required for multiple pods writing checkpoints
+  # storageClassName: fast-ssd
+

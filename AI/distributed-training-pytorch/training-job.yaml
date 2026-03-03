@@ -1,0 +1,142 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pytorch-ddp-training
+  labels:
+    app: pytorch-training
+spec:
+  # Use completions and parallelism to control the number of pods
+  # For 4 GPUs across 2 nodes (2 GPUs per node), set completions to 2 and parallelism to 2
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: pytorch-training
+    spec:
+      # IMPORTANT: subdomain must match the headless Service name for stable pod DNS
+      # Service name in your repo: pytorch-training-headless
+      subdomain: pytorch-training-headless
+
+      # Kubernetes v1.35 workload aware scheduling link
+      workloadRef:
+        name: pytorch-ddp-workload
+        podGroup: ddp-workers
+
+      restartPolicy: Never
+
+      containers:
+      - name: trainer
+        image: pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          set -euo pipefail
+          # Deterministic rank from Indexed Job
+          export RANK="${JOB_COMPLETION_INDEX}"
+
+          # Master is always rank 0 (pod name is stable with completionMode: Indexed)
+          export MASTER_PORT=29500
+          export MASTER_ADDR="pytorch-ddp-training-0.pytorch-training-headless.${POD_NAMESPACE}.svc.cluster.local"
+
+          export WORLD_SIZE="${WORLD_SIZE}"
+
+          # Install required packages
+          pip install -q torchvision tensorboard
+
+          # Run training script
+          python /workspace/train.py \
+            --data-dir /data \
+            --output-dir /output \
+            --num-epochs "${NUM_EPOCHS}" \
+            --batch-size "${BATCH_SIZE}" \
+            --world-size "${WORLD_SIZE}" \
+            --rank "${RANK}" \
+            --master-addr "${MASTER_ADDR}" \
+            --master-port "${MASTER_PORT}"
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        # Available on Indexed Jobs via annotation
+        - name: JOB_COMPLETION_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+
+        - name: WORLD_SIZE
+          value: "2"  # Must match completions
+
+        - name: NUM_EPOCHS
+          valueFrom:
+            configMapKeyRef:
+              name: training-config
+              key: num_epochs
+
+        - name: BATCH_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: training-config
+              key: batch_size
+
+        resources:
+          requests:
+            cpu: "4"
+            memory: "16Gi"
+            nvidia.com/gpu: "2"
+          limits:
+            cpu: "4"
+            memory: "16Gi"
+            nvidia.com/gpu: "2"
+
+        volumeMounts:
+        - name: training-data
+          mountPath: /data
+        - name: output
+          mountPath: /output
+        - name: training-script
+          mountPath: /workspace
+
+      volumes:
+      - name: training-data
+        persistentVolumeClaim:
+          claimName: training-data-pvc
+      - name: output
+        persistentVolumeClaim:
+          claimName: training-output-pvc
+      - name: training-script
+        configMap:
+          name: training-script
+          defaultMode: 0755
+
+      # Node selectors are the main difference among cloud providers and on-prem
+      # Uncomment the appropriate section for your environment
+      #
+      # === Cloud Provider Specific ===
+      #
+      # GKE (Google Kubernetes Engine) - Cloud-specific
+      # nodeSelector:
+      #   cloud.google.com/gke-accelerator: nvidia-tesla-v100
+      #   cloud.google.com/gke-gpu-driver-version: default
+      #
+      # EKS (Amazon Elastic Kubernetes Service) - Cloud-specific
+      # nodeSelector:
+      #   node.kubernetes.io/instance-type: p3.2xlarge
+      #
+      # AKS (Azure Kubernetes Service) - Cloud-specific
+      # nodeSelector:
+      #   agentpiscasi.com/gpu: "true"  # Common label for AKS GPU nodes
+      #
+      # === On-Premises / Generic Kubernetes ===
+      # For on-premises or generic Kubernetes clusters, use node labels that match
+      # your cluster's node labeling scheme. Common examples:
+      # nodeSelector:
+      #   accelerator: nvidia-gpu  # Example: label your GPU nodes with this
+      #   node-role.kubernetes.io/gpu: "true"  # Or use a custom label
+      #   # Note: You may need to label your nodes first:
+      #   # kubectl label nodes <node-name> accelerator=nvidia-gpu
