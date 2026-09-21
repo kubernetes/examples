@@ -21,7 +21,7 @@ reference manifests, and MLOps toolchains.
 * [Databases](databases/): Best practices and configurations for deploying various types of databases on Kubernetes.
 * ... (and more as the collection grows!)
 
-Each example includes its own detailed `README.md` file covering:
+Each example includes its own detailed `README.md` covering:
 * Purpose and learning objectives
 * Prerequisites (including Kubernetes version and hardware if applicable)
 * Step-by-step deployment instructions
