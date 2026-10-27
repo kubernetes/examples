@@ -11,7 +11,6 @@ cd "${GUESTBOOK_DIR}"
 
 
 CLUSTER_NAME="${CLUSTER_NAME:-e2e}"
-REDIS_MASTER_IMAGE="${REDIS_MASTER_IMAGE:-redis:3.2.9}"
 
 # Local port used for the kubectl port-forward to the frontend service.
 FRONTEND_LOCAL_PORT="${FRONTEND_LOCAL_PORT:-18080}"
@@ -21,7 +20,7 @@ PORT_FORWARD_PID=""
 log() { echo -e "\n\033[1;34m==> $*\033[0m"; }
 err() { echo -e "\033[1;31m$*\033[0m" >&2; }
 
-# Read the frontend / replica image names straight out of the manifests so the
+# Read the frontend / follower image names straight out of the manifests so the
 # images we build and load always match what actually gets deployed, even if
 # someone bumps the tags later.
 image_from_manifest() {
@@ -30,9 +29,9 @@ image_from_manifest() {
 }
 
 FRONTEND_IMAGE="$(image_from_manifest "${GUESTBOOK_DIR}/frontend-deployment.yaml" gb-frontend)"
-REDIS_REPLICA_IMAGE="$(image_from_manifest "${GUESTBOOK_DIR}/redis-replica-deployment.yaml" gb-redisslave)"
+REDIS_FOLLOWER_IMAGE="$(image_from_manifest "${GUESTBOOK_DIR}/redis-follower-deployment.yaml" gb-redis-follower)"
 
-if [[ -z "${FRONTEND_IMAGE}" || -z "${REDIS_REPLICA_IMAGE}" ]]; then
+if [[ -z "${FRONTEND_IMAGE}" || -z "${REDIS_FOLLOWER_IMAGE}" ]]; then
   err "Could not determine image names from the manifests."
   exit 1
 fi
@@ -41,7 +40,7 @@ dump_diagnostics() {
   err "Test failed - dumping cluster state for debugging:"
   kubectl get pods -o wide || true
   kubectl get events --sort-by=.lastTimestamp | tail -n 30 || true
-  for d in redis-master redis-replica frontend; do
+  for d in redis-leader redis-follower frontend; do
     echo "--- describe deployment/${d} ---"
     kubectl describe deployment "${d}" || true
     echo "--- logs deployment/${d} ---"
@@ -64,64 +63,55 @@ trap cleanup EXIT
 
 # ---------------------------------------------------------------------------
 log "Guestbook e2e configuration"
-echo "  kind cluster name  : ${CLUSTER_NAME}"
-echo "  frontend image     : ${FRONTEND_IMAGE}"
-echo "  redis-replica image: ${REDIS_REPLICA_IMAGE}"
-echo "  redis-master image : ${REDIS_MASTER_IMAGE}"
+echo "  kind cluster name   : ${CLUSTER_NAME}"
+echo "  frontend image      : ${FRONTEND_IMAGE}"
+echo "  redis-follower image: ${REDIS_FOLLOWER_IMAGE}"
 
 
 # ---------------------------------------------------------------------------
 log "Building images from source"
 docker build -t "${FRONTEND_IMAGE}" "${GUESTBOOK_DIR}/php-redis"
-docker build -t "${REDIS_REPLICA_IMAGE}" "${GUESTBOOK_DIR}/redis-slave"
-
-log "Pulling redis master image (${REDIS_MASTER_IMAGE})"
-docker pull "${REDIS_MASTER_IMAGE}"
+docker build -t "${REDIS_FOLLOWER_IMAGE}" "${GUESTBOOK_DIR}/redis-follower"
 
 # ---------------------------------------------------------------------------
 log "Loading images into the kind cluster"
 kind load docker-image --name "${CLUSTER_NAME}" \
-  "${FRONTEND_IMAGE}" "${REDIS_REPLICA_IMAGE}" "${REDIS_MASTER_IMAGE}"
+  "${FRONTEND_IMAGE}" "${REDIS_FOLLOWER_IMAGE}"
 
 # ---------------------------------------------------------------------------
 log "Deploying the guestbook"
 kubectl apply \
-  -f "${GUESTBOOK_DIR}/redis-master-deployment.yaml" \
-  -f "${GUESTBOOK_DIR}/redis-master-service.yaml" \
-  -f "${GUESTBOOK_DIR}/redis-replica-deployment.yaml" \
-  -f "${GUESTBOOK_DIR}/redis-replica-service.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-leader-deployment.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-leader-service.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-follower-deployment.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-follower-service.yaml" \
   -f "${GUESTBOOK_DIR}/frontend-deployment.yaml" \
   -f "${GUESTBOOK_DIR}/frontend-service.yaml"
 
-# Override the unpullable registry.k8s.io/redis:e2e master image. See the note
-# at the top of this file.
-log "Overriding redis-master image with ${REDIS_MASTER_IMAGE}"
-kubectl set image deployment/redis-master "master=${REDIS_MASTER_IMAGE}"
-
 # ---------------------------------------------------------------------------
 log "Waiting for deployments to become ready"
-for d in redis-master redis-replica frontend; do
+for d in redis-leader redis-follower frontend; do
   kubectl rollout status "deployment/${d}" --timeout=180s
 done
 
 # ---------------------------------------------------------------------------
-log "Waiting for the redis replica to sync from the master"
+log "Waiting for the redis follower to sync from the leader"
 replication_up() {
-  local replica
-  replica="$(kubectl get pod -l role=replica -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-  [[ -n "${replica}" ]] || return 1
-  kubectl exec "${replica}" -- redis-cli info replication 2>/dev/null \
+  local follower
+  follower="$(kubectl get pod -l role=follower -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  [[ -n "${follower}" ]] || return 1
+  kubectl exec "${follower}" -- redis-cli info replication 2>/dev/null \
     | grep -q 'master_link_status:up'
 }
 for _ in $(seq 1 30); do
   if replication_up; then
-    echo "  replica is in sync with the master"
+    echo "  follower is in sync with the leader"
     break
   fi
   sleep 2
 done
 if ! replication_up; then
-  err "redis replica never reached master_link_status:up"
+  err "redis follower never reached master_link_status:up"
   exit 1
 fi
 
