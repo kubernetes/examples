@@ -1,23 +1,22 @@
-apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
-kind: Deployment
+apiVersion: v1
+kind: ReplicationController
 metadata:
-  name: redis-master
+  name: redis-leader
+  labels:
+    app: redis
+    role: leader
+    tier: backend
 spec:
-  selector:
-    matchLabels:
-      app: redis
-      role: master
-      tier: backend
   replicas: 1
   template:
     metadata:
       labels:
         app: redis
-        role: master
+        role: leader
         tier: backend
     spec:
       containers:
-      - name: master
+      - name: leader
         image: registry.k8s.io/redis@sha256:cb111d1bd870a6a471385a4a69ad17469d326e9dd91e0e455350cacf36e1b3ee  # or just image: redis
         resources:
           requests:
