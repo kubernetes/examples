@@ -43,3 +43,6 @@ cscope.*
 
 /bazel-*
 *.pyc
+
+# Build artifacts
+.build/

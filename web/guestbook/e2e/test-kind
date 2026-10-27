@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+#
+# End-to-end smoke test for the PHP / Redis guestbook example.
+
+set -euo pipefail
+
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+GUESTBOOK_DIR="${REPO_ROOT}/web/guestbook"
+cd "${GUESTBOOK_DIR}"
+
+
+CLUSTER_NAME="${CLUSTER_NAME:-e2e}"
+
+# Local port used for the kubectl port-forward to the frontend service.
+FRONTEND_LOCAL_PORT="${FRONTEND_LOCAL_PORT:-18080}"
+
+PORT_FORWARD_PID=""
+
+log() { echo -e "\n\033[1;34m==> $*\033[0m"; }
+err() { echo -e "\033[1;31m$*\033[0m" >&2; }
+
+# Read the frontend / follower image names straight out of the manifests so the
+# images we build and load always match what actually gets deployed, even if
+# someone bumps the tags later.
+image_from_manifest() {
+  # $1 = manifest file, $2 = substring identifying the image
+  awk -v pat="$2" '$1=="image:" && $2 ~ pat {print $2; exit}' "$1"
+}
+
+FRONTEND_IMAGE="$(image_from_manifest "${GUESTBOOK_DIR}/frontend-deployment.yaml" gb-frontend)"
+REDIS_FOLLOWER_IMAGE="$(image_from_manifest "${GUESTBOOK_DIR}/redis-follower-deployment.yaml" gb-redis-follower)"
+
+if [[ -z "${FRONTEND_IMAGE}" || -z "${REDIS_FOLLOWER_IMAGE}" ]]; then
+  err "Could not determine image names from the manifests."
+  exit 1
+fi
+
+dump_diagnostics() {
+  err "Test failed - dumping cluster state for debugging:"
+  kubectl get pods -o wide || true
+  kubectl get events --sort-by=.lastTimestamp | tail -n 30 || true
+  for d in redis-leader redis-follower frontend; do
+    echo "--- describe deployment/${d} ---"
+    kubectl describe deployment "${d}" || true
+    echo "--- logs deployment/${d} ---"
+    kubectl logs "deployment/${d}" --tail=40 || true
+  done
+}
+
+cleanup() {
+  local ec=$?
+  if [[ -n "${PORT_FORWARD_PID}" ]]; then
+    kill "${PORT_FORWARD_PID}" 2>/dev/null || true
+  fi
+  if [[ ${ec} -ne 0 ]]; then
+    dump_diagnostics || true
+  fi
+  exit "${ec}"
+}
+trap cleanup EXIT
+
+
+# ---------------------------------------------------------------------------
+log "Guestbook e2e configuration"
+echo "  kind cluster name   : ${CLUSTER_NAME}"
+echo "  frontend image      : ${FRONTEND_IMAGE}"
+echo "  redis-follower image: ${REDIS_FOLLOWER_IMAGE}"
+
+
+# ---------------------------------------------------------------------------
+log "Building images from source"
+docker build -t "${FRONTEND_IMAGE}" "${GUESTBOOK_DIR}/php-redis"
+docker build -t "${REDIS_FOLLOWER_IMAGE}" "${GUESTBOOK_DIR}/redis-follower"
+
+# ---------------------------------------------------------------------------
+log "Loading images into the kind cluster"
+kind load docker-image --name "${CLUSTER_NAME}" \
+  "${FRONTEND_IMAGE}" "${REDIS_FOLLOWER_IMAGE}"
+
+# ---------------------------------------------------------------------------
+log "Deploying the guestbook"
+kubectl apply \
+  -f "${GUESTBOOK_DIR}/redis-leader-deployment.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-leader-service.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-follower-deployment.yaml" \
+  -f "${GUESTBOOK_DIR}/redis-follower-service.yaml" \
+  -f "${GUESTBOOK_DIR}/frontend-deployment.yaml" \
+  -f "${GUESTBOOK_DIR}/frontend-service.yaml"
+
+# ---------------------------------------------------------------------------
+log "Waiting for deployments to become ready"
+for d in redis-leader redis-follower frontend; do
+  kubectl rollout status "deployment/${d}" --timeout=180s
+done
+
+# ---------------------------------------------------------------------------
+log "Waiting for the redis follower to sync from the leader"
+replication_up() {
+  local follower
+  follower="$(kubectl get pod -l role=follower -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  [[ -n "${follower}" ]] || return 1
+  kubectl exec "${follower}" -- redis-cli info replication 2>/dev/null \
+    | grep -q 'master_link_status:up'
+}
+for _ in $(seq 1 30); do
+  if replication_up; then
+    echo "  follower is in sync with the leader"
+    break
+  fi
+  sleep 2
+done
+if ! replication_up; then
+  err "redis follower never reached master_link_status:up"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+log "Port-forwarding the frontend service to localhost:${FRONTEND_LOCAL_PORT}"
+kubectl port-forward svc/frontend "${FRONTEND_LOCAL_PORT}:80" >/dev/null 2>&1 &
+PORT_FORWARD_PID=$!
+
+base_url="http://localhost:${FRONTEND_LOCAL_PORT}"
+
+# Wait until the port-forward is actually serving.
+ready=""
+for _ in $(seq 1 30); do
+  if curl -fsS -o /dev/null "${base_url}/guestbook.php?cmd=get&key=messages" 2>/dev/null; then
+    ready=1
+    break
+  fi
+  sleep 1
+done
+if [[ -z "${ready}" ]]; then
+  err "frontend did not become reachable via port-forward"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# The actual smoke test: write a message, then read it back.
+message="smoketest-$$-${RANDOM}"
+
+log "POSTing a message (cmd=set) via the frontend"
+set_resp="$(curl -fsS "${base_url}/guestbook.php?cmd=set&key=messages&value=${message}")"
+echo "  response: ${set_resp}"
+if [[ "${set_resp}" != *'"message": "Updated"'* ]]; then
+  err "unexpected response to set: ${set_resp}"
+  exit 1
+fi
+
+log "Reading the message back (cmd=get) via the frontend"
+get_resp=""
+for _ in $(seq 1 15); do
+  get_resp="$(curl -fsS "${base_url}/guestbook.php?cmd=get&key=messages" || true)"
+  if [[ "${get_resp}" == *"${message}"* ]]; then
+    break
+  fi
+  sleep 1
+done
+echo "  response: ${get_resp}"
+if [[ "${get_resp}" != *"${message}"* ]]; then
+  err "message '${message}' was not returned by the guestbook (got: ${get_resp})"
+  exit 1
+fi
+
+log "SUCCESS: the guestbook stored and returned the message."

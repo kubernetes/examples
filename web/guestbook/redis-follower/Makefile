@@ -17,7 +17,7 @@ REGISTRY = gcr.io/google-samples
 ARCH ?= $(shell go env GOARCH)
 ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
-IMAGE = $(REGISTRY)/gb-redisslave
+IMAGE = $(REGISTRY)/gb-redis-follower
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 
 # Set default base image dynamically for each arch

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+#
+# Entry point for running e2e tests with kind in prow.
+
+set -euo pipefail
+
+CLUSTER_NAME="${CLUSTER_NAME:-e2e}"
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "${REPO_ROOT}"
+
+BUILD_DIR="${REPO_ROOT}/.build"
+BIN_DIR="${BUILD_DIR}/bin"
+mkdir -p "${BIN_DIR}"
+
+# Download kind
+KIND_VERSION="v0.32.0"
+KIND_URL="https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+curl -Lo "${BIN_DIR}/kind" "${KIND_URL}"
+chmod +x "${BIN_DIR}/kind"
+
+# Make sure kind is in the path
+export PATH="${BIN_DIR}:${PATH}"
+
+require() {
+  command -v "$1" >/dev/null 2>&1 || { echo "Required command not found: $1"; exit 1; }
+}
+require docker
+require kind
+require kubectl
+
+
+# Create a kind cluster
+echo "Creating kind cluster '${CLUSTER_NAME}'"
+kind create cluster --name "${CLUSTER_NAME}" --wait 120s
+
+# Delete the kind cluster when we're done (usually)
+cleanup() {
+  echo "Deleting kind cluster '${CLUSTER_NAME}'"
+  kind delete cluster --name "${CLUSTER_NAME}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+
+# Run the per-app e2e tests
+echo "Running e2e tests"
+web/guestbook/e2e/test-kind

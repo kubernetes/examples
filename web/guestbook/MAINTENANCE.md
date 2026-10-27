@@ -3,7 +3,7 @@
 ```console
 $ docker build -t gcr.io/google-samples/gb-frontend:v5 php-redis
 
-$ docker build -t gcr.io/google-samples/gb-redisslave:v2 redis-slave
+$ docker build -t gcr.io/google-samples/gb-redis-follower:v2 redis-follower
 ```
 
 Building Multi-architecture docker images
@@ -11,7 +11,7 @@ Building Multi-architecture docker images
 ```console
 $ make -C php-redis
 
-$ make -C redis-slave
+$ make -C redis-follower
 ```
 
 Push:
@@ -19,5 +19,5 @@ Push:
 ```console
 $ make -C php-redis all-push
 
-$ make -C redis-slave all-push
+$ make -C redis-follower all-push
 ```
