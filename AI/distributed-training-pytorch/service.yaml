@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pytorch-training-headless
+  labels:
+    app: pytorch-training
+spec:
+  clusterIP: None  # Headless service for pod-to-pod communication
+  selector:
+    app: pytorch-training
+  ports:
+  - port: 29500
+    name: master-port
+    protocol: TCP
+

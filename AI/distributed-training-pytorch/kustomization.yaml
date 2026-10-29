@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pytorch-training
+
+resources:
+  # Storage
+  - data-pvc.yaml
+  - output-pvc.yaml
+
+  # Config and scripts
+  - training-config.yaml
+  - training-script-configmap.yaml
+
+  # Networking
+  - service.yaml
+
+  # Kubernetes v1.35 workload-aware scheduling
+  - workload.yaml
+
+  # Distributed training job
+  - training-job.yaml
